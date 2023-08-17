@@ -1,0 +1,42 @@
+
+todo:
+  resource loading.
+  proper font loading.
+  minibuffer + completion
+  status bar
+  line numbers
+  utf8 buffer
+  generic modes for widget
+  matching pairs
+  sorrounding pairs
+  indentation
+
+
+areas:
+  core:
+    font manager (bold italic)
+    resource loader
+    layouts
+    workspaces
+    proper command / key binding interface
+    command mode
+    widget rendering system
+    fuzzy finder + search algorithms
+
+  editor:
+    status line
+    proper keybindings and editor modes. + popup
+
+  file explorer:
+
+  shell:
+    rnd realtime stdout, err process with thread and pipe
+    custome shell language
+  
+  [future]:
+  postman like client
+  lsp
+
+
+
+
