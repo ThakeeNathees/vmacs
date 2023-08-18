@@ -88,8 +88,10 @@ private:
 class BufferThemeCache : public BufferListener {
 
 	// Only create this object as a unique pointer.
-public: static std::unique_ptr<BufferThemeCache> New() { return std::unique_ptr<BufferThemeCache>(new BufferThemeCache); }
-private: BufferThemeCache() {}
+public: static std::unique_ptr<BufferThemeCache> New(ThemePtr ptr) {
+	return std::unique_ptr<BufferThemeCache>(new BufferThemeCache(ptr));
+}
+private: BufferThemeCache(ThemePtr ptr) : theme_ptr(ptr) {}
 
 public:
 	// The of a single character, we'll cache this value in a buffer and re-use this
@@ -103,7 +105,6 @@ public:
 	void OnBufferChanged(Buffer* buffer) override;
 	void CacheThemelets(Buffer* buffer);
 
-	void SetThemePtr(ThemePtr theme_ptr) { this->theme_ptr = theme_ptr; }
 	const std::vector<Themelet>& GetThemeles() const { return themelets; }
 
 private:

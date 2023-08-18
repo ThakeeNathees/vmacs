@@ -1,0 +1,25 @@
+// Copyright (c) 2023 Thakee Nathees
+
+#pragma once
+
+#include <raylib.h>
+
+#include "core/common.h"
+#include "core/widget.h"
+#include "textbox/textbox.h"
+
+
+// This is not actually a buffer but a widget at the bottom of the screen
+// printing the logs and prompting commands, In vim they're calling it
+// mini buffer so do we.
+class MiniBuffer : public Widget {
+public:
+	MiniBuffer(Window* window);
+
+	bool HandleEvent(const Event& event) override;
+	void Update() override;
+
+private:
+	void _Draw(Size area) override;
+	std::unique_ptr<TextBox> textbox;
+};

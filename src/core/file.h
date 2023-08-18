@@ -4,19 +4,21 @@
 
 #include <memory>
 
-#include "core/common.h"
-#include "core/theme.h"
-#include "core/buffer.h"
-
+#include "common.h"
+#include "theme.h"
+#include "buffer.h"
 #include "history.h"
-#include "core/theme.h"
+
+class Window;
 
 
 class File : public ThemeListener, HistoryListener {
 
 	// Only create this object as a unique pointer.
-public: static std::unique_ptr<File> New() { return std::unique_ptr<File>(new File); }
-private: File();
+public: static std::unique_ptr<File> New(Window* window) {
+	return std::unique_ptr<File>(new File(window));
+}
+private: File(Window* window);
 
 public:
 
@@ -27,16 +29,14 @@ public:
 	const Buffer* GetBuffer() const { return buffer.get(); }
 	History& GetHistory() { return *history; }
 	const History& GetHistory() const { return *history; }
+	const BufferThemeCache* GetThemeCache() const;
 
 	void SetLanguage(const Language* lang);
-
-	// FIXME: this is for debugging.
-public:
-	std::unique_ptr<BufferThemeCache> themecache = BufferThemeCache::New();
 
 private:
 	std::unique_ptr<Buffer> buffer = Buffer::New();
 	std::unique_ptr<History> history = History::New();
+	std::unique_ptr<BufferThemeCache> themecache;
 
 	bool crlf = false;
 };

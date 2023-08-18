@@ -49,15 +49,13 @@ void Widget::SetMode(const std::string& name) {
 
 
 bool Widget::HandleEvent(const Event& event) {
-  if (mode == nullptr) {
-    // TODO: error("No mode was set to the widget.");
-    return false;
-  }
+
+  // If it doesn't have any modes, this widget doesn't handle any events.
+  if (mode == nullptr) return false;
 
   switch (event.type) {
 
-    case Event::Type::KEY:
-    {
+    case Event::Type::KEY: {
 
       const Event::Key& key = event.key;
 
@@ -76,12 +74,13 @@ bool Widget::HandleEvent(const Event& event) {
         }
       }
 
-      if (fn == nullptr) {
+      const char* key_name = KeyBindings::GetKeyName(key.key);
+      if (fn == nullptr && key_name != nullptr) {
         std::string key_combination = "";
         if (key.control) key_combination += "ctrl+";
         if (key.shift) key_combination += "shift+";
         if (key.alt) key_combination += "alt+";
-        key_combination += KeyBindings::GetKeyName(key.key);
+        key_combination += key_name;
         fn = mode->GetCommand(key_combination);
       }
 

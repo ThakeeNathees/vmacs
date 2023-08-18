@@ -9,6 +9,7 @@
 
 #include "editor/editor.h"
 #include "filemanager/filemanager.h"
+#include "minibuffer/minibuffer.h"
 
 
 int main(void) {
@@ -16,8 +17,11 @@ int main(void) {
   Window window;
   window.Init();
 
-  TextEditor editor(&window);
-  window.widget = &editor;
+  //TextEditor editor(&window);
+  //window.widget = &editor;
+
+  MiniBuffer minibuffer(&window);
+  window.widget = &minibuffer;
 
   //FileManager filemanager(&window);
   //window.widget = &filemanager;

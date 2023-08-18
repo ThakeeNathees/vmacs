@@ -6,8 +6,8 @@
 #include <vector>
 #include <memory>
 
-#include "core/common.h"
-#include "core/buffer.h"
+#include "common.h"
+#include "buffer.h"
 #include "cursors.h"
 
 

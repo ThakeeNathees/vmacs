@@ -5,8 +5,8 @@
 #include <vector>
 #include <raylib.h>
 
-#include "core/common.h"
-#include "core/buffer.h"
+#include "common.h"
+#include "buffer.h"
 
 
 class Cursor {
@@ -56,7 +56,6 @@ class Cursors {
 
 public:
   std::vector<Cursor>& Get() { return cursors; }
-  bool IsBlinkShow() const { return is_blink_show; }
 
   void AddCursor(const Cursor& cursor);
   void AddCursorDown(const Buffer* buffer);
@@ -70,6 +69,7 @@ public:
   // This should be called every time the cursors changed.
   void OnChanged(const Buffer* buffer);
 
+  bool IsBlinkShow() const { return is_blink_show; }
   void BlinkUpdate();
 
 private:

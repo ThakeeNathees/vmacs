@@ -90,7 +90,6 @@ void Highlighter::Highlight(const char* source, int size) {
 	TSNode root_node = ts_tree_root_node(tree);
 	ts_query_cursor_exec(cursor, lang->GetQuery(), root_node);
 	{
-		//printf("-------------------------\n%s\n\n", ts_node_string(root_node));
 		TSQueryMatch match;
 		while (ts_query_cursor_next_match(cursor, &match)) {
 			for (int i = 0; i < match.capture_count; i++) {
@@ -104,13 +103,8 @@ void Highlighter::Highlight(const char* source, int size) {
 				slice.start = ts_node_start_byte(node);
 				slice.end = ts_node_end_byte(node);
 				slices.push_back(slice);
-
-				//char* s = ts_node_string(node);
-				//printf("%s: %s [%i, %i]\n", capture, s, slice.start, slice.end);
-				//free(s);
 			}
 		}
-		//printf("-------------------------\n");
 	}
 	ts_query_cursor_delete(cursor);
 

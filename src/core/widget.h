@@ -41,9 +41,7 @@ public:
 
   virtual void Init() {}
 
-  // Don't override if you're using the modes to handle events.
   virtual bool HandleEvent(const Event& event);
-
   virtual void Update() {}
   virtual void Draw(const Widget* parent, Size area) final;
   virtual void Cleanup() {}

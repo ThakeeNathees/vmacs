@@ -1,62 +1,27 @@
 // Copyright (c) 2023 Thakee Nathees
 
-#include "editor.h"
+#include "textbox.h"
 
-
-void TextEditor::_LoadModes() {
-  AddMode(std::make_shared<Mode>("default", nullptr, KeyBindings::New({
-#define up "k"
-#define down "j"
-#define left "h"
-#define right "l"
-#define home "a"
-#define end ";"
-    { "<char>"              , TextEditor::_InsertText },
-    { "up"                  , TextEditor::_CursorsUp },
-    { "down"                , TextEditor::_CursorsDown },
-    { "left"                , TextEditor::_CursorsLeft },
-    { "right"               , TextEditor::_CursorsRight },
-    { "home"                , TextEditor::_CursorsHome },
-    { "end"                 , TextEditor::_CursorsEnd },
-    { "esc"                 , TextEditor::_ClearCursors },
-    { "shift+alt+down"      , TextEditor::_AddCursorDown },
-    { "shift+alt+up"        , TextEditor::_AddCursorUp },
-    { "backspace"           , TextEditor::_Backspace },
-    { "enter"               , TextEditor::_InsertLine },
-    { "shift+right"         , TextEditor::_SelectRight },
-    { "shift+left"          , TextEditor::_SelectLeft },
-    { "ctrl+z"              , TextEditor::_Undo },
-    { "ctrl+shift+z"        , TextEditor::_Redo },
-    { "alt+" up             , TextEditor::_CursorsUp },
-    { "alt+" down           , TextEditor::_CursorsDown },
-    { "alt+" left           , TextEditor::_CursorsLeft },
-    { "alt+" right          , TextEditor::_CursorsRight },
-    { "alt+" home           , TextEditor::_CursorsHome },
-    { "alt+" end            , TextEditor::_CursorsEnd },
-    { "shift+alt+" right    , TextEditor::_SelectRight },
-    { "shift+alt+" left     , TextEditor::_SelectLeft },
-    { "ctrl+shift+alt+down" , TextEditor::_AddCursorDown },
-    { "ctrl+shift+alt+up"   , TextEditor::_AddCursorUp },
-#undef home
-#undef end
-
-  })), true);
-}
-
-
-void TextEditor::_InsertText(Widget* w, CommandArgs args) {
-  TextEditor* e = static_cast<TextEditor*>(w);
+void TextBox::_InsertText(Widget* w, CommandArgs args) {
+  TextBox* t = static_cast<TextBox*>(w);
   if (args == nullptr) { /*TODO: error()*/ return; }
   if (args->size() != 1) { /*TODO: error()*/ return; }
   const std::string& text = args->at(0);
-  History& history = e->file->GetHistory();
-  e->cursors = history.CommitInsertText(e->cursors, text);
-  e->_EnsureCursorsOnView();
+  History& history = t->file->GetHistory();
+  t->cursors = history.CommitInsertText(t->cursors, text);
+  t->_EnsureCursorsOnView();
 }
 
 
-void TextEditor::_CursorsUp(Widget* w, CommandArgs args) {
-  TextEditor* e = static_cast<TextEditor*>(w);
+void TextBox::_InsertLine(Widget* w, CommandArgs args) {
+  TextBox* t = static_cast<TextBox*>(w);
+  t->cursors = t->file->GetHistory().CommitInsertText(t->cursors, "\n");
+  t->_EnsureCursorsOnView();
+}
+
+
+void TextBox::_CursorsUp(Widget* w, CommandArgs args) {
+  TextBox* e = static_cast<TextBox*>(w);
   const Buffer* buffer = e->file->GetBuffer();
 
   for (Cursor& cursor : e->cursors.Get()) {
@@ -77,8 +42,8 @@ void TextEditor::_CursorsUp(Widget* w, CommandArgs args) {
 }
 
 
-void TextEditor::_CursorsDown(Widget* w, CommandArgs args) {
-  TextEditor* e = static_cast<TextEditor*>(w);
+void TextBox::_CursorsDown(Widget* w, CommandArgs args) {
+  TextBox* e = static_cast<TextBox*>(w);
   const Buffer* buffer = e->file->GetBuffer();
 
   for (Cursor& cursor : e->cursors.Get()) {
@@ -99,8 +64,8 @@ void TextEditor::_CursorsDown(Widget* w, CommandArgs args) {
 }
 
 
-void TextEditor::_CursorsLeft(Widget* w, CommandArgs args) {
-  TextEditor* e = static_cast<TextEditor*>(w);
+void TextBox::_CursorsLeft(Widget* w, CommandArgs args) {
+  TextBox* e = static_cast<TextBox*>(w);
   const Buffer* buffer = e->file->GetBuffer();
 
   for (Cursor& cursor : e->cursors.Get()) {
@@ -118,8 +83,8 @@ void TextEditor::_CursorsLeft(Widget* w, CommandArgs args) {
 }
 
 
-void TextEditor::_CursorsRight(Widget* w, CommandArgs args) {
-  TextEditor* e = static_cast<TextEditor*>(w);
+void TextBox::_CursorsRight(Widget* w, CommandArgs args) {
+  TextBox* e = static_cast<TextBox*>(w);
   const Buffer* buffer = e->file->GetBuffer();
 
   for (Cursor& cursor : e->cursors.Get()) {
@@ -137,8 +102,8 @@ void TextEditor::_CursorsRight(Widget* w, CommandArgs args) {
 }
 
 
-void TextEditor::_CursorsHome(Widget* w, CommandArgs args) {
-  TextEditor* e = static_cast<TextEditor*>(w);
+void TextBox::_CursorsHome(Widget* w, CommandArgs args) {
+  TextBox* e = static_cast<TextBox*>(w);
   const Buffer* buffer = e->file->GetBuffer();
 
   for (Cursor& cursor : e->cursors.Get()) {
@@ -165,8 +130,8 @@ void TextEditor::_CursorsHome(Widget* w, CommandArgs args) {
 }
 
 
-void TextEditor::_CursorsEnd(Widget* w, CommandArgs args) {
-  TextEditor* e = static_cast<TextEditor*>(w);
+void TextBox::_CursorsEnd(Widget* w, CommandArgs args) {
+  TextBox* e = static_cast<TextBox*>(w);
   const Buffer* buffer = e->file->GetBuffer();
 
   for (Cursor& cursor : e->cursors.Get()) {
@@ -180,45 +145,38 @@ void TextEditor::_CursorsEnd(Widget* w, CommandArgs args) {
 }
 
 
-void TextEditor::_ClearCursors(Widget* w, CommandArgs args) {
-  TextEditor* e = static_cast<TextEditor*>(w);
+void TextBox::_ClearCursors(Widget* w, CommandArgs args) {
+  TextBox* e = static_cast<TextBox*>(w);
   e->cursors.ClearMultiCursors();
   e->cursors.ClearSelections();
 }
 
 
-void TextEditor::_AddCursorDown(Widget* w, CommandArgs args) {
-  TextEditor* e = static_cast<TextEditor*>(w);
+void TextBox::_AddCursorDown(Widget* w, CommandArgs args) {
+  TextBox* e = static_cast<TextBox*>(w);
   const Buffer* buffer = e->file->GetBuffer();
   e->cursors.AddCursorDown(buffer);
   e->_EnsureCursorsOnView();
 }
 
 
-void TextEditor::_AddCursorUp(Widget* w, CommandArgs args) {
-  TextEditor* e = static_cast<TextEditor*>(w);
+void TextBox::_AddCursorUp(Widget* w, CommandArgs args) {
+  TextBox* e = static_cast<TextBox*>(w);
   const Buffer* buffer = e->file->GetBuffer();
   e->cursors.AddCursorUp(buffer);
   e->_EnsureCursorsOnView();
 }
 
 
-void TextEditor::_Backspace(Widget* w, CommandArgs args) {
-  TextEditor* e = static_cast<TextEditor*>(w);
+void TextBox::_Backspace(Widget* w, CommandArgs args) {
+  TextBox* e = static_cast<TextBox*>(w);
   e->cursors = e->file->GetHistory().CommitRemoveText(e->cursors);
   e->_EnsureCursorsOnView();
 }
 
 
-void TextEditor::_InsertLine(Widget* w, CommandArgs args) {
-  TextEditor* e = static_cast<TextEditor*>(w);
-  e->cursors = e->file->GetHistory().CommitInsertText(e->cursors, "\n");
-  e->_EnsureCursorsOnView();
-}
-
-
-void TextEditor::_SelectRight(Widget* w, CommandArgs args) {
-  TextEditor* e = static_cast<TextEditor*>(w);
+void TextBox::_SelectRight(Widget* w, CommandArgs args) {
+  TextBox* e = static_cast<TextBox*>(w);
   const Buffer* buffer = e->file->GetBuffer();
 
   for (Cursor& cursor : e->cursors.Get()) {
@@ -237,8 +195,8 @@ void TextEditor::_SelectRight(Widget* w, CommandArgs args) {
 }
 
 
-void TextEditor::_SelectLeft(Widget* w, CommandArgs args) {
-  TextEditor* e = static_cast<TextEditor*>(w);
+void TextBox::_SelectLeft(Widget* w, CommandArgs args) {
+  TextBox* e = static_cast<TextBox*>(w);
   const Buffer* buffer = e->file->GetBuffer();
 
   for (Cursor& cursor : e->cursors.Get()) {
@@ -257,8 +215,8 @@ void TextEditor::_SelectLeft(Widget* w, CommandArgs args) {
 }
 
 
-void TextEditor::_Undo(Widget* w, CommandArgs args) {
-  TextEditor* e = static_cast<TextEditor*>(w);
+void TextBox::_Undo(Widget* w, CommandArgs args) {
+  TextBox* e = static_cast<TextBox*>(w);
   History& history = e->file->GetHistory();
   const Buffer* buffer = e->file->GetBuffer();
   if (!history.HasUndo()) return;
@@ -268,8 +226,8 @@ void TextEditor::_Undo(Widget* w, CommandArgs args) {
 }
 
 
-void TextEditor::_Redo(Widget* w, CommandArgs args) {
-  TextEditor* e = static_cast<TextEditor*>(w);
+void TextBox::_Redo(Widget* w, CommandArgs args) {
+  TextBox* e = static_cast<TextBox*>(w);
   History& history = e->file->GetHistory();
   const Buffer* buffer = e->file->GetBuffer();
   if (!history.HasRedo()) return;
@@ -277,4 +235,3 @@ void TextEditor::_Redo(Widget* w, CommandArgs args) {
   e->cursors.OnChanged(buffer);
   e->_EnsureCursorsOnView();
 }
-
