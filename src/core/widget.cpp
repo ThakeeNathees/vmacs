@@ -48,7 +48,53 @@ void Widget::SetMode(const std::string& name) {
 }
 
 
+void Widget::AddChild(std::unique_ptr<Widget> child) {
+  child->parent = this;
+  children.push_back(std::move(child));
+}
+
+
+Widget* Widget::GetChild(int index) const {
+  if (!BETWEEN(0, index, children.size() - 1)) return nullptr;
+  return children[index].get();
+}
+
+
+void Widget::SetFocusedChild(int index) {
+  focused_child = index;
+  for (int i = 0; i < (int)children.size(); i++) {
+    children[i]->SetFocused(i == index);
+  }
+}
+
+
+void Widget::SetFocused(bool is_focused) {
+  this->is_focused = is_focused;
+
+  if (is_focused) {
+    if (BETWEEN(0, focused_child, children.size() - 1)) {
+      children[focused_child]->SetFocused(true);
+    }
+
+  } else {
+    for (auto& child : children) {
+      child->SetFocused(false);
+    }
+  }
+}
+
+
+void Widget::Update() {
+  for (auto& child : children) {
+    child->Update();
+  }
+}
+
+
 bool Widget::HandleEvent(const Event& event) {
+
+  Widget* child = GetChild(focused_child);
+  if (child && child->HandleEvent(event)) return true;
 
   // If it doesn't have any modes, this widget doesn't handle any events.
   if (mode == nullptr) return false;

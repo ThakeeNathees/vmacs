@@ -1,3 +1,5 @@
+tasks:
+  make the keybinding a static field and share accross instances.
 
 todo:
   resource loading.

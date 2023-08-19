@@ -14,18 +14,10 @@ TextEditor::TextEditor(Window* window) : Widget(window) {
   std::unique_ptr<File> file = File::New(window);
   file->SetLanguage(Language::GetLanguage("c"));
 
-  textbox = std::make_unique<TextBox>(window, std::move(file), true);
-}
-
-
-bool TextEditor::HandleEvent(const Event& event) {
-  if (textbox->HandleEvent(event)) return true;
-  return Widget::HandleEvent(event);
-}
-
-
-void TextEditor::Update() {
-  textbox->Update();
+  std::unique_ptr<TextBox> tb = std::make_unique<TextBox>(window, std::move(file), true);
+  AddChild(std::move(tb));
+  textbox = static_cast<TextBox*>(GetChild(0));
+  SetFocusedChild(0);
 }
 
 

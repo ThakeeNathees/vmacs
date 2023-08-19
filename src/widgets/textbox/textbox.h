@@ -45,6 +45,7 @@ private:
 	static void _Redo(Widget* w, CommandArgs args);
 
 	std::shared_ptr<File> file;
+	bool multiline = false;
 
 	Cursors cursors;
 	Coord view_start = { 0 };

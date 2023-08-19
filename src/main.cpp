@@ -1,5 +1,6 @@
 // Copyright (c) 2023 Thakee Nathees
 
+#include <memory>
 #include <stdio.h>
 
 #include "raylib.h"
@@ -7,9 +8,10 @@
 
 #include "core/window.h"
 
-#include "editor/editor.h"
-#include "filemanager/filemanager.h"
-#include "minibuffer/minibuffer.h"
+#include "widgets/layout/layout.h"
+#include "widgets/editor/editor.h"
+#include "widgets/filemanager/filemanager.h"
+#include "widgets/minibuffer/minibuffer.h"
 
 
 int main(void) {
@@ -17,11 +19,12 @@ int main(void) {
   Window window;
   window.Init();
 
-  //TextEditor editor(&window);
-  //window.widget = &editor;
+  std::unique_ptr<TextEditor> editor = std::make_unique<TextEditor>(&window);
+  std::unique_ptr<MiniBuffer> minibuffer = std::make_unique<MiniBuffer>(&window);
 
-  MiniBuffer minibuffer(&window);
-  window.widget = &minibuffer;
+  HSplit split(&window, std::move(editor), std::move(minibuffer));
+  window.widget = &split;
+  split.SetFocused(true);
 
   //FileManager filemanager(&window);
   //window.widget = &filemanager;

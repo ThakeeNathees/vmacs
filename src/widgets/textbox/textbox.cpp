@@ -6,7 +6,7 @@
 
 
 TextBox::TextBox(Window* window, std::shared_ptr<File> file, bool multiline)
-	: Widget(window), file(file) {
+	: Widget(window), file(file), multiline(multiline) {
 
   BindingData bdata = {
     { "<char>"              , TextBox::_InsertText },
@@ -115,7 +115,7 @@ void TextBox::_DrawSelections(Size area) {
 
 
 void TextBox::_DrawCursors(Size area) {
-  if (!cursors.IsBlinkShow()) return;
+  if (!IsFocused() || !cursors.IsBlinkShow()) return;
 
   const Buffer* buffer = file->GetBuffer();
   Vector2i char_size = window->GetFontCharSize();

@@ -2,11 +2,9 @@
 
 #pragma once
 
-#include <raylib.h>
-
 #include "core/common.h"
 #include "core/widget.h"
-#include "textbox/textbox.h"
+#include "widgets/textbox/textbox.h"
 
 
 // This is not actually a buffer but a widget at the bottom of the screen
@@ -16,10 +14,7 @@ class MiniBuffer : public Widget {
 public:
 	MiniBuffer(Window* window);
 
-	bool HandleEvent(const Event& event) override;
-	void Update() override;
-
 private:
 	void _Draw(Size area) override;
-	std::unique_ptr<TextBox> textbox;
+	TextBox* textbox;
 };
