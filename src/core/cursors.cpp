@@ -88,7 +88,7 @@ void Cursors::AddCursorDown(const Buffer* buffer) {
 #undef return_defer
 #undef return
   l_defer:
-  _ResetBlinkTimer();
+  ResetBlinkTimer();
 }
 
 
@@ -136,7 +136,7 @@ void Cursors::AddCursorUp(const Buffer* buffer) {
 #undef return_defer
 #undef return
   l_defer:
-  _ResetBlinkTimer();
+  ResetBlinkTimer();
 }
 
 
@@ -144,7 +144,7 @@ void Cursors::ClearSelections() {
   for (Cursor& cursor : cursors) {
     cursor.ClearSelection();
   }
-  _ResetBlinkTimer();
+  ResetBlinkTimer();
 }
 
 
@@ -178,12 +178,12 @@ void Cursors::ClearMultiCursors() {
   } else {
     cursors.erase(cursors.begin() + 1, cursors.end());
   }
-  _ResetBlinkTimer();
+  ResetBlinkTimer();
 }
 
 
 void Cursors::OnChanged(const Buffer* buffer) {
-  _ResetBlinkTimer();
+  ResetBlinkTimer();
   _RemoveDuplicates();
   _MergeSelections(buffer);
 }
@@ -198,7 +198,7 @@ void Cursors::BlinkUpdate() {
 }
 
 
-void Cursors::_ResetBlinkTimer() {
+void Cursors::ResetBlinkTimer() {
   is_blink_show = true;
   last_blink = GetTime();
 }

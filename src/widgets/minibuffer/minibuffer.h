@@ -14,6 +14,8 @@ class MiniBuffer : public Widget {
 public:
 	MiniBuffer(Window* window);
 
+	void Clean();
+
 private:
 	void _Draw(Size area) override;
 	TextBox* textbox;

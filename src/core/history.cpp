@@ -328,6 +328,12 @@ const Cursors& History::Redo() {
 }
 
 
+void History::Clean() {
+  actions.erase(actions.begin(), actions.end());
+  ptr = -1;
+}
+
+
 void History::SetBuffer(Buffer* buffer) {
   ASSERT(this->buffer == nullptr, "Trying to set buffer to history multiple times.");
   this->buffer = buffer;

@@ -6,6 +6,21 @@
 #include "core/highligther.h"
 
 
+std::shared_ptr<Mode> TextEditor::mode_normal = std::make_shared<Mode>(
+  "normal",
+  nullptr,
+  KeyBindings::New({
+    { "esc" , TextEditor::_ClearCursors },
+  })
+);
+
+
+void TextEditor::_ClearCursors(Widget* w, CommandArgs args) {
+  TextEditor* e = static_cast<TextEditor*>(w);
+  e->textbox->ClearCursors();
+}
+
+
 TextEditor::TextEditor(Window* window) : Widget(window) {
 
   // TODO: Move this.
@@ -15,9 +30,9 @@ TextEditor::TextEditor(Window* window) : Widget(window) {
   file->SetLanguage(Language::GetLanguage("c"));
 
   std::unique_ptr<TextBox> tb = std::make_unique<TextBox>(window, std::move(file), true);
-  AddChild(std::move(tb));
-  textbox = static_cast<TextBox*>(GetChild(0));
-  SetFocusedChild(0);
+  int idx = AddChild(std::move(tb));
+  textbox = static_cast<TextBox*>(GetChild(idx));
+  SetFocusedChild(idx);
 }
 
 

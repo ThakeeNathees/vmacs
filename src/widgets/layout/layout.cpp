@@ -22,8 +22,8 @@ HSplit::HSplit(
 				{
 					{ "ctrl+w", HSplit::_Test }
 				}
-			)),
-		true);
+			))
+		);
 }
 
 

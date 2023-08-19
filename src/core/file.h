@@ -27,8 +27,11 @@ public:
 
 	// TODO: Get is pointer and reference make all reference.
 	const Buffer* GetBuffer() const { return buffer.get(); }
+	Buffer* GetBuffer() { return buffer.get(); }
+
 	History& GetHistory() { return *history; }
 	const History& GetHistory() const { return *history; }
+
 	const BufferThemeCache* GetThemeCache() const;
 
 	void SetLanguage(const Language* lang);

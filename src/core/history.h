@@ -109,6 +109,8 @@ public:
   const Cursors& Undo();
   const Cursors& Redo();
 
+  void Clean();
+
 private:
   void _UpdateMergability(Action& action);
   bool _CanMerge(Action& on, const Action& next);

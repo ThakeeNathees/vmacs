@@ -13,11 +13,16 @@
 class TextBox : public Widget {
 public:
 	TextBox(Window* window, std::shared_ptr<File> file, bool multiline);
-	void Update() override;
+
+	void Update();
+	void OnFocusChanged();
 
 	// Returns a weak reference to file.
 	File* GetFile() const { return file.get(); }
 	Coord GetViewStart() const { return view_start; }
+
+	void ClearCursors();
+	void Clean();
 
 private:
 	void _EnsureCursorsOnView();
@@ -27,6 +32,9 @@ private:
 	void _DrawCursors(Size area);
 	void _DrawText(Size area);
 
+	static std::shared_ptr<Mode> mode_single_line;
+	static std::shared_ptr<Mode> mode_multi_line;
+
 	static void _InsertText(Widget* w, CommandArgs args);
 	static void _InsertLine(Widget* w, CommandArgs args);
 	static void _CursorsUp(Widget* w, CommandArgs args);
@@ -35,7 +43,6 @@ private:
 	static void _CursorsRight(Widget* w, CommandArgs args);
 	static void _CursorsHome(Widget* w, CommandArgs args);
 	static void _CursorsEnd(Widget* w, CommandArgs args);
-	static void _ClearCursors(Widget* w, CommandArgs args);
 	static void _AddCursorDown(Widget* w, CommandArgs args);
 	static void _AddCursorUp(Widget* w, CommandArgs args);
 	static void _Backspace(Widget* w, CommandArgs args);

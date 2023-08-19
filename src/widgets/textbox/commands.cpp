@@ -2,6 +2,49 @@
 
 #include "textbox.h"
 
+
+std::shared_ptr<Mode> TextBox::mode_single_line = std::make_shared<Mode>(
+  "single_line",
+  nullptr,
+  KeyBindings::New({
+    { "<char>"              , TextBox::_InsertText },
+    { "up"                  , TextBox::_CursorsUp },
+    { "down"                , TextBox::_CursorsDown },
+    { "left"                , TextBox::_CursorsLeft },
+    { "right"               , TextBox::_CursorsRight },
+    { "home"                , TextBox::_CursorsHome },
+    { "end"                 , TextBox::_CursorsEnd },
+
+    { "backspace"           , TextBox::_Backspace },
+    { "shift+right"         , TextBox::_SelectRight },
+    { "shift+left"          , TextBox::_SelectLeft },
+    { "ctrl+z"              , TextBox::_Undo },
+    { "ctrl+shift+z"        , TextBox::_Redo },
+    { "alt+h"               , TextBox::_CursorsLeft },
+    { "alt+j"               , TextBox::_CursorsDown },
+    { "alt+k"               , TextBox::_CursorsUp },
+    { "alt+l"               , TextBox::_CursorsRight },
+    { "alt+a"               , TextBox::_CursorsHome },
+    { "alt+;"               , TextBox::_CursorsEnd },
+    { "shift+alt+l"         , TextBox::_SelectRight },
+    { "shift+alt+h"         , TextBox::_SelectLeft },
+    { "ctrl+shift+alt+down" , TextBox::_AddCursorDown },
+    { "ctrl+shift+alt+up"   , TextBox::_AddCursorUp },
+  })
+);
+
+
+std::shared_ptr<Mode> TextBox::mode_multi_line = std::make_shared<Mode>(
+  "multi_line",
+  TextBox::mode_single_line,
+  KeyBindings::New({
+    { "enter" , TextBox::_InsertLine },
+    { "shift+alt+down" , TextBox::_AddCursorDown },
+    { "shift+alt+up" , TextBox::_AddCursorUp },
+  })
+);
+
+
 void TextBox::_InsertText(Widget* w, CommandArgs args) {
   TextBox* t = static_cast<TextBox*>(w);
   if (args == nullptr) { /*TODO: error()*/ return; }
@@ -142,13 +185,6 @@ void TextBox::_CursorsEnd(Widget* w, CommandArgs args) {
   }
   e->cursors.OnChanged(buffer);
   e->_EnsureCursorsOnView();
-}
-
-
-void TextBox::_ClearCursors(Widget* w, CommandArgs args) {
-  TextBox* e = static_cast<TextBox*>(w);
-  e->cursors.ClearMultiCursors();
-  e->cursors.ClearSelections();
 }
 
 

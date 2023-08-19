@@ -8,53 +8,33 @@
 TextBox::TextBox(Window* window, std::shared_ptr<File> file, bool multiline)
 	: Widget(window), file(file), multiline(multiline) {
 
-  BindingData bdata = {
-    { "<char>"              , TextBox::_InsertText },
-    { "up"                  , TextBox::_CursorsUp },
-    { "down"                , TextBox::_CursorsDown },
-    { "left"                , TextBox::_CursorsLeft },
-    { "right"               , TextBox::_CursorsRight },
-    { "home"                , TextBox::_CursorsHome },
-    { "end"                 , TextBox::_CursorsEnd },
-
-    // TODO: Don't handle here.
-    { "esc"                 , TextBox::_ClearCursors },
-
-    { "backspace"           , TextBox::_Backspace },
-    { "shift+right"         , TextBox::_SelectRight },
-    { "shift+left"          , TextBox::_SelectLeft },
-    { "ctrl+z"              , TextBox::_Undo },
-    { "ctrl+shift+z"        , TextBox::_Redo },
-    { "alt+h"               , TextBox::_CursorsLeft },
-    { "alt+j"               , TextBox::_CursorsDown },
-    { "alt+k"               , TextBox::_CursorsUp },
-    { "alt+l"               , TextBox::_CursorsRight },
-    { "alt+a"               , TextBox::_CursorsHome },
-    { "alt+;"               , TextBox::_CursorsEnd },
-    { "shift+alt+l"         , TextBox::_SelectRight },
-    { "shift+alt+h"         , TextBox::_SelectLeft },
-    { "ctrl+shift+alt+down" , TextBox::_AddCursorDown },
-    { "ctrl+shift+alt+up"   , TextBox::_AddCursorUp },
-  };
-
-  if (multiline) {
-    bdata["enter"] = TextBox::_InsertLine;
-    bdata["shift+alt+down"] = TextBox::_AddCursorDown;
-    bdata["shift+alt+up"] = TextBox::_AddCursorUp;
-  }
-
-  AddMode(
-    std::make_shared<Mode>(
-      "default",
-      nullptr,
-      KeyBindings::New(std::move(bdata))),
-    true);
-
+  if (multiline) AddMode(mode_multi_line);
+  else AddMode(mode_single_line);
 }
 
 
 void TextBox::Update() {
-	cursors.BlinkUpdate();
+  cursors.BlinkUpdate();
+}
+
+
+void TextBox::OnFocusChanged() {
+  cursors.ResetBlinkTimer();
+}
+
+
+void TextBox::ClearCursors() {
+  cursors.ClearMultiCursors();
+  cursors.ClearSelections();
+}
+
+
+void TextBox::Clean() {
+  int buff_size = file->GetBuffer()->GetSize();
+  file->GetBuffer()->RemoveText(0, buff_size);
+  file->GetHistory().Clean();
+  ClearCursors();
+  cursors.Get()[0].SetIndex(file->GetBuffer(), 0);
 }
 
 

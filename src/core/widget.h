@@ -46,19 +46,25 @@ public:
   virtual void Draw(const Widget* parent, Size area) final;
   virtual void Cleanup() {}
 
+  virtual void OnFocusChanged() {}
+
   RenderTexture2D GetCanvas() const { return canvas; }
   
-  void AddMode(std::shared_ptr<Mode> mode, bool update);
+  // If it doesn't have any modes set, it'll update this to current mode.
+  void AddMode(std::shared_ptr<Mode> mode);
   void SetMode(const std::string& name);
 
-  void AddChild(std::unique_ptr<Widget> child);
+  // Returns the index of the child. Note that if we ever remove a child from a widget
+  // we only set the slot to nullptr so that the index of a child will never change.
+  int AddChild(std::unique_ptr<Widget> child);
+  void RemoveChild(int index);
   Widget* GetChild(int index) const;
   Widget* GetParent() const { return parent; }
-  int GetChildrenCount() const { return (int)children.size(); }
 
   bool IsFocused() const { return is_focused; }
   void SetFocused(bool is_focused);
   void SetFocusedChild(int index);
+  void SetFocusedChild(Widget* widget);
 
 private:
   // Implement this in all child classes and call the above Draw method when

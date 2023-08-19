@@ -30,10 +30,10 @@ Widget::Widget(Window* window) {
 }
 
 
-void Widget::AddMode(std::shared_ptr<Mode> mode, bool update) {
+void Widget::AddMode(std::shared_ptr<Mode> mode) {
   std::shared_ptr<Mode>& m = modes[mode->GetName()];
   m = std::move(mode);
-  if (update) this->mode = m.get();
+  if (this->mode == nullptr) this->mode = m.get();
 }
 
 
@@ -48,9 +48,16 @@ void Widget::SetMode(const std::string& name) {
 }
 
 
-void Widget::AddChild(std::unique_ptr<Widget> child) {
+int Widget::AddChild(std::unique_ptr<Widget> child) {
   child->parent = this;
   children.push_back(std::move(child));
+  return (int)children.size() - 1;
+}
+
+
+void Widget::RemoveChild(int index) {
+  if (!BETWEEN(0, index, children.size() - 1)) return;
+  children[index] = nullptr;
 }
 
 
@@ -63,7 +70,23 @@ Widget* Widget::GetChild(int index) const {
 void Widget::SetFocusedChild(int index) {
   focused_child = index;
   for (int i = 0; i < (int)children.size(); i++) {
-    children[i]->SetFocused(i == index);
+    Widget* c = children[i].get();
+    if (c) c->SetFocused(i == index);
+  }
+}
+
+
+void Widget::SetFocusedChild(Widget* widget) {
+  focused_child = -1;
+  for (int i = 0; i < (int)children.size(); i++) {
+    Widget* c = children[i].get();
+    if (!c) continue;
+    if (c == widget) {
+      c->SetFocused(true);
+      focused_child = i;
+    } else {
+      c->SetFocused(false);
+    }
   }
 }
 
@@ -73,31 +96,31 @@ void Widget::SetFocused(bool is_focused) {
 
   if (is_focused) {
     if (BETWEEN(0, focused_child, children.size() - 1)) {
-      children[focused_child]->SetFocused(true);
+      Widget* c = children[focused_child].get();
+      if (c) c->SetFocused(true);
     }
 
   } else {
     for (auto& child : children) {
-      child->SetFocused(false);
+      if (child != nullptr) child->SetFocused(false);
     }
   }
+
+  OnFocusChanged();
 }
 
 
 void Widget::Update() {
   for (auto& child : children) {
-    child->Update();
+    Widget* c = child.get();
+    if (c) child->Update();
   }
 }
 
 
 bool Widget::HandleEvent(const Event& event) {
 
-  Widget* child = GetChild(focused_child);
-  if (child && child->HandleEvent(event)) return true;
-
-  // If it doesn't have any modes, this widget doesn't handle any events.
-  if (mode == nullptr) return false;
+  if (mode == nullptr) goto handle_child;
 
   switch (event.type) {
 
@@ -130,6 +153,11 @@ bool Widget::HandleEvent(const Event& event) {
         fn = mode->GetCommand(key_combination);
       }
 
+      // No command bind to this combination, try "<other>".
+      if (fn == nullptr) {
+        fn = mode->GetCommand("<other>");
+      }
+
       if (fn != nullptr) {
         fn(this, &args);
         return true;
@@ -137,6 +165,10 @@ bool Widget::HandleEvent(const Event& event) {
 
     } break;
   }
+
+handle_child:
+  Widget* child = GetChild(focused_child);
+  if (child && child->HandleEvent(event)) return true;
 
   return false;
 }

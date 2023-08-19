@@ -71,9 +71,9 @@ public:
 
   bool IsBlinkShow() const { return is_blink_show; }
   void BlinkUpdate();
+  void ResetBlinkTimer();
 
 private:
-  void _ResetBlinkTimer();
   void _SortCursors();
   void _RemoveDuplicates();
   void _MergeSelections(const Buffer* buffer);

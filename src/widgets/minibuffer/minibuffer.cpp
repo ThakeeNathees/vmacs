@@ -8,14 +8,16 @@
 MiniBuffer::MiniBuffer(Window* window) : Widget(window) {
 
 	// We store the textbox content as a temp file that doesn't has a path.
-	std::unique_ptr<TextBox> tb = std::make_unique<TextBox>(
-		window,
-		File::New(window),
-		false);
+	std::unique_ptr<TextBox> tb = std::make_unique<TextBox>(window, File::New(window), false);
 	
-	AddChild(std::move(tb));
-	textbox = static_cast<TextBox*>(GetChild(0));
-	SetFocusedChild(0);
+	int idx = AddChild(std::move(tb));
+	textbox = static_cast<TextBox*>(GetChild(idx));
+	SetFocusedChild(idx);
+}
+
+
+void MiniBuffer::Clean() {
+	textbox->Clean();
 }
 
 
