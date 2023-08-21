@@ -3,46 +3,46 @@
 #include "textbox.h"
 
 
-std::shared_ptr<Mode> TextBox::mode_single_line = std::make_shared<Mode>(
-  "single_line",
-  nullptr,
-  KeyBindings::New({
-    { "<char>"              , TextBox::_InsertText },
-    { "up"                  , TextBox::_CursorsUp },
-    { "down"                , TextBox::_CursorsDown },
-    { "left"                , TextBox::_CursorsLeft },
-    { "right"               , TextBox::_CursorsRight },
-    { "home"                , TextBox::_CursorsHome },
-    { "end"                 , TextBox::_CursorsEnd },
+ModeList TextBox::_GetModes() {
+  static ModeList modes = std::make_shared<std::vector<std::shared_ptr<Mode>>>(
+    std::initializer_list<std::shared_ptr<Mode>>({
 
-    { "backspace"           , TextBox::_Backspace },
-    { "shift+right"         , TextBox::_SelectRight },
-    { "shift+left"          , TextBox::_SelectLeft },
-    { "ctrl+z"              , TextBox::_Undo },
-    { "ctrl+shift+z"        , TextBox::_Redo },
-    { "alt+h"               , TextBox::_CursorsLeft },
-    { "alt+j"               , TextBox::_CursorsDown },
-    { "alt+k"               , TextBox::_CursorsUp },
-    { "alt+l"               , TextBox::_CursorsRight },
-    { "alt+a"               , TextBox::_CursorsHome },
-    { "alt+;"               , TextBox::_CursorsEnd },
-    { "shift+alt+l"         , TextBox::_SelectRight },
-    { "shift+alt+h"         , TextBox::_SelectLeft },
-    { "ctrl+shift+alt+down" , TextBox::_AddCursorDown },
-    { "ctrl+shift+alt+up"   , TextBox::_AddCursorUp },
-  })
-);
+      Mode::New("single_line", {
+        { "<char>"              , TextBox::_InsertText },
+        { "up"                  , TextBox::_CursorsUp },
+        { "down"                , TextBox::_CursorsDown },
+        { "left"                , TextBox::_CursorsLeft },
+        { "right"               , TextBox::_CursorsRight },
+        { "home"                , TextBox::_CursorsHome },
+        { "end"                 , TextBox::_CursorsEnd },
+        { "backspace"           , TextBox::_Backspace },
+        { "shift+right"         , TextBox::_SelectRight },
+        { "shift+left"          , TextBox::_SelectLeft },
+        { "ctrl+z"              , TextBox::_Undo },
+        { "ctrl+shift+z"        , TextBox::_Redo },
+        { "alt+h"               , TextBox::_CursorsLeft },
+        { "alt+j"               , TextBox::_CursorsDown },
+        { "alt+k"               , TextBox::_CursorsUp },
+        { "alt+l"               , TextBox::_CursorsRight },
+        { "alt+a"               , TextBox::_CursorsHome },
+        { "alt+;"               , TextBox::_CursorsEnd },
+        { "shift+alt+l"         , TextBox::_SelectRight },
+        { "shift+alt+h"         , TextBox::_SelectLeft },
+        { "ctrl+shift+alt+down" , TextBox::_AddCursorDown },
+        { "ctrl+shift+alt+up"   , TextBox::_AddCursorUp },
+      }),
 
+      Mode::New("multi_line", "single_line", {
+        { "enter" , TextBox::_InsertLine },
+        { "shift+alt+down" , TextBox::_AddCursorDown },
+        { "shift+alt+up" , TextBox::_AddCursorUp },
+      }),
 
-std::shared_ptr<Mode> TextBox::mode_multi_line = std::make_shared<Mode>(
-  "multi_line",
-  TextBox::mode_single_line,
-  KeyBindings::New({
-    { "enter" , TextBox::_InsertLine },
-    { "shift+alt+down" , TextBox::_AddCursorDown },
-    { "shift+alt+up" , TextBox::_AddCursorUp },
-  })
-);
+    })
+  );
+
+  return modes;
+}
 
 
 void TextBox::_InsertText(Widget* w, CommandArgs args) {

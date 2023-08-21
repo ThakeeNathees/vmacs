@@ -3,43 +3,39 @@
 #include "rootview.h"
 
 
-std::shared_ptr<Mode> RootView::mode_normal = std::make_shared<Mode>(
-	"normal",
-	nullptr,
-	KeyBindings::New({
-		{ "ctrl+w" , RootView::_ModeListenWindow },
-		{ "ctrl+shift+;" , RootView::_ModeCommand },
-  })
-);
+ModeList RootView::_GetModes() {
+  static ModeList modes = std::make_shared<std::vector<std::shared_ptr<Mode>>>(
+    std::initializer_list<std::shared_ptr<Mode>>({
 
+      Mode::New("normal", {
+				{ "ctrl+w" , RootView::_ModeListenWindow },
+				{ "ctrl+shift+;" , RootView::_ModeCommand },
+      }),
 
-std::shared_ptr<Mode> RootView::mode_listen_window = std::make_shared<Mode>(
-	"listen_window",
-	nullptr,
-	KeyBindings::New({
-		{ "<other>" , RootView::_ModeNormal },
-		{ "w" , RootView::_ModeCommand },
-  })
-);
+			Mode::New("listen_window", { // Listen key after ctrl+w.
+		    { "<other>" , RootView::_ModeNormal },
+		    { "w" , RootView::_ModeCommand },
+	    }),
 
+			Mode::New("command", {
+				{ "esc" , RootView::_ModeNormal },
+				// { "enter" , RootView::CommandExecute },
+		  }),
 
-std::shared_ptr<Mode> RootView::mode_command = std::make_shared<Mode>(
-	"command",
-	nullptr,
-	KeyBindings::New({
-		{ "esc" , RootView::_ModeNormal },
-		// { "enter" , RootView::CommandExecute },
-  })
-);
+    })
+  );
+
+  return modes;
+}
+
 
 
 RootView::RootView(Window* window) : Widget(window) {
+
+	_UpdateModes(_GetModes());
+
 	std::unique_ptr<TextEditor> editor = std::make_unique<TextEditor>(window);
 	std::unique_ptr<MiniBuffer> minibuffer = std::make_unique<MiniBuffer>(window);
-
-	AddMode(mode_normal);
-	AddMode(mode_listen_window);
-	AddMode(mode_command);
 
 	AddChild(std::move(editor));
 	this->editor = static_cast<TextEditor*>(GetChild(0));

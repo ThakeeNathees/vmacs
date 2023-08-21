@@ -13,17 +13,6 @@ HSplit::HSplit(
 	AddChild(std::move(first));
 	AddChild(std::move(second));
 	SetFocusedChild(0);
-
-	AddMode(
-		std::make_shared<Mode>(
-			"default",
-			nullptr,
-			KeyBindings::New(
-				{
-					{ "ctrl+w", HSplit::_Test }
-				}
-			))
-		);
 }
 
 

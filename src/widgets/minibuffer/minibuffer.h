@@ -18,5 +18,6 @@ public:
 
 private:
 	void _Draw(Size area) override;
+
 	TextBox* textbox;
 };

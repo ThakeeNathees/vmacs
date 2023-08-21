@@ -8,8 +8,9 @@
 TextBox::TextBox(Window* window, std::shared_ptr<File> file, bool multiline)
 	: Widget(window), file(file), multiline(multiline) {
 
-  if (multiline) AddMode(mode_multi_line);
-  else AddMode(mode_single_line);
+  _UpdateModes(_GetModes());
+  if (multiline) SetMode("multi_line");
+  else SetMode("single_line");
 }
 
 

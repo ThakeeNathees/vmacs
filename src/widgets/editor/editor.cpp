@@ -6,13 +6,19 @@
 #include "core/highligther.h"
 
 
-std::shared_ptr<Mode> TextEditor::mode_normal = std::make_shared<Mode>(
-  "normal",
-  nullptr,
-  KeyBindings::New({
-    { "esc" , TextEditor::_ClearCursors },
-  })
-);
+
+ModeList TextEditor::_GetModes() {
+  static ModeList modes = std::make_shared<std::vector<std::shared_ptr<Mode>>>(
+    std::initializer_list<std::shared_ptr<Mode>>({
+
+      Mode::New("normal", {
+        { "esc" , TextEditor::_ClearCursors },
+      }),
+
+    })
+  );
+  return modes;
+}
 
 
 void TextEditor::_ClearCursors(Widget* w, CommandArgs args) {
@@ -33,6 +39,8 @@ TextEditor::TextEditor(Window* window) : Widget(window) {
   int idx = AddChild(std::move(tb));
   textbox = static_cast<TextBox*>(GetChild(idx));
   SetFocusedChild(idx);
+
+  _UpdateModes(_GetModes());
 }
 
 

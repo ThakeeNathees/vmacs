@@ -18,13 +18,10 @@ public:
 private:
 	void _Draw(Size area) override;
 
+	static ModeList _GetModes();
 	static void _ModeListenWindow(Widget* w, CommandArgs args);
 	static void _ModeNormal(Widget* w, CommandArgs args);
 	static void _ModeCommand(Widget* w, CommandArgs args);
-
-	static std::shared_ptr<Mode> mode_normal;
-	static std::shared_ptr<Mode> mode_listen_window; // Listen after ctrl+w.
-	static std::shared_ptr<Mode> mode_command;
 
 	TextEditor* editor = nullptr;
 	MiniBuffer* minibuffer = nullptr;

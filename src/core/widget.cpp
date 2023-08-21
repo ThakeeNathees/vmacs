@@ -5,9 +5,18 @@
 #include "keybindings.h"
 
 
-Mode::Mode(const std::string& name, std::shared_ptr<Mode> parent, std::unique_ptr<KeyBindings> bindings)
-  : name(name), parent(parent), bindings(std::move(bindings))
-{ }
+std::shared_ptr<Mode> Mode::New(const std::string& name, BindingData&& data) {
+  return New(name, "", std::move(data));
+}
+
+
+std::shared_ptr<Mode> Mode::New(const std::string& name, const std::string& parent, BindingData&& data) {
+  std::shared_ptr<Mode> mode = std::make_shared<Mode>();
+  mode->name = name;
+  mode->parent_name = parent;
+  mode->bindings = KeyBindings::New(std::move(data));
+  return mode;
+}
 
 
 CommandFn Mode::GetCommand(const std::string& key_combination) const {
@@ -24,27 +33,53 @@ CommandFn Mode::GetCommand(const std::string& key_combination) const {
 }
 
 
+void Mode::ResolveParent(ModeList list) {
+  for (const std::shared_ptr<Mode>& ptr : *list) {
+    if (this == ptr.get()) {
+      // TODO: error(cyclic dependency);
+      return;
+    }
+    if (parent_name == ptr->name) {
+      parent = ptr;
+      return;
+    }
+  }
+}
+
+
 Widget::Widget(Window* window) {
   this->window = window;
   theme_ptr = window->GetThemeManager().GetThemePtr();
 }
 
 
+void Widget::_UpdateModes(ModeList modes_list) {
+  modes = modes_list;
+  if (modes == nullptr) return;
+
+  for (auto& mode : *modes) {
+    mode->ResolveParent(modes);
+  }
+  if (mode == nullptr && modes->size() > 0) {
+    mode = modes->at(0).get(); // SetMode.
+  }
+}
+
+
 void Widget::AddMode(std::shared_ptr<Mode> mode) {
-  std::shared_ptr<Mode>& m = modes[mode->GetName()];
-  m = std::move(mode);
-  if (this->mode == nullptr) this->mode = m.get();
+  modes->push_back(mode);
 }
 
 
 void Widget::SetMode(const std::string& name) {
-  auto iter = modes.find(name);
-  if (iter == modes.end()) {
-    // TODO: error("Mode with name %s not exists.", name);
-    return;
+  auto iter = modes->begin();
+  while (iter != modes->end()) {
+    if (iter->get()->GetName() == name) {
+      mode = iter->get();
+    }
+    ++iter;
   }
-
-  mode = iter->second.get();
+  // TODO: error();
 }
 
 

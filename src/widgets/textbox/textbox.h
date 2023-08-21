@@ -32,9 +32,7 @@ private:
 	void _DrawCursors(Size area);
 	void _DrawText(Size area);
 
-	static std::shared_ptr<Mode> mode_single_line;
-	static std::shared_ptr<Mode> mode_multi_line;
-
+	static ModeList _GetModes();
 	static void _InsertText(Widget* w, CommandArgs args);
 	static void _InsertLine(Widget* w, CommandArgs args);
 	static void _CursorsUp(Widget* w, CommandArgs args);

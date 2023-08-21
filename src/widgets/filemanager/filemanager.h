@@ -13,9 +13,10 @@ public:
 	FileManager(Window* window);
 
 	bool HandleEvent(const Event& event) override;
-	void _Draw(Size area) override;
 	void Update() override;
 
 private:
+	void _Draw(Size area) override;
+
 	std::filesystem::path cwd;
 };

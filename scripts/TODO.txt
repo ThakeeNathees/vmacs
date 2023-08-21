@@ -1,14 +1,15 @@
 tasks:
-  make the keybinding a static field and share accross instances.
+  pair brackets and quotes
+  indentations
+
 
 todo:
-  resource loading.
-  proper font loading.
+  color active line
+  resource loading
+  proper font loading
   minibuffer + completion
   status bar
-  line numbers
   utf8 buffer
-  generic modes for widget
   matching pairs
   sorrounding pairs
   indentation
@@ -20,14 +21,12 @@ areas:
     resource loader
     layouts
     workspaces
-    proper command / key binding interface
     command mode
-    widget rendering system
     fuzzy finder + search algorithms
+    popup
 
   editor:
     status line
-    proper keybindings and editor modes. + popup
 
   file explorer:
 
@@ -36,8 +35,8 @@ areas:
     custome shell language
   
   [future]:
-  postman like client
   lsp
+  scripting language integration
 
 
 
