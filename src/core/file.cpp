@@ -8,21 +8,33 @@ File::File(Window* window) {
 	ThemePtr ptr = window->GetThemeManager().GetThemePtr();
 	ASSERT(ptr != nullptr, OOPS);
 	themecache = BufferThemeCache::New(ptr);
-	buffer->RegisterListener(themecache.get());
-	history->SetBuffer(buffer.get());
+
+	// The register order is super important since they'll be notified
+	// in the same order they've registered.
+	//
+	// Here we cannot cache theme without the highlighter constructed.
+	buffer->RegisterListener(highlighter.get());
+	buffer->RegisterListener(this);
+
 	history->RegisterListener(this);
+	history->SetBuffer(buffer.get());
 
 	window->GetThemeManager().RegisterListener(this);
 }
 
 
-void File::HistoryChanged(History* history) {
+void File::OnHistoryChanged(History* history) {
 
 }
 
 
-void File::ThemeChanged(const Theme* theme) {
-	themecache->CacheThemelets(buffer.get());
+void File::OnThemeChanged(const Theme* theme) {
+	themecache->CacheThemelets(buffer.get(), highlighter.get());
+}
+
+
+void File::OnBufferChanged(Buffer* buffer) {
+	themecache->CacheThemelets(buffer, highlighter.get());
 }
 
 
@@ -33,5 +45,5 @@ const BufferThemeCache* File::GetThemeCache() const {
 
 
 void File::SetLanguage(const Language* lang) {
-	buffer->GetHighlighter().SetLanguage(lang);
+	highlighter->SetLanguage(lang);
 }

@@ -198,7 +198,7 @@ void ThemeManager::RegisterListener(ThemeListener* listener) {
 
 void ThemeManager::_OnThemeChanged() {
 	for (ThemeListener* listener : listeners) {
-		listener->ThemeChanged(theme);
+		listener->OnThemeChanged(theme);
 	}
 }
 
@@ -228,12 +228,7 @@ void ThemeManager::SetTheme(const std::string& name) {
 }
 
 
-void BufferThemeCache::OnBufferChanged(Buffer* buffer) {
-	CacheThemelets(buffer);
-}
-
-
-void BufferThemeCache::CacheThemelets(Buffer* buffer) {
+void BufferThemeCache::CacheThemelets(Buffer* buffer, Highlighter* highlighter) {
 
 	ASSERT(theme_ptr != nullptr, OOPS);
 	const Theme* theme = *theme_ptr;
@@ -241,11 +236,13 @@ void BufferThemeCache::CacheThemelets(Buffer* buffer) {
 	Color text = (theme != nullptr)
 		? (theme)->GetUiEntries().text.fg
 		: WHITE;
-	themelets.assign(buffer->GetSize(), {text, 0});
+
+	int themelet_size = buffer->GetSize();
+	themelets.assign(themelet_size, {text, 0});
 
 	if (theme == nullptr) return;
 	
-	const std::vector<HighlightSlice>& slices = buffer->GetHighlighter().GetHighlightSlices();
+	const std::vector<HighlightSlice>& slices = highlighter->GetHighlightSlices();
 
 	for (auto it = slices.begin(); it != slices.end(); ++it) {
 
@@ -255,9 +252,16 @@ void BufferThemeCache::CacheThemelets(Buffer* buffer) {
 		const ThemeEntry* entry = theme->GetEntry(name);
 		if (entry == nullptr) continue;
 
+		bool done = false;
 		for (int i = it->start; i < it->end; i++) {
+			// Failsafe in case if something went wrong earlier.
+			if (i >= themelet_size) {
+				done = true;
+				break;
+			}
 			themelets[i].color = entry->fg;
 			themelets[i].modifiers = entry->modifier;
 		}
+		if (done) break;
 	}
 }

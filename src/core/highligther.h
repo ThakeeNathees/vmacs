@@ -12,6 +12,7 @@
 #include <tree_sitter/api.h>
 
 #include "common.h"
+#include "buffer.h"
 
 // Treesitter get language function.
 typedef const TSLanguage* (*GetLanguageFn)(void);
@@ -63,17 +64,21 @@ struct HighlightSlice {
 };
 
 
-class Highlighter {
+class Highlighter : public BufferListener {
+
+	// Only create this object as a unique pointer.
+public: static std::unique_ptr<Highlighter> New() { return std::unique_ptr<Highlighter>(new Highlighter); }
+private: Highlighter();
 
 public:
-	Highlighter();
 	~Highlighter();
-
 	void Highlight(const char* source, int size);
 	void SetLanguage(const Language* lang);
 
 	const std::vector<HighlightSlice>& GetHighlightSlices() const { return slices; }
 	const HighlightSlice* GetHighlightSlice(int index) const;
+
+	void OnBufferChanged(Buffer* buffer) override;
 
 private:
 

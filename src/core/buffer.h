@@ -7,8 +7,7 @@
 #include <memory>
 #include <raylib.h>
 
-#include "highligther.h"
-
+#include "common.h"
 
 class Buffer;
 
@@ -66,12 +65,15 @@ public:
   // Returns the codepoint if it's unicode.
   int At(int i) const;
 
+  // This method is required for the highlighter to highlight,
+  // however if the string is utf8 we may have 32 bit integer
+  // array and we might not have const char* (figure it out).
+  const char* GetSource() const;
+
   int GetSize() const;
   Slice GetLine(int index) const;
   int GetLineCount() const;
   bool HasNullLine() const;
-
-  Highlighter& GetHighlighter() { return highlighter; }
 
   Coord IndexToCoord(int index) const;
   std::string GetSubstring(int index, int count) const;
@@ -90,7 +92,6 @@ private:
   std::string data;
 
   Lines lines;
-  Highlighter highlighter;
 
   // FIXME: I should use a std::shared_ptr<> for safty, but assuming the
   // listener will always exists while the buffer is exists.

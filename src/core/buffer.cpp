@@ -31,6 +31,11 @@ int Buffer::At(int i) const {
 }
 
 
+const char* Buffer::GetSource() const {
+  return data.c_str();
+}
+
+
 int Buffer::GetSize() const {
   return (int) data.size();
 }
@@ -110,7 +115,6 @@ void Buffer::InsertText(int index, const std::string& text) {
 
 void Buffer::_OnDataChanged() {
   lines.ComputeLines(data.c_str());
-  highlighter.Highlight(data.c_str(), (int) data.size());
 
   // Brodcast message.
   for (BufferListener* listener : listeners) {

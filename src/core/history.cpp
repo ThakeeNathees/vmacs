@@ -347,6 +347,6 @@ void History::RegisterListener(HistoryListener* listener) {
 
 void History::_OnHistoryChanged() {
   for (HistoryListener* listener : listeners) {
-    listener->HistoryChanged(this);
+    listener->OnHistoryChanged(this);
   }
 }

@@ -76,6 +76,11 @@ const HighlightSlice* Highlighter::GetHighlightSlice(int index) const {
 }
 
 
+void Highlighter::OnBufferChanged(Buffer* buffer) {
+	Highlight(buffer->GetSource(), buffer->GetSize());
+}
+
+
 void Highlighter::Highlight(const char* source, int size) {
 	slices.clear();
 	if (lang == nullptr || lang->GetQuery() == nullptr) return;

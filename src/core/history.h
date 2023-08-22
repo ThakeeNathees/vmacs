@@ -15,7 +15,7 @@ class History;
 
 class HistoryListener {
 public:
-  virtual void HistoryChanged(History* history) = 0;
+  virtual void OnHistoryChanged(History* history) = 0;
 };
 
 

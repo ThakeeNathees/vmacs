@@ -12,6 +12,7 @@
 
 #include "common.h"
 #include "buffer.h"
+#include "highligther.h"
 
 
 class Theme;
@@ -20,7 +21,7 @@ typedef const Theme* const* ThemePtr;
 
 class ThemeListener {
 public:
-	virtual void ThemeChanged(const Theme* theme) = 0;
+	virtual void OnThemeChanged(const Theme* theme) = 0;
 };
 
 
@@ -85,7 +86,7 @@ private:
 };
 
 
-class BufferThemeCache : public BufferListener {
+class BufferThemeCache {
 
 	// Only create this object as a unique pointer.
 public: static std::unique_ptr<BufferThemeCache> New(ThemePtr ptr) {
@@ -102,8 +103,7 @@ public:
 		uint8_t modifiers;
 	};
 
-	void OnBufferChanged(Buffer* buffer) override;
-	void CacheThemelets(Buffer* buffer);
+	void CacheThemelets(Buffer* buffer, Highlighter* highlighter);
 
 	const std::vector<Themelet>& GetThemeles() const { return themelets; }
 
