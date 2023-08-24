@@ -86,7 +86,7 @@ private:
 };
 
 
-class BufferThemeCache {
+class BufferThemeCache : public BufferListener {
 
 	// Only create this object as a unique pointer.
 public: static std::unique_ptr<BufferThemeCache> New(ThemePtr ptr) {
@@ -103,15 +103,19 @@ public:
 		uint8_t modifiers;
 	};
 
-	void CacheThemelets(Buffer* buffer, Highlighter* highlighter);
+	void SetHighlighter(std::shared_ptr<Highlighter> highlighter) { this->highlighter = highlighter; }
 
-	const std::vector<Themelet>& GetThemeles() const { return themelets; }
+	void OnBufferChanged(Buffer* buffer) override;
+	void CacheThemelets(Buffer* buffer);
+
+	const std::vector<Themelet>* GetThemeles() const { return &themelets; }
 
 private:
 
 	// We use a pointer to theme pointer because if the theme ever changed, 
 	ThemePtr theme_ptr = nullptr;
 
+	std::shared_ptr<Highlighter> highlighter = nullptr;
 	std::vector<Themelet> themelets;
 
 };

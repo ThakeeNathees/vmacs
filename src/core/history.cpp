@@ -1,6 +1,7 @@
 // Copyright (c) 2023 Thakee Nathees
 
 #include "history.h"
+#include "buffer.h"
 
 
 Cursors History::CommitInsertText(Cursors cursors, const std::string& text) {

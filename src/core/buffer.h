@@ -8,6 +8,7 @@
 #include <raylib.h>
 
 #include "common.h"
+#include "history.h"
 
 class Buffer;
 
@@ -58,7 +59,7 @@ class Buffer {
 
   // Only create this object as a unique pointer.
 public: static std::unique_ptr<Buffer> New() { return std::unique_ptr<Buffer>(new Buffer); }
-private: Buffer() {}
+private: Buffer();
 
 public:
 
@@ -78,6 +79,9 @@ public:
   Coord IndexToCoord(int index) const;
   std::string GetSubstring(int index, int count) const;
 
+  History& GetHistory() { return *history; }
+  const History& GetHistory() const { return *history; }
+
   void RegisterListener(BufferListener* listener);
 
   // These methods will change the buffer data and should call _OnDataChanged()
@@ -90,8 +94,9 @@ private:
 
   // TODO: if it's unicode we should have an int array here.
   std::string data;
-
   Lines lines;
+
+  std::unique_ptr<History> history = History::New();
 
   // FIXME: I should use a std::shared_ptr<> for safty, but assuming the
   // listener will always exists while the buffer is exists.

@@ -93,6 +93,7 @@ void Highlighter::Highlight(const char* source, int size) {
 
 	TSQueryCursor* cursor = ts_query_cursor_new();
 	TSNode root_node = ts_tree_root_node(tree);
+
 	ts_query_cursor_exec(cursor, lang->GetQuery(), root_node);
 	{
 		TSQueryMatch match;

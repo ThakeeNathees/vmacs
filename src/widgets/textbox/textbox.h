@@ -7,18 +7,22 @@
 #include "core/common.h"
 #include "core/widget.h"
 #include "core/cursors.h"
-#include "core/file.h"
+#include "core/buffer.h"
 
 
 class TextBox : public Widget {
 public:
-	TextBox(Window* window, std::shared_ptr<File> file, bool multiline);
+	TextBox(
+		Window* window,
+		bool multiline,
+		std::shared_ptr<Buffer> buffer,
+		std::shared_ptr<BufferThemeCache> themecache);
 
 	void Update();
 	void OnFocusChanged();
 
-	// Returns a weak reference to file.
-	File* GetFile() const { return file.get(); }
+	// Returns a weak reference to buffer.
+	Buffer* GetBuffer() const { return buffer.get(); }
 	Coord GetViewStart() const { return view_start; }
 
 	void ClearCursors();
@@ -49,7 +53,9 @@ private:
 	static void _Undo(Widget* w, CommandArgs args);
 	static void _Redo(Widget* w, CommandArgs args);
 
-	std::shared_ptr<File> file;
+	std::shared_ptr<Buffer> buffer;
+	std::shared_ptr<BufferThemeCache> themecache;
+
 	bool multiline = false;
 
 	Cursors cursors;

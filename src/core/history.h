@@ -7,11 +7,11 @@
 #include <memory>
 
 #include "common.h"
-#include "buffer.h"
 #include "cursors.h"
 
-
+class Buffer;
 class History;
+
 
 class HistoryListener {
 public:

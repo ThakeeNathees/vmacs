@@ -33,21 +33,19 @@ public:
 	// TODO: Get is pointer and reference make all reference.
 	const Buffer* GetBuffer() const { return buffer.get(); }
 	Buffer* GetBuffer() { return buffer.get(); }
-
-	History& GetHistory() { return *history; }
-	const History& GetHistory() const { return *history; }
+	std::shared_ptr<Buffer> GetBufferSharedPtr() { return buffer; }
 
 	Highlighter& GetHighlighter() { return *highlighter; }
 
 	const BufferThemeCache* GetThemeCache() const;
+	const std::shared_ptr<BufferThemeCache> GetThemeCacheSharedPtr() const { return themecache; }
 
 	void SetLanguage(const Language* lang);
 
 private:
-	std::unique_ptr<Highlighter> highlighter = Highlighter::New();
-	std::unique_ptr<Buffer> buffer = Buffer::New();
-	std::unique_ptr<History> history = History::New();
-	std::unique_ptr<BufferThemeCache> themecache;
+	std::shared_ptr<Buffer> buffer = Buffer::New();
+	std::shared_ptr<Highlighter> highlighter = Highlighter::New();
+	std::shared_ptr<BufferThemeCache> themecache;
 
 	bool crlf = false;
 };

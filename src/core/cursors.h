@@ -6,7 +6,8 @@
 #include <raylib.h>
 
 #include "common.h"
-#include "buffer.h"
+
+class Buffer;
 
 
 class Cursor {

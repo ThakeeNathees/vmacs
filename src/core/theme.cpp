@@ -228,10 +228,16 @@ void ThemeManager::SetTheme(const std::string& name) {
 }
 
 
-void BufferThemeCache::CacheThemelets(Buffer* buffer, Highlighter* highlighter) {
+void BufferThemeCache::OnBufferChanged(Buffer* buffer) {
+	CacheThemelets(buffer);
+}
+
+
+void BufferThemeCache::CacheThemelets(Buffer* buffer) {
 
 	ASSERT(theme_ptr != nullptr, OOPS);
 	const Theme* theme = *theme_ptr;
+	if (theme == nullptr || highlighter == nullptr) return;
 
 	Color text = (theme != nullptr)
 		? (theme)->GetUiEntries().text.fg
@@ -239,8 +245,6 @@ void BufferThemeCache::CacheThemelets(Buffer* buffer, Highlighter* highlighter) 
 
 	int themelet_size = buffer->GetSize();
 	themelets.assign(themelet_size, {text, 0});
-
-	if (theme == nullptr) return;
 	
 	const std::vector<HighlightSlice>& slices = highlighter->GetHighlightSlices();
 

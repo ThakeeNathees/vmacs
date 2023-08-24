@@ -50,7 +50,7 @@ void TextBox::_InsertText(Widget* w, CommandArgs args) {
   if (args == nullptr) { /*TODO: error()*/ return; }
   if (args->size() != 1) { /*TODO: error()*/ return; }
   const std::string& text = args->at(0);
-  History& history = t->file->GetHistory();
+  History& history = t->buffer->GetHistory();
   t->cursors = history.CommitInsertText(t->cursors, text);
   t->_EnsureCursorsOnView();
 }
@@ -58,16 +58,17 @@ void TextBox::_InsertText(Widget* w, CommandArgs args) {
 
 void TextBox::_InsertLine(Widget* w, CommandArgs args) {
   TextBox* t = static_cast<TextBox*>(w);
-  t->cursors = t->file->GetHistory().CommitInsertText(t->cursors, "\n");
+  History& history = t->buffer->GetHistory();
+  t->cursors = history.CommitInsertText(t->cursors, "\n");
   t->_EnsureCursorsOnView();
 }
 
 
 void TextBox::_CursorsUp(Widget* w, CommandArgs args) {
-  TextBox* e = static_cast<TextBox*>(w);
-  const Buffer* buffer = e->file->GetBuffer();
+  TextBox* t = static_cast<TextBox*>(w);
+  const Buffer* buffer = t->buffer.get();
 
-  for (Cursor& cursor : e->cursors.Get()) {
+  for (Cursor& cursor : t->cursors.Get()) {
     cursor.ClearSelection();
     Coord coord = cursor.GetCoord();
     if (coord.row == 0) {
@@ -80,16 +81,16 @@ void TextBox::_CursorsUp(Widget* w, CommandArgs args) {
       cursor.SetIndex(buffer, index);
     }
   }
-  e->cursors.OnChanged(buffer);
-  e->_EnsureCursorsOnView();
+  t->cursors.OnChanged(buffer);
+  t->_EnsureCursorsOnView();
 }
 
 
 void TextBox::_CursorsDown(Widget* w, CommandArgs args) {
-  TextBox* e = static_cast<TextBox*>(w);
-  const Buffer* buffer = e->file->GetBuffer();
+  TextBox* t = static_cast<TextBox*>(w);
+  const Buffer* buffer = t->buffer.get();
 
-  for (Cursor& cursor : e->cursors.Get()) {
+  for (Cursor& cursor : t->cursors.Get()) {
     cursor.ClearSelection();
     Coord coord = cursor.GetCoord();
     if (coord.row == buffer->GetLineCount() - 1) {
@@ -102,16 +103,16 @@ void TextBox::_CursorsDown(Widget* w, CommandArgs args) {
       cursor.SetIndex(buffer, index);
     }
   }
-  e->cursors.OnChanged(buffer);
-  e->_EnsureCursorsOnView();
+  t->cursors.OnChanged(buffer);
+  t->_EnsureCursorsOnView();
 }
 
 
 void TextBox::_CursorsLeft(Widget* w, CommandArgs args) {
-  TextBox* e = static_cast<TextBox*>(w);
-  const Buffer* buffer = e->file->GetBuffer();
+  TextBox* t = static_cast<TextBox*>(w);
+  const Buffer* buffer = t->buffer.get();
 
-  for (Cursor& cursor : e->cursors.Get()) {
+  for (Cursor& cursor : t->cursors.Get()) {
     if (cursor.HasSelection()) {
       Slice selection = cursor.GetSelection();
       cursor.SetIndex(buffer, selection.start);
@@ -121,16 +122,16 @@ void TextBox::_CursorsLeft(Widget* w, CommandArgs args) {
     }
     cursor.UpdateColumn();
   }
-  e->cursors.OnChanged(buffer);
-  e->_EnsureCursorsOnView();
+  t->cursors.OnChanged(buffer);
+  t->_EnsureCursorsOnView();
 }
 
 
 void TextBox::_CursorsRight(Widget* w, CommandArgs args) {
-  TextBox* e = static_cast<TextBox*>(w);
-  const Buffer* buffer = e->file->GetBuffer();
+  TextBox* t = static_cast<TextBox*>(w);
+  const Buffer* buffer = t->buffer.get();
 
-  for (Cursor& cursor : e->cursors.Get()) {
+  for (Cursor& cursor : t->cursors.Get()) {
     if (cursor.HasSelection()) {
       Slice selection = cursor.GetSelection();
       cursor.SetIndex(buffer, selection.end);
@@ -140,16 +141,16 @@ void TextBox::_CursorsRight(Widget* w, CommandArgs args) {
     }
     cursor.UpdateColumn();
   }
-  e->cursors.OnChanged(buffer);
-  e->_EnsureCursorsOnView();
+  t->cursors.OnChanged(buffer);
+  t->_EnsureCursorsOnView();
 }
 
 
 void TextBox::_CursorsHome(Widget* w, CommandArgs args) {
-  TextBox* e = static_cast<TextBox*>(w);
-  const Buffer* buffer = e->file->GetBuffer();
+  TextBox* t = static_cast<TextBox*>(w);
+  const Buffer* buffer = t->buffer.get();
 
-  for (Cursor& cursor : e->cursors.Get()) {
+  for (Cursor& cursor : t->cursors.Get()) {
     cursor.ClearSelection();
     Coord coord = cursor.GetCoord();
     const Slice& line = buffer->GetLine(coord.row);
@@ -168,54 +169,55 @@ void TextBox::_CursorsHome(Widget* w, CommandArgs args) {
 
     cursor.UpdateColumn();
   }
-  e->cursors.OnChanged(buffer);
-  e->_EnsureCursorsOnView();
+  t->cursors.OnChanged(buffer);
+  t->_EnsureCursorsOnView();
 }
 
 
 void TextBox::_CursorsEnd(Widget* w, CommandArgs args) {
-  TextBox* e = static_cast<TextBox*>(w);
-  const Buffer* buffer = e->file->GetBuffer();
+  TextBox* t = static_cast<TextBox*>(w);
+  const Buffer* buffer = t->buffer.get();
 
-  for (Cursor& cursor : e->cursors.Get()) {
+  for (Cursor& cursor : t->cursors.Get()) {
     cursor.ClearSelection();
     const Slice& line = buffer->GetLine(cursor.GetCoord().row);
     cursor.SetIndex(buffer, line.end);
     cursor.UpdateColumn();
   }
-  e->cursors.OnChanged(buffer);
-  e->_EnsureCursorsOnView();
+  t->cursors.OnChanged(buffer);
+  t->_EnsureCursorsOnView();
 }
 
 
 void TextBox::_AddCursorDown(Widget* w, CommandArgs args) {
-  TextBox* e = static_cast<TextBox*>(w);
-  const Buffer* buffer = e->file->GetBuffer();
-  e->cursors.AddCursorDown(buffer);
-  e->_EnsureCursorsOnView();
+  TextBox* t = static_cast<TextBox*>(w);
+  const Buffer* buffer = t->buffer.get();
+  t->cursors.AddCursorDown(buffer);
+  t->_EnsureCursorsOnView();
 }
 
 
 void TextBox::_AddCursorUp(Widget* w, CommandArgs args) {
-  TextBox* e = static_cast<TextBox*>(w);
-  const Buffer* buffer = e->file->GetBuffer();
-  e->cursors.AddCursorUp(buffer);
-  e->_EnsureCursorsOnView();
+  TextBox* t = static_cast<TextBox*>(w);
+  const Buffer* buffer = t->buffer.get();
+  t->cursors.AddCursorUp(buffer);
+  t->_EnsureCursorsOnView();
 }
 
 
 void TextBox::_Backspace(Widget* w, CommandArgs args) {
-  TextBox* e = static_cast<TextBox*>(w);
-  e->cursors = e->file->GetHistory().CommitRemoveText(e->cursors);
-  e->_EnsureCursorsOnView();
+  TextBox* t = static_cast<TextBox*>(w);
+  History& history = t->buffer->GetHistory();
+  t->cursors = history.CommitRemoveText(t->cursors);
+  t->_EnsureCursorsOnView();
 }
 
 
 void TextBox::_SelectRight(Widget* w, CommandArgs args) {
-  TextBox* e = static_cast<TextBox*>(w);
-  const Buffer* buffer = e->file->GetBuffer();
+  TextBox* t = static_cast<TextBox*>(w);
+  const Buffer* buffer = t->buffer.get();
 
-  for (Cursor& cursor : e->cursors.Get()) {
+  for (Cursor& cursor : t->cursors.Get()) {
     int index = cursor.GetIndex();
     if (index < buffer->GetSize()) {
       if (!cursor.HasSelection()) cursor.StartSelection();
@@ -226,16 +228,16 @@ void TextBox::_SelectRight(Widget* w, CommandArgs args) {
     }
     cursor.UpdateColumn();
   }
-  e->cursors.OnChanged(buffer);
-  e->_EnsureCursorsOnView();
+  t->cursors.OnChanged(buffer);
+  t->_EnsureCursorsOnView();
 }
 
 
 void TextBox::_SelectLeft(Widget* w, CommandArgs args) {
-  TextBox* e = static_cast<TextBox*>(w);
-  const Buffer* buffer = e->file->GetBuffer();
+  TextBox* t = static_cast<TextBox*>(w);
+  const Buffer* buffer = t->buffer.get();
 
-  for (Cursor& cursor : e->cursors.Get()) {
+  for (Cursor& cursor : t->cursors.Get()) {
     int index = cursor.GetIndex();
     if (index > 0) {
       if (!cursor.HasSelection()) cursor.StartSelection();
@@ -246,28 +248,28 @@ void TextBox::_SelectLeft(Widget* w, CommandArgs args) {
     }
     cursor.UpdateColumn();
   }
-  e->cursors.OnChanged(buffer);
-  e->_EnsureCursorsOnView();
+  t->cursors.OnChanged(buffer);
+  t->_EnsureCursorsOnView();
 }
 
 
 void TextBox::_Undo(Widget* w, CommandArgs args) {
-  TextBox* e = static_cast<TextBox*>(w);
-  History& history = e->file->GetHistory();
-  const Buffer* buffer = e->file->GetBuffer();
+  TextBox* t = static_cast<TextBox*>(w);
+  Buffer* buffer = t->buffer.get();
+  History& history = buffer->GetHistory();
   if (!history.HasUndo()) return;
-  e->cursors = history.Undo();
-  e->cursors.OnChanged(buffer);
-  e->_EnsureCursorsOnView();
+  t->cursors = history.Undo();
+  t->cursors.OnChanged(buffer);
+  t->_EnsureCursorsOnView();
 }
 
 
 void TextBox::_Redo(Widget* w, CommandArgs args) {
-  TextBox* e = static_cast<TextBox*>(w);
-  History& history = e->file->GetHistory();
-  const Buffer* buffer = e->file->GetBuffer();
+  TextBox* t = static_cast<TextBox*>(w);
+  History& history = t->buffer->GetHistory();
+  const Buffer* buffer = t->buffer.get();
   if (!history.HasRedo()) return;
-  e->cursors = history.Redo();
-  e->cursors.OnChanged(buffer);
-  e->_EnsureCursorsOnView();
+  t->cursors = history.Redo();
+  t->cursors.OnChanged(buffer);
+  t->_EnsureCursorsOnView();
 }

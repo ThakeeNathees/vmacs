@@ -25,6 +25,11 @@ void Lines::ComputeLines(const char* buff) {
 }
 
 
+Buffer::Buffer() {
+  history->SetBuffer(this);
+}
+
+
 int Buffer::At(int i) const {
   ASSERT_INDEX(i, data.size() + 1); // +1 since we'll include '\0'.
   return (int) data[i];

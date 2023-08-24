@@ -26,6 +26,8 @@ private:
 
   TextBox* textbox = nullptr;
 
+  std::shared_ptr<File> file;
+
   // All the values are multiple of char size.
   int gutter_margin_left = 1;
   int gutter_min_width = 2;

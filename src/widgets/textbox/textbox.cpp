@@ -5,8 +5,12 @@
 #include "core/window.h"
 
 
-TextBox::TextBox(Window* window, std::shared_ptr<File> file, bool multiline)
-	: Widget(window), file(file), multiline(multiline) {
+TextBox::TextBox(
+  Window* window,
+  bool multiline,
+  std::shared_ptr<Buffer> buffer,
+  std::shared_ptr<BufferThemeCache> themecache)
+	: Widget(window), multiline(multiline), buffer(buffer), themecache(themecache) {
 
   _UpdateModes(_GetModes());
   if (multiline) SetMode("multi_line");
@@ -31,11 +35,12 @@ void TextBox::ClearCursors() {
 
 
 void TextBox::Clean() {
-  int buff_size = file->GetBuffer()->GetSize();
-  file->GetBuffer()->RemoveText(0, buff_size);
-  file->GetHistory().Clean();
+  int buff_size = buffer->GetSize();
+  buffer->RemoveText(0, buff_size);
+  History& history = buffer->GetHistory();
+  history.Clean();
   ClearCursors();
-  cursors.Get()[0].SetIndex(file->GetBuffer(), 0);
+  cursors.Get()[0].SetIndex(buffer.get(), 0);
 }
 
 
@@ -59,7 +64,6 @@ void TextBox::_EnsureCursorsOnView() {
 void TextBox::_DrawSelections(Size area) {
   // TODO: This is in efficient and run inside a hot loop, refactor.
 
-  const Buffer* buffer = file->GetBuffer();
   const UiThemeCache& ui = (*theme_ptr)->GetUiEntries();
   Vector2i char_size = window->GetFontCharSize();
 
@@ -98,7 +102,6 @@ void TextBox::_DrawSelections(Size area) {
 void TextBox::_DrawCursors(Size area) {
   if (!IsFocused() || !cursors.IsBlinkShow()) return;
 
-  const Buffer* buffer = file->GetBuffer();
   Vector2i char_size = window->GetFontCharSize();
   const UiThemeCache& ui = (*theme_ptr)->GetUiEntries();
 
@@ -139,12 +142,15 @@ void TextBox::_DrawCursors(Size area) {
 
 
 void TextBox::_DrawText(Size area) {
-  const Buffer* buffer = file->GetBuffer();
   Vector2i char_size = window->GetFontCharSize();
   int font_size = window->GetFontSize();
   Font font = window->GetFont();
   const UiThemeCache& ui = (*theme_ptr)->GetUiEntries();
-  const auto& themelets = file->GetThemeCache()->GetThemeles();
+
+  const std::vector<BufferThemeCache::Themelet>* themelets = ((themecache == nullptr)
+    ? nullptr
+    : themecache->GetThemeles()
+  );
 
   // We add 1 and let the last character cropped out at the middle.
   int visible_line_count = (area.height / char_size.y) + 1;
@@ -172,7 +178,9 @@ void TextBox::_DrawText(Size area) {
 
           default:
           {
-            Color color = (index < themelets.size()) ? themelets[index].color : WHITE;
+            Color color = ((themelets != nullptr && index < themelets->size())
+                       ? (*themelets)[index].color
+                       : WHITE);
             DrawTextCodepoint(font, c, curr.Float(), (float)font_size, color);
             curr.x += char_size.x;
           } break;

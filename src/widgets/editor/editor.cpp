@@ -32,10 +32,14 @@ TextEditor::TextEditor(Window* window) : Widget(window) {
   // TODO: Move this.
   Language::LoadLanguages();
 
-  std::unique_ptr<File> file = File::New(window);
+  file = File::New(window);
   file->SetLanguage(Language::GetLanguage("c"));
 
-  std::unique_ptr<TextBox> tb = std::make_unique<TextBox>(window, std::move(file), true);
+  std::unique_ptr<TextBox> tb = std::make_unique<TextBox>(
+    window, true,
+    file->GetBufferSharedPtr(),
+    file->GetThemeCacheSharedPtr());
+
   int idx = AddChild(std::move(tb));
   textbox = static_cast<TextBox*>(GetChild(idx));
   SetFocusedChild(idx);
@@ -70,7 +74,7 @@ int TextEditor::_DrawLineNumbers(Vector2i pos, Size area) {
 
   if (area.height == 0) return 0;
 
-  const Buffer* buffer = textbox->GetFile()->GetBuffer();
+  const Buffer* buffer = textbox->GetBuffer();
   Font font = window->GetFont();
   Vector2i char_size = window->GetFontCharSize();
   int font_size = window->GetFontSize();
@@ -133,7 +137,7 @@ void TextEditor::_Draw(Size area) {
 
   const Theme* theme = *theme_ptr;
   const UiThemeCache& ui = theme->GetUiEntries();
-  const Buffer* buffer = textbox->GetFile()->GetBuffer();
+  const Buffer* buffer = textbox->GetBuffer();
 
   Font font = window->GetFont();
   int font_size = window->GetFontSize();

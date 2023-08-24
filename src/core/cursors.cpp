@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "cursors.h"
+#include "buffer.h"
 
 
 bool Cursor::Equals(const Cursor& other) const {
