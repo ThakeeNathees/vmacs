@@ -11,6 +11,9 @@
 #include <tomlcpp.hpp>
 #include <filesystem>
 
+#include "theme.hpp"
+#include "font.hpp"
+
 
 std::unique_ptr<Window> Window::singleton = nullptr;
 
@@ -31,8 +34,6 @@ void Window::Init() {
   if (window_flags & FLAG_WINDOW_MAXIMIZED) {
     MaximizeWindow();
   }
-
-  FontManager::Init();
 }
 
 
@@ -89,14 +90,25 @@ void Window::HandleInputs() {
 
 
 void Window::Update() {
-
+  if (singleton->main_widget != nullptr) {
+    singleton->main_widget->Update();
+  }
 }
 
 
 void Window::Draw() {
   BeginDrawing();
   {
-    ClearBackground(RAYWHITE);
+    const UiThemeCache& ui = ThemeManager::GetCurrentTheme()->GetUiEntries();
+    ClearBackground(ui.background.bg);
+
+    Widget* main_widget = singleton->main_widget.get();
+    if (main_widget != nullptr) {
+      Rectangle area = singleton->_GetDrawArea();
+      main_widget->Draw(nullptr, { (int) area.width, (int) area.height });
+      DrawRenderTexture(main_widget->GetCanvas(), { area.x, area.y });
+    }
+
   }
   EndDrawing();
 }
@@ -107,17 +119,34 @@ void Window::Close() {
 }
 
 
+void Window::SetMainWidget(std::unique_ptr<Widget> widget) {
+  singleton->main_widget = std::move(widget);
+}
+
+
 void Window::Error(std::string_view message) {
 
 }
 
 
+Rectangle Window::_GetDrawArea() const {
+  return {
+    (float) border_margin,
+    (float) border_margin,
+    (float) (GetScreenWidth() - 2 * border_margin),
+    (float) (GetScreenHeight() - 2 * border_margin),
+  };
+}
+
+
 bool Window::_HandleEvent(const Event& event) {
 
-  // TODO: Handle child events here.
+  if (singleton->main_widget != nullptr) {
+    if (singleton->main_widget->HandleEvent(event)) return true;
+  }
 
   if (event.type == Event::Type::CLOSE) {
-    Window::singleton->should_close = true;
+    singleton->should_close = true;
     return true;
   }
 

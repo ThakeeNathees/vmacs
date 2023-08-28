@@ -10,11 +10,6 @@
 
 #include "window.hpp"
 
-// Default font.
-#include "res/fonts/UbuntuMonoNerdFont-Regular.ttf.gen.h"
-#include "res/fonts/UbuntuMonoNerdFont-Bold.ttf.gen.h"
-#include "res/fonts/UbuntuMonoNerdFont-Italic.ttf.gen.h"
-
 
 std::vector<int> FontLoader::cp_ascii;
 std::vector<int> FontLoader::cp_nerd;
@@ -40,18 +35,6 @@ void FontManager::Init() {
   #define ICON(value, name) FontLoader::cp_nerd.push_back(value);
   #include "icons.hpp"
   #undef ICON
-
-  auto loader = std::make_unique<FontLoaderMemory>();
-  loader->file_type = ".ttf";
-  loader->regular_data = fonts_UbuntuMonoNerdFont_Regular_ttf;
-  loader->regular_size = fonts_UbuntuMonoNerdFont_Regular_ttf_len;
-  loader->bold_data = fonts_UbuntuMonoNerdFont_Bold_ttf;
-  loader->bold_size = fonts_UbuntuMonoNerdFont_Bold_ttf_len;
-  loader->italic_data = fonts_UbuntuMonoNerdFont_Italic_ttf;
-  loader->italic_size = fonts_UbuntuMonoNerdFont_Italic_ttf_len;
-  SetFontLoader(std::move(loader));
-
-  font = GetFont(font_size);
 }
 
 
@@ -73,6 +56,20 @@ FontWrapper::~FontWrapper() {
   UnloadFont(regular);
   if (unload_bold) UnloadFont(bold);
   if (unload_italic) UnloadFont(italic);
+}
+
+
+Size FontWrapper::GetCharSize() const {
+  // TODO: These should be runtime errors.
+  ASSERT(IsFontReady(regular), "Font was not loaded.");
+  ASSERT(regular.glyphCount > 0, "No glyph were in the font.");
+
+  // TODO: using any other index than 0 return different (small) size
+  // in a mono font, investigate.
+  return {
+    (int) (regular.recs[0].width ),
+    (int) (regular.recs[0].height)
+  };
 }
 
 
@@ -121,12 +118,19 @@ std::unique_ptr<FontWrapper> FontLoaderMemory::LoadFont(int font_size) {
 void FontManager::SetFontLoader(std::unique_ptr<FontLoader> font_loader) {
   if (font_loader == nullptr) return;
   FontManager::font_loader = std::move(font_loader);
+  // TODO: Since the font is changed, we have to clean all the cached fonts.
+  font = GetFont(font_size);
 }
 
 
 void FontManager::SetFontSize(int font_size) {
   FontManager::font_size = font_size;
   font = GetFont(font_size);
+}
+
+
+int FontManager::GetFontSize() {
+  return FontManager::font_size;
 }
 
 
@@ -140,6 +144,11 @@ std::shared_ptr<FontWrapper> FontManager::AddFont(int font_size, std::unique_ptr
 std::shared_ptr<FontWrapper> FontManager::GetFont() {
   if (font != nullptr) return font;
   font = GetFont(font_size);
+  if (font != nullptr) return font;
+
+  // Load default font.
+  font = std::make_shared<FontWrapper>(GetFontDefault(), nullptr, nullptr);
+
   return font;
 }
 

@@ -12,7 +12,6 @@
 
 #include "common.hpp"
 #include "event.hpp"
-#include "font.hpp"
 #include "widget.hpp"
 
 
@@ -27,6 +26,8 @@ public:
   static void Draw();
   static void Close();
 
+  static void SetMainWidget(std::unique_ptr<Widget> widget);
+
   // Display an error popup.
   static void Error(std::string_view message);
 
@@ -34,6 +35,7 @@ private:
   Window() {}
   bool _HandleEvent(const Event& event);
   void _LoadConfig();
+  Rectangle _GetDrawArea() const;
 
   static std::unique_ptr<Window> singleton;
 
@@ -45,4 +47,6 @@ private:
   int width = 800, height = 450;
   int fps = 60;
   int font_size = 32;
+
+  int border_margin = 5;
 };

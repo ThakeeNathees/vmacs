@@ -10,10 +10,24 @@
 #include "core/common.hpp"
 #include "core/window.hpp"
 
+#include "core/font.hpp"
+#include "core/theme.hpp"
+#include "editor/language.hpp"
+#include "widgets/texteditor/texteditor.hpp"
+
+void LoadResources();
+
 
 int main() {
 
   Window::Init();
+  FontManager::Init();
+  ThemeManager::Init();
+  LanguageManager::Init();
+
+  LoadResources();
+
+  Window::SetMainWidget(std::make_unique<TextEditor>());
 
   while (!Window::ShouldClose()) {
     Window::HandleInputs();

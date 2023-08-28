@@ -75,23 +75,23 @@ RenderTexture2D Widget::GetCanvas() const {
 }
 
 
-void Widget::_SetModes(ModeList&& modes_list) {
+void Widget::_SetModes(std::shared_ptr<ModeList> modes_list) {
   modes = std::move(modes_list);
 
-  for (auto& mode : modes) {
-    mode->ResolveParent(modes);
+  for (auto& mode : *modes) {
+    mode->ResolveParent(*modes);
   }
 
   // By default set the first mode.
-  if (mode == nullptr && modes.size() > 0) {
-    mode = modes.at(0).get();
+  if (mode == nullptr && modes->size() > 0) {
+    mode = modes->at(0).get();
   }
 }
 
 
 void Widget::SetMode(const std::string_view name) {
-  auto iter = modes.begin();
-  while (iter != modes.end()) {
+  auto iter = modes->begin();
+  while (iter != modes->end()) {
     if (iter->get()->GetName() == name) {
       mode = iter->get();
       return;
@@ -111,8 +111,7 @@ void Widget::Update() {
 
 
 void Widget::Draw(const Widget* parent, Size area) {
-  if (area.width == 0 || area.height == 0) return;
-  ASSERT(area.width > 0 && area.height > 0, OOPS);
+  if (area.width <= 0 || area.height <= 0) return;
 
   // Create / update the canvas.
   if (!IsRenderTextureReady(canvas)) {

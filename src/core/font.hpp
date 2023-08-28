@@ -27,6 +27,8 @@ struct FontWrapper {
   FontWrapper(Font regular, Font* bold, Font* italic);
   ~FontWrapper();
 
+  Size GetCharSize() const;
+
 private:
   // We shouldn't unload bold/italic font if they're referencing the regular font.
   bool unload_bold = true;
@@ -67,6 +69,7 @@ public:
   static void SetFontLoader(std::unique_ptr<FontLoader> font_loader);
   static void SetFontSize(int font_size);
 
+  static int GetFontSize();
   static std::shared_ptr<FontWrapper> GetFont();
   static std::shared_ptr<FontWrapper> GetFont(int font_size);
   static std::shared_ptr<FontWrapper> AddFont(int font_size, std::unique_ptr<FontWrapper> font); // Add the font and return it as a weak ref.
