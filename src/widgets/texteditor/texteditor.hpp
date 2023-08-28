@@ -11,26 +11,27 @@
 #include "core/common.hpp"
 #include "core/widget.hpp"
 #include "editor/buffer.hpp"
+#include "editor/file.hpp"
+
 #include "widgets/textbox/textbox.hpp"
 
 
 class TextEditor : public Widget {
 
 public:
-  TextEditor();
+  TextEditor(std::shared_ptr<File> file);
 
 private:
-  static void _ClearCursors(Widget* w, CommandArgs args);
 
   void _Draw(Size area) override;
   int _DrawLineNumbers(Vector2 pos, Size area); // Returns the gutter width as character count.
   void _DrawStatusLine(Vector2 pos, Size area);
 
   static std::shared_ptr<ModeList> _GetModes();
-  ///static void _ClearCursors(Widget* w, CommandArgs args);
+  static void _ClearCursors(Widget* w, CommandArgs args);
 
   TextBox* textbox = nullptr; // Child widget.
-  std::shared_ptr<Buffer> buffer;
+  std::shared_ptr<File> file;
 
   // All the values are multiple of char size.
   int gutter_margin_left = 1;

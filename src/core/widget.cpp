@@ -13,7 +13,9 @@
 Widget* Widget::AddChild(std::unique_ptr<Widget> child) {
   child->parent = this;
   children.push_back(std::move(child));
-  return children[children.size() - 1].get();
+  Widget* ptr = children[children.size() - 1].get();
+  if (focused_child == nullptr) focused_child = ptr;
+  return ptr;
 }
 
 
@@ -34,39 +36,63 @@ Widget* Widget::GetParent() const {
 }
 
 
+int Widget::GetChildCount() const {
+  return (int) children.size();
+}
+
+
+Widget* Widget::GetChild(int index) const {
+  if (!BETWEEN(0, index, children.size())) return nullptr;
+  return children[index].get();
+}
+
+
 bool Widget::IsFocused() const {
   return is_focused;
 }
 
 
-void Widget::SetFocused(bool is_focused) {
-  this->is_focused = is_focused;
+void Widget::_RemoveFocusTree() {
+  bool changed = is_focused;
+  is_focused = false;
+  for (auto& child : children) {
+    child->_RemoveFocusTree();
+  }
+  if (changed) OnFocusChanged();
+}
 
-  if (is_focused) {
-    if (focused_child != nullptr) focused_child->SetFocused(true);
 
-  } else {
-    for (auto& child : children) {
-      child->SetFocused(false);
-    }
+void Widget::SetFocused() {
+
+  // Update the focus tree.
+  if (focused_child != nullptr) {
+    focused_child->SetFocused();
+    return;
   }
 
-  OnFocusChanged();
+  Widget* curr = this;
+  while (curr) {
+
+    bool changed = !curr->is_focused;
+    curr->is_focused = true;
+    if (changed) OnFocusChanged();
+
+    if (curr->parent != nullptr) {
+      curr->parent->focused_child = curr;
+
+      for (auto& child : curr->parent->children) {
+        if (child.get() == curr) continue;
+        child.get()->_RemoveFocusTree();
+      }
+      
+    }
+    curr = curr->parent;
+  }
 }
 
 
 Widget* Widget::GetFocusedChild() const {
   return focused_child;
-}
-
-
-void Widget::SetFocusedChild(Widget* widget) {
-  focused_child = nullptr;
-  for (int i = 0; i < (int) children.size(); i++) {
-    Widget* c = children[i].get();
-    if (c == widget) focused_child = widget;
-    c->SetFocused(c == widget);
-  }
 }
 
 
@@ -133,14 +159,24 @@ void Widget::Draw(const Widget* parent, Size area) {
 }
 
 
+bool Widget::IsSplit() const {
+  return false;
+}
+
+
 bool Widget::HandleEvent(const Event& event) {
 
-  Widget* child = GetFocusedChild();
-  if (child && child->HandleEvent(event)) return true;
+  bool event_child_first = (mode != nullptr) ? mode->IsEventChildFirst() : true;
+
+  if (event_child_first) {
+    Widget* child = GetFocusedChild();
+    if (child && child->HandleEvent(event)) return true;
+  }
 
   switch (event.type) {
 
     case Event::Type::KEY: {
+      if (mode == nullptr) break;
 
       const Event::Key& key = event.key;
 
@@ -176,6 +212,11 @@ bool Widget::HandleEvent(const Event& event) {
       }
 
     } break;
+  }
+
+  if (!event_child_first) {
+    Widget* child = GetFocusedChild();
+    if (child && child->HandleEvent(event)) return true;
   }
 
   return false;

@@ -27,22 +27,12 @@ std::shared_ptr<ModeList> TextEditor::_GetModes() {
 }
 
 
-TextEditor::TextEditor() {
-
-  buffer = Buffer::New();
-
-  // Temproary:
-  auto highlighter = Highlighter::New();
-  highlighter->SetLanguage(LanguageManager::GetLanguage("c"));
-  buffer->RegisterListener(highlighter.get());
-
+TextEditor::TextEditor(std::shared_ptr<File> file) {
   _SetModes(_GetModes());
 
-  std::unique_ptr<TextBox> tb = std::make_unique<TextBox>(true, buffer);
-  tb->SetHighlighter(std::move(highlighter));
+  std::unique_ptr<TextBox> tb = std::make_unique<TextBox>(true, file->GetBuffer());
+  tb->SetHighlighter(file->GetHighlighter());
   textbox = static_cast<TextBox*>(AddChild(std::move(tb)));
-  SetFocusedChild(textbox);
-
 }
 
 

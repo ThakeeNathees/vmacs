@@ -81,8 +81,13 @@ const HighlightSlice* Highlighter::GetHighlightSlice(int index) const {
 }
 
 
-const HighlightCache* Highlighter::GetCache() const {
+HighlightCache* Highlighter::GetCache() const {
   return cache.get();
+}
+
+
+const std::vector<HighlightSlice>& Highlighter::GetHighlightSlices() const {
+  return slices;
 }
 
 

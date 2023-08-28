@@ -9,16 +9,27 @@
 #include "mode.hpp"
 
 
-std::shared_ptr<Mode> Mode::New(const std::string& name, BindingData&& data) {
+std::shared_ptr<Mode> Mode::New(const char* name, BindingData&& data) {
   return New(name, "", std::move(data));
 }
 
 
-std::shared_ptr<Mode> Mode::New(const std::string& name, const std::string& parent, BindingData&& data) {
+std::shared_ptr<Mode> Mode::New(const char* name, bool event_child_first, BindingData&& data) {
+  return New(name, "", event_child_first, std::move(data));
+}
+
+
+std::shared_ptr<Mode> Mode::New(const char* name, const char* parent, BindingData&& data) {
+  return New(name, parent, true, std::move(data));
+}
+
+
+std::shared_ptr<Mode> Mode::New(const char* name, const char* parent, bool event_child_first, BindingData&& data) {
   std::shared_ptr<Mode> mode = std::make_shared<Mode>();
   mode->name = name;
   mode->parent_name = parent;
   mode->bindings = KeyBindings::New(std::move(data));
+  mode->event_child_first = event_child_first;
   return mode;
 }
 
@@ -42,6 +53,11 @@ const KeyBindings* Mode::GetBindings() const {
 
 const std::string& Mode::GetName() const {
   return name;
+}
+
+
+bool Mode::IsEventChildFirst() const {
+  return event_child_first;
 }
 
 

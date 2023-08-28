@@ -159,7 +159,8 @@ void TextBox::_DrawSelections(Size area) {
 
 
 void TextBox::_DrawCursors(Size area) {
-  if (!IsFocused() || !cursors.IsBlinkShow()) return;
+  if (!IsFocused() && !multiline) return;
+  if (IsFocused() && !cursors.IsBlinkShow()) return;
 
   Size char_size = FontManager::GetFont()->GetCharSize();
   const UiThemeCache& ui = ThemeManager::GetCurrentTheme()->GetUiEntries();
@@ -178,13 +179,18 @@ void TextBox::_DrawCursors(Size area) {
 
     int draw_x = coord.col * char_size.width;
     int draw_y = coord.row * char_size.height;
-    DrawRectangle(
+
+    typedef void (*DrawCursorFn)(int posX, int posY, int width, int height, Color color);
+    DrawCursorFn draw_cursor = (IsFocused()) ? DrawRectangle : DrawRectangleLines;
+    draw_cursor(
       draw_x,
       draw_y,
       char_size.width,
       char_size.height,
       ui.cursor_primary.fg
     );
+
+    if (!IsFocused()) continue;
 
     int codepoint = buffer->At(cursor.GetIndex());
     if (codepoint != '\0' && codepoint != '\n') {
@@ -204,6 +210,7 @@ void TextBox::_DrawText(Size area) {
   Size char_size = FontManager::GetFont()->GetCharSize();
   int font_size = FontManager::GetFontSize();
   Font font = FontManager::GetFont()->regular;
+
   const UiThemeCache& ui = ThemeManager::GetCurrentTheme()->GetUiEntries();
 
   const std::vector<Themelet>* themelets = (highlighter != nullptr)

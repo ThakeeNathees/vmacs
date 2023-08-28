@@ -120,6 +120,7 @@ void Window::Close() {
 
 
 void Window::SetMainWidget(std::unique_ptr<Widget> widget) {
+  widget->SetFocused();
   singleton->main_widget = std::move(widget);
 }
 
@@ -183,4 +184,3 @@ void Window::_LoadConfig() {
       if (ok && val > 0) FontManager::SetFontSize((int) val); }
   }
 }
-

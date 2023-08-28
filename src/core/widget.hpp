@@ -22,6 +22,10 @@ public:
 	virtual void Draw(const Widget* parent, Size area) final;
 	virtual void Cleanup() {}
 
+	// To traverse between splits, this might not be the propper way to do it
+	// but who cares.
+	virtual bool IsSplit() const;
+
 	// Signals.
 	virtual void OnFocusChanged() {}
 
@@ -34,10 +38,13 @@ public:
 	void RemoveChild(Widget* widget);
 	Widget* GetParent() const;
 
+	int GetChildCount() const;
+	Widget* GetChild(int index) const;
+
 	bool IsFocused() const;
-	void SetFocused(bool is_focused);
+	void SetFocused();
+
 	Widget* GetFocusedChild() const;
-	void SetFocusedChild(Widget* child);
 
 protected:
 	// Implement this in all child classes and call the above Draw method when
@@ -50,16 +57,18 @@ protected:
 	RenderTexture2D canvas = { 0 };
 
 private:
+	void _RemoveFocusTree();
+
 	Mode* mode = nullptr; // Current mode in the modes list.
 	std::shared_ptr<ModeList> modes;
 
 	Widget* parent = nullptr;
 	std::vector<std::unique_ptr<Widget>> children;
 
-	bool is_focused = false;
-
 	// Pointer to the focused child. When this widget gain focus it'll pass the
 	// focus to it's focused_childs along the tree.
 	Widget* focused_child = nullptr;
+
+	bool is_focused = false;
 
 };

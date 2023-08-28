@@ -69,9 +69,9 @@ public:
   void Highlight(const char* source, int size);
   void SetLanguage(const Language* lang);
 
-  const std::vector<HighlightSlice>& GetHighlightSlices() const { return slices; }
+  HighlightCache* GetCache() const;
+  const std::vector<HighlightSlice>& GetHighlightSlices() const;
   const HighlightSlice* GetHighlightSlice(int index) const;
-  const HighlightCache* GetCache() const;
 
   void OnBufferChanged(Buffer* buffer) override;
 
