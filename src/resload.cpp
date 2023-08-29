@@ -48,4 +48,11 @@ void LoadResources() {
     #include "res/queries/c.scm.hpp"
   );
   LanguageManager::AddLanguage(std::move(c));
+
+  std::unique_ptr<Language> python = Language::New("python");
+  python->SetData(tree_sitter_python());
+  python->SetQuery(
+    #include "res/queries/python.scm.hpp"
+  );
+  LanguageManager::AddLanguage(std::move(python));
 }

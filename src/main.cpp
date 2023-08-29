@@ -31,7 +31,7 @@ int main() {
 
 
   std::shared_ptr<File> file = File::New();
-  file->SetLanguage(LanguageManager::GetLanguage("c"));
+  file->SetLanguage(LanguageManager::GetLanguage("python"));
 
   //auto hsplit = std::make_unique<HSplit>();
   //hsplit->AddChild(std::make_unique<TextEditor>(file));

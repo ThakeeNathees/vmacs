@@ -35,9 +35,6 @@ public:
     // If use select a text and past something, we remove the selected
     // text and insert the clipboard there, and it considered as a single
     // INSERT_TEXT action where added, removed strings are there.
-    //
-    // If we selection some lines and indent, it's an INSERT_TEXT action,
-    // where the old de-indent text is removed and new string added.
     std::string removed;
     std::string added;
 

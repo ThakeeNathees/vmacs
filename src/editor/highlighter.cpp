@@ -11,6 +11,7 @@
 #include "highlighter.hpp"
 
 #include <algorithm>
+#include <regex>
 
 #include "core/theme.hpp"
 
@@ -97,11 +98,96 @@ void Highlighter::OnBufferChanged(Buffer* buffer) {
 }
 
 
+// TODO: Move this to a general place to parse tree-sitter predicates.
+// The logic is stolen from: https://github.com/tree-sitter/tree-sitter/blob/a0cf0a7104f4a64eac04bd916297524db83d09c0/lib/binding_web/binding.js#L844
+bool TreeSitterCheckPredicate(const char* source, const TSQuery* query, TSQueryMatch match) {
+
+  // Incase of error we'll return true ignoring the predicate.
+#define return_error return true
+#define get_str(id) ts_query_string_value_for_id(query, (id), &length)
+#define get_capture(id) ts_query_capture_name_for_id(query, (id), &length)
+
+  uint32_t step_count;
+  const TSQueryPredicateStep* steps = ts_query_predicates_for_pattern(query, match.pattern_index, &step_count);
+
+  uint32_t i = 0;
+  for (; i < step_count; i++) {
+    if (steps[i].type == TSQueryPredicateStepTypeDone) break;
+  }
+  step_count = i;
+
+  if (step_count == 0) return true; // Nothing to check.
+  if (steps[0].type != TSQueryPredicateStepTypeString) return_error;
+
+  uint32_t length;
+  const char* predicate_name = get_str(steps[0].value_id);
+
+  bool is_positive = true;
+  switch (ConstHash(predicate_name)) {
+
+    case "not-eq?"_hash: {
+      is_positive = false;
+      [[fallthrough]];
+
+    case "eq?"_hash:
+      if (step_count != 3) return_error;
+      TODO;
+    } break;
+
+    case "not-match?"_hash: {
+      is_positive = false;
+      [[fallthrough]];
+
+    case "match?"_hash:
+
+      if (step_count != 3) return_error;
+      if (steps[1].type != TSQueryPredicateStepTypeCapture) return_error;
+      if (steps[2].type != TSQueryPredicateStepTypeString) return_error;
+
+      const char* capture_name = get_capture(steps[1].value_id);
+      std::regex re(get_str(steps[2].value_id));
+
+      for (int i = 0; i < match.capture_count; i++) {
+        TSQueryCapture capture = match.captures[i];
+
+        if (strcmp(get_capture(capture.index), capture_name) == 0) {
+
+          uint32_t start = ts_node_start_byte(capture.node);
+          uint32_t end = ts_node_end_byte(capture.node);
+          std::string text(source + start, end - start);
+          return std::regex_match(text, re) == is_positive;
+        }
+
+      }
+    } break;
+
+    case "set!"_hash:
+      TODO;
+    break;
+
+    case "is?"_hash: {
+      [[fallthrough]];
+
+    case "is-not?"_hash:
+      TODO;
+    } break;
+    
+  }
+
+  return true;
+
+#undef get_capture
+#undef get_str
+#undef return_error
+}
+
+
 void Highlighter::Highlight(const char* source, int size) {
   slices.clear();
   if (lang == nullptr || lang->GetQuery() == nullptr) return;
 
   ts_parser_set_language(parser, lang->GetData());
+  const TSQuery* query = lang->GetQuery();
 
   // TODO: use ts_tree_edit and pass old tree here to make the parsing much
   // faster and efficient.
@@ -110,22 +196,26 @@ void Highlighter::Highlight(const char* source, int size) {
   TSQueryCursor* cursor = ts_query_cursor_new();
   TSNode root_node = ts_tree_root_node(tree);
 
-  ts_query_cursor_exec(cursor, lang->GetQuery(), root_node);
+  ts_query_cursor_exec(cursor, query, root_node);
   {
     TSQueryMatch match;
     while (ts_query_cursor_next_match(cursor, &match)) {
-      for (int i = 0; i < match.capture_count; i++) {
 
-        uint32_t len;
-        const char* capture = ts_query_capture_name_for_id(lang->GetQuery(), match.captures[i].index, &len);
-        TSNode node = match.captures[i].node;
+      if (!TreeSitterCheckPredicate(source, query, match)) continue;
+      if (match.capture_count == 0) continue; // We'll create a slice for the first capture.
 
-        HighlightSlice slice;
-        slice.capture = capture;
-        slice.start = ts_node_start_byte(node);
-        slice.end = ts_node_end_byte(node);
-        slices.push_back(slice);
-      }
+      uint32_t len;
+      TSQueryCapture capture = match.captures[0];
+      TSNode node = capture.node;
+
+      // TODO: Maybe we can do a red underline to indicate syntax error.
+      if (ts_node_is_error(node)) continue;
+
+      HighlightSlice slice;
+      slice.capture = ts_query_capture_name_for_id(query, capture.index, &len);
+      slice.start = ts_node_start_byte(node);
+      slice.end = ts_node_end_byte(node);
+      slices.push_back(slice);
     }
   }
   ts_query_cursor_delete(cursor);

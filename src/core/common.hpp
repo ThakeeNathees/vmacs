@@ -37,3 +37,12 @@ typedef struct {
   int width;
   int height;
 } Size;
+
+
+unsigned constexpr ConstHash(char const* input) {
+  return *input ? static_cast<unsigned int>(*input) + 33 * ConstHash(input + 1) : 5381;
+}
+
+std::size_t constexpr operator "" _hash(const char* s, size_t) {
+  return ConstHash(s);
+}

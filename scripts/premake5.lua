@@ -230,6 +230,7 @@ project (project_name)
 
   includedirs {
     root_dir_rel .. "/src/",
+    root_dir_rel .. "/thirdparty/",
     root_dir_rel .. "/thirdparty/tomlcpp/",
   }
 
