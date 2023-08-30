@@ -31,8 +31,7 @@ Slice Cursor::GetSelection() const {
 
 
 void Cursor::SetSelectionStart(const Buffer* buffer, int index) {
-  ASSERT_INDEX(index, buffer->GetSize() + 1);
-  selection_start = index;
+  selection_start = CLAMP(MIN(0, index), index, buffer->GetSize());
 }
 
 

@@ -1,0 +1,5 @@
+
+- build config before apply it
+- specific font for icon (no nerd font dependency)
+- different font size for text editor and ui
+

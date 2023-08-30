@@ -22,9 +22,14 @@ public:
 	virtual void Draw(const Widget* parent, Size area) final;
 	virtual void Cleanup() {}
 
+	// Create a copy of this widget and return (to split view).
+	// By default it'll return nullptr.
+	virtual std::unique_ptr<Widget> Copy() const;
+
 	// To traverse between splits, this might not be the propper way to do it
 	// but who cares.
 	virtual bool IsSplit() const;
+	Widget* GetFocusedWidget(); // Returns the non-split widget that has focus.
 
 	// Signals.
 	virtual void OnFocusChanged() {}
@@ -34,12 +39,13 @@ public:
 
 	// Returns the index of the child. Note that if we ever remove a child from
 	// the widget this index will be invalid.
-	Widget* AddChild(std::unique_ptr<Widget> child);
-	void RemoveChild(Widget* widget);
+	Widget* AddChild(std::unique_ptr<Widget> child, int index = -1);
+	std::unique_ptr<Widget> RemoveChild(Widget* widget, int* index = nullptr);
 	Widget* GetParent() const;
 
 	int GetChildCount() const;
 	Widget* GetChild(int index) const;
+	int GetChildIndex(Widget* child) const;
 
 	bool IsFocused() const;
 	void SetFocused();

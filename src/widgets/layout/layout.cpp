@@ -10,28 +10,20 @@
 #include "core/font.hpp"
 
 
-std::shared_ptr<ModeList> RootView::_GetModes() {
-	static std::shared_ptr<ModeList> modes = std::make_shared<ModeList>(
-		std::initializer_list<std::shared_ptr<Mode>>({
+Split::Split(Split::Type type) : type(type) {
+}
 
-			Mode::New("normal", {
-				{ "ctrl+w" , RootView::_ModeListenWindow },
-				{ "ctrl+shift+;" , RootView::_ModeCommand },
-			}),
 
-			Mode::New("listen_window", false, { // Listen key after ctrl+w.
-				{ "<other>" , RootView::_ModeNormal },
-				{ "w" , RootView::_SwitchWindow },
-			}),
+std::unique_ptr<Split> Split::New(Split::Type type) {
+	switch (type) {
+		case HSPLIT:
+		return std::make_unique<HSplit>();
 
-			Mode::New("command", {
-				{ "esc" , RootView::_ModeNormal },
-				// { "enter" , RootView::CommandExecute },
-			}),
+		case VSPLIT:
+		return std::make_unique<VSplit>();
+	}
 
-    }));
-
-	return modes;
+	UNREACHABLE();
 }
 
 
@@ -40,90 +32,66 @@ bool Split::IsSplit() const {
 }
 
 
-RootView::RootView(std::unique_ptr<Widget> main_widget) {
-
-	_SetModes(_GetModes());
-
-	this->main_widget = AddChild(std::move(main_widget));
-
-	std::unique_ptr<MiniBuffer> minibuffer = std::make_unique<MiniBuffer>();
-	this->minibuffer = static_cast<MiniBuffer*>(AddChild(std::move(minibuffer)));
+Split::Type Split::GetType() const {
+	return type;
 }
 
 
-void RootView::_Draw(Size area) {
-	
-	Size char_size = FontManager::GetFont()->GetCharSize();
-
-	main_widget->Draw(this, { area.width, area.height - char_size.height });
-	DrawRenderTexture(main_widget->GetCanvas(), { 0, 0 });
-
-	minibuffer->Draw(this, { area.width, char_size.height });
-	DrawRenderTexture(minibuffer->GetCanvas(), { 0, (float)area.height - char_size.height });
-}
-
-
-static void FocusNextWidget(Widget* widget, bool& focus_next, bool& done) {
-	if (done) return;
+static void _SplitTraverse(std::vector<Widget*>& list, Widget* widget) {
+	if (widget == nullptr) return;
 
 	if (!widget->IsSplit()) {
-		if (focus_next) {
-			widget->SetFocused();
-			done = true;
-		} else {
-			focus_next = widget->IsFocused();
-		}
+		list.push_back(widget);
 		return;
 	}
 
 	for (int i = 0; i < widget->GetChildCount(); i++) {
-		FocusNextWidget(widget->GetChild(i), focus_next, done);
-		if (done) return;
+		_SplitTraverse(list, widget->GetChild(i));
+	}
+}
+
+
+std::vector<Widget*> Split::Traverse() {
+	std::vector<Widget*> ret;
+	_SplitTraverse(ret, this);
+	return ret;
+}
+
+
+Widget* Split::SplitChild(Widget* widget, Split::Type type) {
+	Widget* parent = widget->GetParent();
+	if (parent == nullptr) return nullptr;
+
+	if (parent->IsSplit() && static_cast<Split*>(parent)->type == type) {
+		std::unique_ptr<Widget> copy = widget->Copy();
+		if (copy == nullptr) return nullptr;
+		parent->AddChild(std::move(copy), parent->GetChildIndex(widget) + 1)->SetFocused();
+		return parent;
+
+	} else {
+		int index;
+		bool is_focused_child = parent->GetFocusedChild() == widget;
+		std::unique_ptr<Widget> first = parent->RemoveChild(widget, &index);
+		std::unique_ptr<Widget> second = widget->Copy();
+		if (first == nullptr || second == nullptr) return nullptr;
+		std::unique_ptr<Split> split = Split::New(type);
+		split->AddChild(std::move(first));
+		Widget* next_focus = split->AddChild(std::move(second));
+
+		Widget* new_child = parent->AddChild(std::move(split), index);
+		if (is_focused_child) next_focus->SetFocused();
+		return new_child;
 	}
 
+	UNREACHABLE();
 }
 
 
-void RootView::_ModeListenWindow(Widget* w, CommandArgs args) {
-	RootView* rv = static_cast<RootView*>(w);
-	rv->SetMode("listen_window");
+VSplit::VSplit() : Split(Split::VSPLIT) {
 }
 
 
-void RootView::_SwitchWindow(Widget* w, CommandArgs args) {
-	RootView* rv = static_cast<RootView*>(w);
-
-	bool focus_next = false, done = false;
-	FocusNextWidget(rv->main_widget , focus_next, done);
-	if (!done) {
-		Widget* first = rv->main_widget;
-		while (first->IsSplit() && first->GetChildCount() > 0) {
-			Widget* child = first->GetChild(0);
-			if (!child->IsSplit()) {
-				child->SetFocused();
-				break;
-			} else {
-				first = child;
-			}
-		}
-	}
-
-	rv->SetMode("normal");
-}
-
-
-void RootView::_ModeNormal(Widget* w, CommandArgs args) {
-	RootView* rv = static_cast<RootView*>(w);
-	rv->SetMode("normal");
-	rv->minibuffer->Clean();
-	rv->main_widget->SetFocused();
-}
-
-
-void RootView::_ModeCommand(Widget* w, CommandArgs args) {
-	RootView* rv = static_cast<RootView*>(w);
-	rv->SetMode("command");
-	rv->minibuffer->SetFocused();
+HSplit::HSplit() : Split(Split::HSPLIT) {
 }
 
 

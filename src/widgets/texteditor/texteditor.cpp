@@ -27,13 +27,20 @@ std::shared_ptr<ModeList> TextEditor::_GetModes() {
 }
 
 
-TextEditor::TextEditor(std::shared_ptr<File> file) {
+TextEditor::TextEditor(std::shared_ptr<File> file) : file(file) {
   _SetModes(_GetModes());
 
   std::unique_ptr<TextBox> tb = std::make_unique<TextBox>(true, file->GetBuffer());
   tb->SetHighlighter(file->GetHighlighter());
   textbox = static_cast<TextBox*>(AddChild(std::move(tb)));
   file->GetBuffer()->GetHistory().RegisterListener(textbox);
+}
+
+
+std::unique_ptr<Widget> TextEditor::Copy() const {
+  std::unique_ptr<TextEditor> e = std::make_unique<TextEditor>(file);
+  e->textbox->CopyValues(*textbox);
+  return std::move(e);
 }
 
 

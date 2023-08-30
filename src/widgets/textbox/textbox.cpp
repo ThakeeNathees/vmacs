@@ -63,6 +63,16 @@ TextBox::TextBox(bool multiline, std::shared_ptr<Buffer> buffer)
 }
 
 
+void TextBox::CopyValues(const TextBox& other) {
+  multiline = other.multiline;
+  buffer = other.buffer;
+  highlighter = other.highlighter;
+  cursors = other.cursors;
+  view_start = other.view_start;
+  text_area = other.text_area;
+}
+
+
 void TextBox::SetHighlighter(std::shared_ptr<Highlighter> highlighter) {
   this->highlighter = highlighter;
 }
@@ -108,13 +118,13 @@ void TextBox::Clean() {
 void TextBox::_EnsureCursorsOnView() {
   Coord coord = cursors.GetPrimaryCursor().GetCoord();
 
-  if (coord.col < view_start.col) {
+  if (coord.col <= view_start.col) {
     view_start.col = coord.col;
   } else if (view_start.col + text_area.width <= coord.col) {
     view_start.col = coord.col - text_area.width + 1;
   }
 
-  if (coord.row < view_start.row) {
+  if (coord.row <= view_start.row) {
     view_start.row = coord.row;
   } else if (view_start.row + text_area.height <= coord.row) {
     view_start.row = coord.row - text_area.height + 1;

@@ -1,3 +1,10 @@
+// .--.--.--------.-----.----.-----. vmacs text editor and more.
+// |  |  |        |  _  |  __|__ --| version 0.1.0
+//  \___/|__|__|__|__.__|____|_____| https://github.com/thakeenathees/vmacs
+//
+// Copyright (c) 2023 Thakee Nathees
+// Licenced under: MIT
+
 #include "client.hpp"
 
 

@@ -16,6 +16,7 @@
 
 #include "widgets/layout/layout.hpp"
 #include "widgets/texteditor/texteditor.hpp"
+#include "widgets/rootview/rootview.hpp"
 
 void LoadResources();
 
@@ -36,15 +37,14 @@ int main() {
   //auto hsplit = std::make_unique<HSplit>();
   //hsplit->AddChild(std::make_unique<TextEditor>(file));
   //hsplit->AddChild(std::make_unique<TextEditor>(file));
-  auto vsplit = std::make_unique<VSplit>();
-  vsplit->AddChild(std::make_unique<TextEditor>(file));
-
-  vsplit->AddChild(std::make_unique<TextEditor>(file));
+  //auto vsplit = std::make_unique<VSplit>();
+  //vsplit->AddChild(std::make_unique<TextEditor>(file));
   //vsplit->AddChild(std::move(hsplit));
+  //Window::SetMainWidget(std::make_unique<RootView>(std::move(vsplit)));
 
-  Window::SetMainWidget(std::make_unique<RootView>(std::move(vsplit)));
-
-  //Window::SetMainWidget(std::make_unique<TextEditor>(file));
+  Window::SetMainWidget(std::make_unique<RootView>(
+    std::make_unique<TextEditor>(file)
+  ));
 
 
   while (!Window::ShouldClose()) {

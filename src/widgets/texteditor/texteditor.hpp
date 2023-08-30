@@ -21,6 +21,8 @@ class TextEditor : public Widget {
 public:
   TextEditor(std::shared_ptr<File> file);
 
+  std::unique_ptr<Widget> Copy() const override;
+
 private:
 
   void _Draw(Size area) override;
@@ -33,6 +35,7 @@ private:
   TextBox* textbox = nullptr; // Child widget.
   std::shared_ptr<File> file;
 
+  // TODO: Make it static.
   // All the values are multiple of char size.
   int gutter_margin_left = 1;
   int gutter_min_width = 2;

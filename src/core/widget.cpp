@@ -10,24 +10,35 @@
 #include "window.hpp"
 
 
-Widget* Widget::AddChild(std::unique_ptr<Widget> child) {
+Widget* Widget::AddChild(std::unique_ptr<Widget> child, int index) {
   child->parent = this;
-  children.push_back(std::move(child));
-  Widget* ptr = children[children.size() - 1].get();
+  Widget* ptr = nullptr;
+  if (index < 0) {
+    children.push_back(std::move(child));
+    ptr = children[children.size() - 1].get();
+  } else {
+    children.insert(children.begin() + index, std::move(child));
+    ptr = children[index].get();
+  }
   if (focused_child == nullptr) focused_child = ptr;
   return ptr;
 }
 
 
-void Widget::RemoveChild(Widget* widget) {
+std::unique_ptr<Widget> Widget::RemoveChild(Widget* widget, int* index) {
+  std::unique_ptr<Widget> ret;
   auto it = children.begin();
   while (it != children.end()) {
     if (it->get() == widget) {
+      if (widget == focused_child) focused_child = nullptr;
+      if (index) *index = (int)(it - children.begin());
+      ret = std::move(*it);
       children.erase(it);
-      return;
+      return std::move(ret);
     }
     ++it;
   }
+  return nullptr;
 }
 
 
@@ -44,6 +55,14 @@ int Widget::GetChildCount() const {
 Widget* Widget::GetChild(int index) const {
   if (!BETWEEN(0, index, children.size())) return nullptr;
   return children[index].get();
+}
+
+
+int Widget::GetChildIndex(Widget* child) const {
+  for (size_t i = 0; i < children.size(); i++) {
+    if (children[i].get() == child) return (int)i;
+  }
+  return -1;
 }
 
 
@@ -98,6 +117,11 @@ Widget* Widget::GetFocusedChild() const {
 
 RenderTexture2D Widget::GetCanvas() const {
   return canvas;
+}
+
+
+std::unique_ptr<Widget> Widget::Copy() const {
+  return nullptr;
 }
 
 
@@ -161,6 +185,14 @@ void Widget::Draw(const Widget* parent, Size area) {
 
 bool Widget::IsSplit() const {
   return false;
+}
+
+
+Widget* Widget::GetFocusedWidget() {
+  if (!IsFocused()) return nullptr;
+  if (!IsSplit()) return this;
+  if (focused_child == nullptr) return nullptr; // Unlikely.
+  return focused_child->GetFocusedWidget();
 }
 
 

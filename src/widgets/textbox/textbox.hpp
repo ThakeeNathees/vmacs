@@ -18,6 +18,7 @@ class TextBox : public Widget, public HistoryListener {
 
 public:
   TextBox(bool multiline, std::shared_ptr<Buffer> buffer);
+  void CopyValues(const TextBox& other);
 
   void SetHighlighter(std::shared_ptr<Highlighter> highlighter);
 

@@ -10,43 +10,46 @@
 #include "core/common.hpp"
 #include "core/widget.hpp"
 
-#include "widgets/minibuffer/minibuffer.hpp"
-
 
 class Split : public Widget {
 public:
-	bool IsSplit() const override;
+  enum Type {
+    VSPLIT,
+    HSPLIT,
+  };
+
+protected: Split(Split::Type type);
+public:	static std::unique_ptr<Split> New(Split::Type type);
+
+public:
+
+  bool IsSplit() const override;
+  Type GetType() const;
+
+  std::vector<Widget*> Traverse();
+
+  // Split the widget from it's parent and return the split pointer.
+  // This will return split container of the widget.
+  static Widget* SplitChild(Widget* widget, Split::Type type);
+
+private:
+  Type type;
 };
 
 
 class VSplit : public Split {
+public:
+  VSplit();
 
 private:
-	void _Draw(Size area) override;
+  void _Draw(Size area) override;
 };
 
 
 class HSplit : public Split {
-private:
-	void _Draw(Size area) override;
-};
-
-
-
-class RootView : public Widget {
 public:
-	RootView(std::unique_ptr<Widget> main_widget);
+  HSplit();
 
 private:
-	void _Draw(Size area) override;
-
-	static std::shared_ptr<ModeList> _GetModes();
-	static void _ModeListenWindow(Widget* w, CommandArgs args);
-	static void _SwitchWindow(Widget* w, CommandArgs args);
-	static void _ModeNormal(Widget* w, CommandArgs args);
-	static void _ModeCommand(Widget* w, CommandArgs args);
-
-	Widget* main_widget = nullptr;
-	MiniBuffer* minibuffer = nullptr;
-
+  void _Draw(Size area) override;
 };
