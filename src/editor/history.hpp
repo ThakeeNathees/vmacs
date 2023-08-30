@@ -14,11 +14,11 @@
 // (raw pointer) to buffer so we forward declare it here.
 class Buffer;
 class History;
-
+class Action;
 
 class HistoryListener {
 public:
-  virtual void OnHistoryChanged(History* history) = 0;
+  virtual void OnHistoryChanged(History* history, bool undo, const Action* action) = 0;
 };
 
 
@@ -40,6 +40,9 @@ public:
 
     // Index in the buffer where we performed the delta.
     int index = -1;
+
+    // We need this to sync lsp document.
+    Coord start = {0}, end = {0};
 
     // Only create this object as a unique pointer.
   public: static std::unique_ptr<TextDelta> New() { return std::unique_ptr<TextDelta>(new TextDelta()); }
@@ -107,7 +110,7 @@ private:
   void _Merge(Action& on, const Action& next);
 
   void _CommitAction(std::unique_ptr<Action> action);
-  void _OnHistoryChanged();
+  void _OnHistoryChanged(bool undo, const Action* action);
 
   // We're assuming that the buffer and listeners will be alive
   // till the lifetime of this history object.

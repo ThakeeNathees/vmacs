@@ -31,12 +31,13 @@ Slice Cursor::GetSelection() const {
 
 
 void Cursor::SetSelectionStart(const Buffer* buffer, int index) {
-  ASSERT_INDEX(index, buffer->GetSize());
+  ASSERT_INDEX(index, buffer->GetSize() + 1);
   selection_start = index;
 }
 
 
 void Cursor::SetIndex(const Buffer* buffer, int index) {
+  index = MIN(MAX(0, index), buffer->GetSize());
   this->index = index;
   this->coord = buffer->IndexToCoord(index);
 }
@@ -191,6 +192,7 @@ void Cursors::ClearMultiCursors() {
 
 void Cursors::OnMoved(const Buffer* buffer) {
   ResetBlinkTimer();
+  _ClampPositions(buffer);
   _RemoveDuplicates();
   _MergeSelections(buffer);
 }
@@ -217,6 +219,17 @@ void Cursors::_SortCursors() {
     [](const Cursor& l, const Cursor& r) {
       return l.GetIndex() < r.GetIndex();
   });
+}
+
+
+void Cursors::_ClampPositions(const Buffer* buffer) {
+  for (Cursor& cursor : cursors) {
+    if (cursor.GetIndex() < 0) {
+      cursor.SetIndex(buffer, 0);
+    } else if (cursor.GetIndex() > buffer->GetSize()) {
+      cursor.SetIndex(buffer, buffer->GetSize());
+    }
+  }
 }
 
 

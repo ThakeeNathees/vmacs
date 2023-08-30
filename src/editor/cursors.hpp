@@ -81,6 +81,7 @@ public:
 
 private:
   void _SortCursors();
+  void _ClampPositions(const Buffer* buffer);
   void _RemoveDuplicates();
   void _MergeSelections(const Buffer* buffer);
 

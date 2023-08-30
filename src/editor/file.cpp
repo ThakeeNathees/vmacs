@@ -11,32 +11,32 @@
 
 
 File::File() {
-	buffer->RegisterListener(highlighter.get());
-	buffer->GetHistory().RegisterListener(this);
-	ThemeManager::RegisterListener(this);
+  buffer->RegisterListener(highlighter.get());
+  buffer->GetHistory().RegisterListener(this);
+  ThemeManager::RegisterListener(this);
 }
 
 
 void File::OnThemeChanged(const Theme* theme) {
-	highlighter->GetCache()->CacheThemelets(buffer.get(), highlighter.get());
+  highlighter->GetCache()->CacheThemelets(buffer.get(), highlighter.get());
 }
 
 
-void File::OnHistoryChanged(History* history) {
+void File::OnHistoryChanged(History* history, bool unod, const Action* action) {
 
 }
 
 
 void File::SetLanguage(const Language* lang) {
-	highlighter->SetLanguage(lang);
+  highlighter->SetLanguage(lang);
 }
 
 
 std::shared_ptr<Buffer> File::GetBuffer() {
-	return buffer;
+  return buffer;
 }
 
 
 std::shared_ptr<Highlighter> File::GetHighlighter() {
-	return highlighter;
+  return highlighter;
 }

@@ -33,6 +33,7 @@ TextEditor::TextEditor(std::shared_ptr<File> file) {
   std::unique_ptr<TextBox> tb = std::make_unique<TextBox>(true, file->GetBuffer());
   tb->SetHighlighter(file->GetHighlighter());
   textbox = static_cast<TextBox*>(AddChild(std::move(tb)));
+  file->GetBuffer()->GetHistory().RegisterListener(textbox);
 }
 
 

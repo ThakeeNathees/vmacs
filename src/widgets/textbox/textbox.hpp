@@ -14,7 +14,7 @@
 #include "editor/highlighter.hpp"
 
 
-class TextBox : public Widget {
+class TextBox : public Widget, public HistoryListener {
 
 public:
   TextBox(bool multiline, std::shared_ptr<Buffer> buffer);
@@ -32,6 +32,8 @@ public:
 
 
 private:
+  void OnHistoryChanged(History* history, bool unod, const Action* action) override;
+
   void _EnsureCursorsOnView();
 
   void _Draw(Size area) override;
@@ -61,6 +63,7 @@ private:
   std::shared_ptr<Highlighter> highlighter;
 
   Cursors cursors;
+
   Coord view_start = { 0 };
   Size text_area = { 0 }; // We store the size of the text area here to adjust the view.
 

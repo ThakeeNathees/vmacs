@@ -31,6 +31,9 @@ Cursors History::CommitInsertText(Cursors cursors, const std::string& text) {
       int count = selection.end - selection.start;
 
       delta->index = selection.start;
+      delta->start = buffer->IndexToCoord(selection.start);
+      delta->end = buffer->IndexToCoord(selection.end);
+
       delta->removed = buffer->GetSubstring(delta->index, count);
 
       buffer->RemoveText(selection.start, count);
@@ -41,6 +44,8 @@ Cursors History::CommitInsertText(Cursors cursors, const std::string& text) {
 
     } else {
       delta->index = cursor.GetIndex();
+      delta->start = buffer->IndexToCoord(delta->index);
+      delta->end = delta->start;
     }
 
     buffer->InsertText(cursor.GetIndex(), text);
@@ -90,6 +95,9 @@ Cursors History::CommitRemoveText(Cursors cursors) {
       int count = selection.end - selection.start;
 
       delta->index = selection.start;
+      delta->start = buffer->IndexToCoord(selection.start);
+      delta->end = buffer->IndexToCoord(selection.end);
+
       delta->removed = buffer->GetSubstring(delta->index, count);
 
       buffer->RemoveText(selection.start, count);
@@ -102,7 +110,11 @@ Cursors History::CommitRemoveText(Cursors cursors) {
       int index = cursor.GetIndex();
       if (index == 0) continue;
 
+      // FIXME: This logic is written for backspace and not valid for delete.
       delta->index = index - 1;
+      delta->start = buffer->IndexToCoord(delta->index);
+      delta->end = buffer->IndexToCoord(delta->index + 1);
+
       delta->removed = buffer->GetSubstring(index - 1, 1);
 
       buffer->RemoveText(index - 1, 1);
@@ -140,6 +152,7 @@ void History::_CommitAction(std::unique_ptr<Action> action) {
   ASSERT(ptr >= -1, OOPS);
 
   _UpdateMergability(*action);
+  const Action* action_ptr = action.get();
 
   if (ptr >= 0 && _CanMerge(*actions[ptr], *action)) {
     _Merge(*actions[ptr], *action);
@@ -153,7 +166,7 @@ void History::_CommitAction(std::unique_ptr<Action> action) {
   // Remove all the future actions.
   actions.erase(actions.begin() + (ptr + 1), actions.end());
 
-  _OnHistoryChanged();
+  _OnHistoryChanged(false, action_ptr);
 }
 
 
@@ -301,7 +314,7 @@ const Cursors& History::Undo() {
     } break;
   }
 
-  _OnHistoryChanged();
+  _OnHistoryChanged(true, &action);
   return action.before;
 }
 
@@ -329,7 +342,7 @@ const Cursors& History::Redo() {
     } break;
   }
 
-  _OnHistoryChanged();
+  _OnHistoryChanged(false, &action);
   return action.after;
 }
 
@@ -351,8 +364,8 @@ void History::RegisterListener(HistoryListener* listener) {
 }
 
 
-void History::_OnHistoryChanged() {
+void History::_OnHistoryChanged(bool undo, const Action* action) {
   for (HistoryListener* listener : listeners) {
-    listener->OnHistoryChanged(this);
+    listener->OnHistoryChanged(this, undo, action);
   }
 }

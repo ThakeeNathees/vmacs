@@ -75,6 +75,7 @@ void TextBox::Update() {
 
 void TextBox::OnFocusChanged() {
   cursors.ResetBlinkTimer();
+  if (IsFocused()) _EnsureCursorsOnView();
 }
 
 
@@ -118,6 +119,32 @@ void TextBox::_EnsureCursorsOnView() {
   } else if (view_start.row + text_area.height <= coord.row) {
     view_start.row = coord.row - text_area.height + 1;
   }
+}
+
+
+// This entire logic was stolen from:
+// https://github.com/focus-editor/focus/blob/086d13876940949e4f7681e1466c4cf33ac0477c/src/editors.jai#L374
+//
+// TODO: Implement glue point.
+void TextBox::OnHistoryChanged(History* history, bool unod, const Action* action) {
+
+  for (auto& delta : action->text_deltas) {
+
+    int offset = delta->index;
+    int change = (int)(delta->added.size() - delta->removed.size());
+
+    for (Cursor& cursor : cursors.Get()) {
+      if (offset <= cursor.GetIndex()) {
+        cursor.SetIndex(buffer.get(), MAX(cursor.GetIndex() + change, offset));
+      }
+      if (!cursor.HasSelection()) continue;
+      if (offset <= cursor.GetSelectionStart()) {
+        cursor.SetSelectionStart(buffer.get(), MAX(cursor.GetSelectionStart() + change, offset));
+      }
+    }
+  }
+  cursors.OnMoved(buffer.get());
+
 }
 
 

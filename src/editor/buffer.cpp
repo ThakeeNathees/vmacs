@@ -102,6 +102,11 @@ Coord Buffer::IndexToCoord(int index) const {
 }
 
 
+int Buffer::CoordToIndex(Coord coord) const {
+  return GetLine(coord.row).start + coord.col;
+}
+
+
 void Buffer::RegisterListener(BufferListener* listener) {
   listeners.push_back(listener);
 }

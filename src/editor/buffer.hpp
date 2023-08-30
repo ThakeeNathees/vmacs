@@ -72,6 +72,8 @@ public:
   bool HasNullLine() const;
 
   Coord IndexToCoord(int index) const;
+  int CoordToIndex(Coord coord) const;
+
   std::string_view GetSubstring(int index, int count) const;
 
   void RegisterListener(BufferListener* listener);

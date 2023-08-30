@@ -23,7 +23,7 @@ public: static std::unique_ptr<File> New() { return std::unique_ptr<File>(new Fi
 private: File();
 
 public:
-	void OnHistoryChanged(History* history) override;
+	void OnHistoryChanged(History* history, bool undo, const Action* action) override;
 	void OnThemeChanged(const Theme* theme) override;
 
 	std::shared_ptr<Buffer> GetBuffer();
