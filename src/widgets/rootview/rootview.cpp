@@ -25,6 +25,27 @@ std::shared_ptr<ModeList> RootView::_GetModes() {
 				{ "<other>" , RootView::_ModeNormal },
 				{ "w"       , RootView::_SwitchWindow },
 				{ "ctrl+w"  , RootView::_SwitchWindow },
+
+				{ "j"       , RootView::_JumpWindowDown },
+				{ "ctrl+j"  , RootView::_JumpWindowDown },
+				{ "down"    , RootView::_JumpWindowDown },
+
+				{ "k"       , RootView::_JumpWindowUp },
+				{ "ctrl+k"  , RootView::_JumpWindowUp },
+				{ "up"      , RootView::_JumpWindowUp },
+
+				{ "h"       , RootView::_JumpWindowLeft },
+				{ "ctrl+h"  , RootView::_JumpWindowLeft },
+				{ "left"    , RootView::_JumpWindowLeft },
+
+				{ "l"       , RootView::_JumpWindowRight },
+				{ "ctrl+l"  , RootView::_JumpWindowRight },
+				{ "right"   , RootView::_JumpWindowRight },
+
+
+				//{ "q"       , RootView::_CloseWindow },
+				//{ "ctrl+q"  , RootView::_CloseWindow },
+
 				{ "s"       , RootView::_SplitHorizontal },
 				{ "ctrl+s"  , RootView::_SplitHorizontal },
 				{ "v"       , RootView::_SplitVertical },
@@ -114,6 +135,64 @@ void RootView::_SwitchWindow(Widget* w, CommandArgs args) {
 	}
 
 	rv->SetMode("normal");
+}
+
+
+Split* RootView::_GetParentSplit(Split::Type type) {
+	if (main_widget == nullptr) return nullptr;
+	Widget* widget = main_widget->GetFocusedWidget();
+	while (widget) {
+		if (widget->IsSplit()) {
+			Split* split = static_cast<Split*>(widget);
+			if (split->GetType() == type) return split;
+		}
+		widget = widget->GetParent();
+	}
+	return nullptr;
+}
+
+
+static void _JumpWindow(Split* split, bool next) {
+	if (split == nullptr) return;
+	Widget* curr = split->GetFocusedChild();
+	if (curr == nullptr) return;
+	if (next) curr = curr->GetNextSibling();
+	else curr = curr->GetPrevSibling();
+	if (curr == nullptr) return;
+	curr->SetFocused();
+}
+
+
+void RootView::_JumpWindowDown(Widget* w, CommandArgs args) {
+	RootView* rv = static_cast<RootView*>(w);
+	_JumpWindow(rv->_GetParentSplit(Split::HSPLIT), true);
+	rv->SetMode("normal");
+}
+
+
+void RootView::_JumpWindowUp(Widget* w, CommandArgs args) {
+	RootView* rv = static_cast<RootView*>(w);
+	_JumpWindow(rv->_GetParentSplit(Split::HSPLIT), false);
+	rv->SetMode("normal");
+}
+
+
+void RootView::_JumpWindowLeft(Widget* w, CommandArgs args) {
+	RootView* rv = static_cast<RootView*>(w);
+	_JumpWindow(rv->_GetParentSplit(Split::VSPLIT), false);
+	rv->SetMode("normal");
+}
+
+
+void RootView::_JumpWindowRight(Widget* w, CommandArgs args) {
+	RootView* rv = static_cast<RootView*>(w);
+	_JumpWindow(rv->_GetParentSplit(Split::VSPLIT), true);
+	rv->SetMode("normal");
+}
+
+
+void RootView::_CloseWindow(Widget* w, CommandArgs args) {
+	//rv->main_widget->GetFocusedWidget();
 }
 
 

@@ -21,12 +21,19 @@ public:
 private:
 	void _Draw(Size area) override;
 
+	Split* _GetParentSplit(Split::Type type);
+
 	static std::shared_ptr<ModeList> _GetModes();
 	static void _ModeListenWindow(Widget* w, CommandArgs args);
 	static void _ModeNormal(Widget* w, CommandArgs args);
 	static void _ModeCommand(Widget* w, CommandArgs args);
 
 	static void _SwitchWindow(Widget* w, CommandArgs args);
+	static void _JumpWindowDown(Widget* w, CommandArgs args);
+	static void _JumpWindowUp(Widget* w, CommandArgs args);
+	static void _JumpWindowLeft(Widget* w, CommandArgs args);
+	static void _JumpWindowRight(Widget* w, CommandArgs args);
+	static void _CloseWindow(Widget* w, CommandArgs args);
 
 	static void _Split(RootView* self, Split::Type type);
 	static void _SplitHorizontal(Widget* w, CommandArgs args);

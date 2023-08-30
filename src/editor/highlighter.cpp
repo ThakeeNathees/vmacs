@@ -221,29 +221,29 @@ void Highlighter::Highlight(const char* source, int size) {
   ts_query_cursor_delete(cursor);
 
   {
-    // Remove duplicates.
-    // TODO: Seemslike in C, identifier is captured as both variable and constant
-    // however the constant set to match a regex all uppercase but it doesn't seems
-    // like working, investigate.
+    std::sort(slices.begin(), slices.end(), [](const HighlightSlice& l, const HighlightSlice& r) {
+      return l.start < r.start;
+    });
+
     auto iter = std::unique(slices.begin(), slices.end(), [](const HighlightSlice& l, const HighlightSlice& r) {
       return l.start == r.start && l.end == r.end;
     });
     slices.erase(iter, slices.end());
   }
 
-#ifdef DEBUG
-  { // All the slices are sorted with start index if not the slice r, be a subset of slice l.
-    if (!slices.empty()) {
-      for (auto iter = slices.begin() + 1; iter != slices.end(); ++iter) {
-        const HighlightSlice& l = *(iter - 1);
-        const HighlightSlice& r = *iter;
-        if (l.end <= r.start) continue;
-        ASSERT(
-          BETWEEN(l.start, r.start, l.end) && BETWEEN(l.start, r.end, l.end),
-          "An inveriant assumption about the tree-sitter query result is failed.");
-      }
-    }
-  }
-#endif // DEBUG
+//#ifdef DEBUG
+//  { // All the slices are sorted with start index if not the slice r, be a subset of slice l.
+//    if (!slices.empty()) {
+//      for (auto iter = slices.begin() + 1; iter != slices.end(); ++iter) {
+//        const HighlightSlice& l = *(iter - 1);
+//        const HighlightSlice& r = *iter;
+//        if (l.end <= r.start) continue;
+//        ASSERT(
+//          BETWEEN(l.start, r.start, l.end) && BETWEEN(l.start, r.end, l.end),
+//          "An inveriant assumption about the tree-sitter query result is failed.");
+//      }
+//    }
+//  }
+//#endif // DEBUG
 
 }

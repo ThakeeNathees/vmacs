@@ -53,16 +53,28 @@ int Widget::GetChildCount() const {
 
 
 Widget* Widget::GetChild(int index) const {
-  if (!BETWEEN(0, index, children.size())) return nullptr;
+  if (!BETWEEN(0, index, children.size() - 1)) return nullptr;
   return children[index].get();
 }
 
 
-int Widget::GetChildIndex(Widget* child) const {
+int Widget::GetChildIndex(const Widget* child) const {
   for (size_t i = 0; i < children.size(); i++) {
     if (children[i].get() == child) return (int)i;
   }
   return -1;
+}
+
+
+Widget* Widget::GetNextSibling() const {
+  if (parent == nullptr) return nullptr;
+  return parent->GetChild(parent->GetChildIndex(this) + 1);
+}
+
+
+Widget* Widget::GetPrevSibling() const {
+  if (parent == nullptr) return nullptr;
+  return parent->GetChild(parent->GetChildIndex(this) - 1);
 }
 
 

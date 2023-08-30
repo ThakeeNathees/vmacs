@@ -45,7 +45,9 @@ public:
 
 	int GetChildCount() const;
 	Widget* GetChild(int index) const;
-	int GetChildIndex(Widget* child) const;
+	int GetChildIndex(const Widget* child) const;
+	Widget* GetNextSibling() const;
+	Widget* GetPrevSibling() const;
 
 	bool IsFocused() const;
 	void SetFocused();
