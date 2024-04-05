@@ -197,8 +197,11 @@ void RootView::_CloseWindow(Widget* w, CommandArgs args) {
 
 
 void RootView::_Split(RootView* rv, Split::Type type) {
-#define return ?
-#define return_defer goto l_defer
+#define return_defer       \
+  do {                     \
+    rv->SetMode("normal"); \
+    return;                \
+  } while (false)
 
 	if (!rv->main_widget->IsSplit()) {
 		Widget* container = Split::SplitChild(rv->main_widget, type);
@@ -210,10 +213,6 @@ void RootView::_Split(RootView* rv, Split::Type type) {
 	if (widget == nullptr) return_defer;
 	Split::SplitChild(widget, type);
 
-l_defer:
-	rv->SetMode("normal");
-
-#undef return
 #undef return_defer
 }
 

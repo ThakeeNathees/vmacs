@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include "core/core.hpp"
+
 #include <string>
 #include <memory>
 #include <functional>

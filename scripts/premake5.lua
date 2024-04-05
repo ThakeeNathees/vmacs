@@ -237,7 +237,9 @@ project (project_name)
   -- Enable if needed.
   -- buildoptions { "-Wall" }
 
-  links { "winmm.lib" } -- TODO: This should be a conditional link for windows.
+  filter "system:windows"
+    links { "winmm.lib" }
+  filter {}
 
   link_raylib()
   link_parsers()
