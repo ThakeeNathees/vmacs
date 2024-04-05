@@ -54,8 +54,11 @@ void Cursors::AddCursor(const Cursor& cursor) {
 
 
 void Cursors::AddCursorDown(const Buffer* buffer) {
-#define return_defer goto l_defer
-#define return ? // Dont use return in this function.
+#define return_defer   \
+  do {                 \
+    ResetBlinkTimer(); \
+    return;            \
+  } while (false)
 
   if (!is_multicursor_adding) {
     ClearMultiCursors();
@@ -93,15 +96,15 @@ void Cursors::AddCursorDown(const Buffer* buffer) {
   }
 
 #undef return_defer
-#undef return
-  l_defer:
-  ResetBlinkTimer();
 }
 
 
 void Cursors::AddCursorUp(const Buffer* buffer) {
-#define return_defer goto l_defer
-#define return ? // Dont use return in this function.
+#define return_defer   \
+  do {                 \
+    ResetBlinkTimer(); \
+    return;            \
+  } while (false)
 
   if (!is_multicursor_adding) {
     ClearMultiCursors();
@@ -141,9 +144,6 @@ void Cursors::AddCursorUp(const Buffer* buffer) {
   }
 
 #undef return_defer
-#undef return
-  l_defer:
-  ResetBlinkTimer();
 }
 
 

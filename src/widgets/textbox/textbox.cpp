@@ -475,6 +475,7 @@ void TextBox::_AddCursorDown(Widget* w, CommandArgs args) {
   const Buffer* buffer = t->buffer.get();
   t->cursors.AddCursorDown(buffer);
   t->_EnsureCursorsOnView();
+  t->cursors.ResetBlinkTimer();
 }
 
 
@@ -483,6 +484,7 @@ void TextBox::_AddCursorUp(Widget* w, CommandArgs args) {
   const Buffer* buffer = t->buffer.get();
   t->cursors.AddCursorUp(buffer);
   t->_EnsureCursorsOnView();
+  t->cursors.ResetBlinkTimer();
 }
 
 
@@ -491,6 +493,7 @@ void TextBox::_Backspace(Widget* w, CommandArgs args) {
   History& history = t->buffer->GetHistory();
   t->cursors = history.CommitRemoveText(t->cursors);
   t->_EnsureCursorsOnView();
+  t->cursors.ResetBlinkTimer();
 }
 
 

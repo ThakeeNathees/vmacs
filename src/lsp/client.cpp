@@ -66,7 +66,8 @@ void LspClient::_HandleServerContent(const json& content) {
   RequestId id = content["id"];
 
   if (content.contains("method")) {
-    OnRequest(id, content["method"], content["params"]);
+    std::string_view method = content["method"].template get<std::string_view>();
+    OnRequest(id, method, content["params"]);
     return;
   }
 
