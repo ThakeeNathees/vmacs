@@ -83,59 +83,61 @@
 #include "editor/editor.hpp"
 
 
-// std::string ReadAll(const std::string& path) {
-//   std::ifstream inputFile(path.data());
-//   assert(inputFile.is_open() && "Failed to open file.");
-//   std::stringstream buffer;
-//   buffer << inputFile.rdbuf();
-//   inputFile.close();
-//   return buffer.str();
-// }
+std::string ReadAll2(const std::string& path) {
+  std::ifstream inputFile(path.data());
+  assert(inputFile.is_open() && "Failed to open file.");
+  std::stringstream buffer;
+  buffer << inputFile.rdbuf();
+  inputFile.close();
+  return buffer.str();
+}
 
-// void lsp_test() {
+void lsp_test() {
 
-//   LspConfig config;
-//   config.server = "clangd";
+  LspConfig config;
+  config.server = "clangd";
 
-//   LspClient client(config);
-//   client.StartServer(std::nullopt);
+  LspClient client(config);
+  client.StartServer(std::nullopt);
 
-//   std::string path = "/Users/thakeenathees/Desktop/thakee/temp/lsp/main.c";
-//   std::string x;
+  std::string path = "/Users/thakeenathees/Desktop/thakee/temp/lsp/main.c";
+  std::string x;
 
-//   // std::cin >> x;
-//   client.SendNotification(
-//       "textDocument/didOpen", {
-//       {
-//         "textDocument", {
-//           { "uri",  std::string("file://") + path },
-//           { "text", ReadAll(path) },
-//           { "languageId", "c" },
-//         }
-//       }
-//   });
+  // std::cin >> x;
+  client.SendNotification(
+      "textDocument/didOpen", {
+      {
+        "textDocument", {
+          { "uri",  std::string("file://") + path },
+          { "text", ReadAll2(path) },
+          { "languageId", "c" },
+        }
+      }
+  });
 
-//   // goto definition.
-//   // std::cin >> x;
-//   client.SendRequest(
-//     "textDocument/definition", {
-//     {
-//       "textDocument", {
-//         { "uri",  std::string("file://") + path },
-//       },
-//     },
-//     {
-//       "position", {
-//         { "line", 3  },
-//         { "character", 2 },
-//       },
-//     }
-//   });
-  
-// }
+  // goto definition.
+  // std::cin >> x;
+  client.SendRequest(
+    "textDocument/definition", {
+    {
+      "textDocument", {
+        { "uri",  std::string("file://") + path },
+      },
+    },
+    {
+      "position", {
+        { "line", 3  },
+        { "character", 2 },
+      },
+    }
+  });
 
+  // Prevent the client from destroy before we got response from server.
+  std::string s; std::cin >> s;
 
-
+  // Otherwise it'll wait forever.
+  global_thread_stop = true;
+}
 
 
 int main(int argc, char** argv) {
@@ -150,6 +152,12 @@ int main(int argc, char** argv) {
   //
   signal(SIGPIPE, SIG_IGN);
 
+  lsp_test();
+  return 0;
+
+
+
+
   std::unique_ptr<FrontEnd> fe;
 
   // fe = std::make_unique<Termbox2>();
@@ -159,26 +167,8 @@ int main(int argc, char** argv) {
   std::unique_ptr<IEditor> editor = IEditor::New();
   editor->SetFrontEnd(std::move(fe));
 
+
   editor->MainLoop();
-  
-  // if (!editor->Initialize()) {
-  //   printf("initialize failed\n");
-  //   return 1;
-  // }
-
-  // // What a mess.
-  // Editor* e = (Editor*) editor.get();
-  // e->OpenDocument("/Users/thakeenathees/Desktop/thakee/temp/lsp/main.c");
-
-  // while (editor->Running()) {
-  //   // FIXME: Draw first and handle because termbox is blocking, fix and
-  //   // change the order.
-  //   editor->Draw();
-  //   editor->HandleEvents();
-
-  // }
-  // editor->Cleanup();
-
   return 0;
 }
 

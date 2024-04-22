@@ -14,7 +14,14 @@
 
 Document::Document(const Uri& uri, std::shared_ptr<Buffer> buffer)
   : uri(uri), buffer(buffer), cursor(buffer.get()), history(buffer)
-{}
+{
+  buffer->RegisterListener(this);
+}
+
+
+Document::~Document() {
+  buffer->UnRegisterListener(this);
+}
 
 
 void Document::PushDiagnostics(std::vector<Diagnostic>&& diagnostics) {
@@ -30,6 +37,11 @@ void Document::SetLspClient(std::shared_ptr<LspClient> client) {
 
   // FIXME: language id of the document (c/c++, etc).
   lsp_client->DidOpen(uri, buffer->GetData(), "c");
+}
+
+
+void Document::OnBufferChanged() {
+  version++;
 }
 
 

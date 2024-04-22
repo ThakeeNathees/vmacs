@@ -225,8 +225,10 @@ public:
   }
 
   void StartListening() override {
-    thread_listener = std::thread([this] () {
-      bool success = ShellExec(execopt, &pid);
+    // TODO: Assert that the server_io_thread is not assigned yet and only
+    // call this method only once.
+    server_io_thread = std::thread([this] () {
+      ShellExec(execopt, &pid);
     });
   }
 
@@ -245,7 +247,9 @@ public:
 
   ~IpcUnix() {
     pending_inputs = false;
-    if (thread_listener.joinable()) thread_listener.join();
+    if (server_io_thread.joinable()) {
+      server_io_thread.join();
+    }
   }
 
 
@@ -255,10 +259,10 @@ private:
   ThreadSafeQueue<std::string> queue_to_server;
 
   exec_options_t execopt;
-  std::atomic<bool> pending_inputs = true;
-  std::thread thread_listener;
   pid_t pid;
 
+  std::atomic<bool> pending_inputs = true;
+  std::thread server_io_thread;
 
 private:
   static int StdinCallback(void* user_data, int fd, bool* pending) {

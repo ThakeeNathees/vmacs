@@ -29,7 +29,9 @@ LspClient::LspClient(LspConfig config) : config(config) {
 
 
 LspClient::~LspClient() {
-  // TODO: send exit notification.
+
+  // TODO: Make a shoutdown lsp method call and call this before unregister and
+  // remove lsp clients from the lsp_client registry.
   // SendNotification("exit", Json::object());
 
   // It's possible the server is not initialized and all the requests are
@@ -37,6 +39,19 @@ LspClient::~LspClient() {
   stop_all_threads = true;
   cond_server_initialized.notify_all();
 
+  // This is necessary, consider without destroing ipc here and the LspClient is
+  // "dying" bellow and waiting to join threads but suddenly we got response
+  // from the language server for our initialize request and now we have to send
+  // "initialized" notification. So the notification will wait on the mutex
+  // `mutex_threads_pool` and it'll only unlocks when we're done with this
+  // destructor. So by the time "initilized" method aquire the mutex it's already
+  // destroied.
+  //
+  // So we make sure the IPC is destroied properly and we have nothing to do
+  // with it or its callback before we cleanup.
+  ipc = nullptr;
+
+  std::lock_guard<std::mutex> lock_pool(mutex_threads_pool);
   for (std::thread& thread : threads) {
     if (thread.joinable()) thread.join();
   }
@@ -98,7 +113,10 @@ void LspClient::DidChange(const Uri& uri, uint32_t version, std::vector<Document
       { "text", change.text }
     });
   }
-  SendNotification("textDocument/didChange", content_changes);
+  SendNotification("textDocument/didChange", {
+      { "textDocument", {{ "uri", uri }, { "version", version }} },
+      { "contentChanges", content_changes },
+  });
 }
 
 
@@ -118,9 +136,17 @@ void LspClient::SendServerContent(const Json& content) {
     (content["id"].template get<int>() == INITIALIZE_REQUSET_ID));
 
   if (is_initialize_request) {
-    ipc->WriteToStdin(data);
+    if (ipc) ipc->WriteToStdin(data);
 
   } else {
+
+    // This is not necessary all handled properly (read in the destructor)
+    // but just in case.
+    if (stop_all_threads) return;
+
+    {
+    std::lock_guard<std::mutex> look_pool(mutex_threads_pool);
+
     // Wait in a thread till the server is initialized.
     threads.emplace_back([this, data](){
       std::unique_lock<std::mutex> lock(mutex_server_initialized);
@@ -128,8 +154,9 @@ void LspClient::SendServerContent(const Json& content) {
         cond_server_initialized.wait(lock);
       }
       if (stop_all_threads || global_thread_stop) return;
-      ipc->WriteToStdin(data);
+      if (ipc) ipc->WriteToStdin(data);
     });
+    }
 
   }
 }
@@ -249,9 +276,14 @@ void LspClient::StdoutCallback(void* user_data, const char* buff, size_t length)
     Json content = Json::parse(content_str);
 
     // FIXME: this is temproary.
-    // printf("[lsp-client] %s\n", content.dump(2).c_str());
+    printf(" [lsp-client] %s\n", content.dump(2).c_str());
 
-    self->HandleServerContent(content);
+    // Just in case an extra protection.
+    try {
+      self->HandleServerContent(content);
+    } catch (std::exception) {
+      return;
+    }
 
     // Update data for the next iteration.
     data = data.substr(content_start + content_len);
@@ -262,16 +294,14 @@ void LspClient::StdoutCallback(void* user_data, const char* buff, size_t length)
 
 // FIXME: Clean up this mess.
 void LspClient::StderrCallback(void* user_data, const char* buff, size_t length) {
-  // printf("[lsp-stderr] %*s\n", (int) length, buff);
-  static bool first = true;
-  FILE* f = fopen("./build/lsp.log", (first) ?  "w" : "a");
-  first = false;
-  fprintf(f, "%*s\n", (int) length, buff);
-  fclose(f);
+  printf(" [lsp-stderr] %*s\n", (int) length, buff);
+
+  // FILE* f = fopen("./build/lsp.log", (0) ?  "w" : "a");
+  // fclose(f);
 }
 
 
 void LspClient::ExitCallback(void* user_data, int exit_code) {
   // FIXME: this is temproary.
-  printf("[lsp-client] exit_code=%i\n", exit_code);
+  printf(" [lsp-client] exit_code=%i\n", exit_code);
 }

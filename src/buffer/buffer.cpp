@@ -132,4 +132,22 @@ void Buffer::RemoveText(int index, int count) {
 
 void Buffer::OnBufferChanged() {
   lines.ComputeLines(data.c_str());
+  for (BufferListener* listener : listeners) {
+    listener->OnBufferChanged();
+  }
+}
+
+
+void Buffer::RegisterListener(BufferListener* listener) {
+  listeners.push_back(listener);
+}
+
+
+void Buffer::UnRegisterListener(BufferListener* listener) {
+  for (int i = 0; i < listeners.size(); i++) {
+    if (listeners[i] == listener) {
+      listeners.erase(listeners.begin() + i);
+      return;
+    }
+  }
 }

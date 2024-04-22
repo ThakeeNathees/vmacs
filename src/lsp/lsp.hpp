@@ -94,7 +94,7 @@ private:
   // The bellow condition_variable will wait for the atomic boolean to becomd
   // true before it sends any request to the server.
   std::atomic<bool> is_server_initialized = false;
-  mutable std::mutex mutex_server_initialized;
+  std::mutex mutex_server_initialized;
   std::condition_variable cond_server_initialized;
 
   // We set this to true when this object is destroied and that'll signal all
@@ -104,6 +104,7 @@ private:
   // All the requests will wait for the server in this "thread pool" and will be
   // joined once the client is destroied.
   std::vector<std::thread> threads;
+  std::mutex mutex_threads_pool;
 
 
 private:

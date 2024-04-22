@@ -44,6 +44,13 @@ private:
 };
 
 
+class BufferListener {
+public:
+  virtual void OnBufferChanged() = 0;
+  virtual ~BufferListener() = default;
+};
+
+
 class Buffer {
 
 public:
@@ -65,9 +72,14 @@ public:
   void InsertText(int index, const String& text);
   void RemoveText(int index, int count);
 
+  // Buffer listener methods.
+  void RegisterListener(BufferListener* listener);
+  void UnRegisterListener(BufferListener* listener);
+
 private:
   String data;
   Lines lines;
+  std::vector<BufferListener*> listeners;
 
 private:
   // This should be called by every time the buffer is modified.
@@ -132,7 +144,7 @@ private:
 
 
 /*
- * For the undo/redo  we have 3 primary types, Change, Action, History.
+ * For the undo/redo we have 3 primary types, Change, Action, History.
  *
  * Change: A single unit of instruction where a text is added or removed from a
  *         specific index of the buffer.

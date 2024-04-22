@@ -27,10 +27,13 @@
   } while (false)
 
 
-class Document {
+class Document : public BufferListener {
 
 public:
   Document(const Uri& uri, std::shared_ptr<Buffer> buffer);
+  ~Document();
+
+  void OnBufferChanged() override;
 
   // If any language server send notification the editor will recieve it first
   // and send to the corresponded document.
@@ -72,6 +75,10 @@ private:
 
   std::shared_ptr<LspClient> lsp_client;
   std::vector<Diagnostic> diagnostics;
+
+  // TODO: Should this be atomic? (thread safe)
+  // Version of this document required for the lsp server.
+  uint32_t version = 0;
 
   // TODO:
   // Encoding: utf8, utf16, etc.
