@@ -15,12 +15,17 @@
 #include <stdlib.h>
 
 #include <optional>
+#include <memory>
+
 #include <vector>
 #include <string>
 #include <map>
 #include <unordered_map>
 #include <queue>
-#include <memory>
+
+#include <thread>
+#include <atomic>
+#include <future>
 
 // Commonly used macros and utility C things.
 #include "common.h"
@@ -30,6 +35,9 @@
 // compact form where the ctrl/alt/shift are set as bits in the integer.
 typedef uint32_t event_t;
 
+// Not sure this is a good idea but, if this set to true, we signal all the
+// threads to stop what they're doing and join.
+extern std::atomic<bool> global_thread_stop;
 
 /*
  * TODO:

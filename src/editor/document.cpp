@@ -12,10 +12,9 @@
 #include "editor.hpp"
 
 
-Document::Document(std::shared_ptr<Buffer> buffer)
-  : buffer(buffer), cursor(buffer.get()), history(buffer) {
-
-}
+Document::Document(const Uri& uri, std::shared_ptr<Buffer> buffer)
+  : uri(uri), buffer(buffer), cursor(buffer.get()), history(buffer)
+{}
 
 
 void Document::PushDiagnostics(std::vector<Diagnostic>&& diagnostics) {
@@ -23,6 +22,14 @@ void Document::PushDiagnostics(std::vector<Diagnostic>&& diagnostics) {
     // TODO: Ignore if the version isn't our current version.
     this->diagnostics.push_back(std::move(diag));
   }
+}
+
+
+void Document::SetLspClient(std::shared_ptr<LspClient> client) {
+  lsp_client = client;
+
+  // FIXME: language id of the document (c/c++, etc).
+  lsp_client->DidOpen(uri, buffer->GetData(), "c");
 }
 
 

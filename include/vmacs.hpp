@@ -271,11 +271,10 @@ public:
   static std::unique_ptr<IEditor> New();
 
   virtual void SetFrontEnd(std::unique_ptr<FrontEnd> frontend) = 0;
-  virtual bool Initialize() = 0;
-  virtual bool Running() = 0;
-  virtual void HandleEvents() = 0;
-  virtual void Draw() = 0;
-  virtual bool Cleanup() = 0;
+
+  // The Main loop of our application, this is blocking. If you integrate this
+  // into your own application, run this in a different thread.
+  virtual int MainLoop() = 0;
 
   virtual ~IEditor() = default;
 

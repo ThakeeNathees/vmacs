@@ -12,10 +12,6 @@
 #include "buffer/buffer.hpp"
 #include "lsp/lsp.hpp"
 
-// TODO: Added for open documet which is temproary at the moment.
-#include <iostream>
-#include <fstream>
-#include <sstream>
 
 // TODO: Move this to somewhere else.
 #define BUFF_CELL(buff, x, y)\
@@ -34,9 +30,12 @@
 class Document {
 
 public:
-  Document(std::shared_ptr<Buffer> buffer);
+  Document(const Uri& uri, std::shared_ptr<Buffer> buffer);
 
+  // If any language server send notification the editor will recieve it first
+  // and send to the corresponded document.
   void PushDiagnostics(std::vector<Diagnostic>&& diagnostics);
+  void SetLspClient(std::shared_ptr<LspClient> client);
 
   // Actions.
   void CursorRight();
@@ -63,11 +62,13 @@ private:
   std::shared_ptr<Buffer> buffer;
   History history;
 
-  // The path of the current document. If the file is a new buffer the path will
-  // be empty and the editor will ask a path before save. If we started the editor
-  // like `vim test.c` the path is `path/to/cwd/test.c` even thought the file
-  // isn't exists in the disk we'll create a new one.
-  std::string path;
+  // Uri is simply "file://" + "the/file/path/in/the/disk".
+  //
+  // If the file is a new buffer the uri will be empty and the editor will ask
+  // a path before save. If we started the editor like `vim test.c` the uri is
+  // `file://path/to/cwd/test.c` even thought the file isn't exists in the disk
+  // we'll create a new one.
+  Uri uri;
 
   std::shared_ptr<LspClient> lsp_client;
   std::vector<Diagnostic> diagnostics;
@@ -129,22 +130,19 @@ public:
   ~Editor();
 
   void SetFrontEnd(std::unique_ptr<FrontEnd> frontend) override;
-  bool Initialize() override;
-  bool Running() override;
-  void HandleEvents() override;
-  void Draw() override;
-  bool Cleanup() override;
 
-  // TODO: These are subjected to change.
-  std::shared_ptr<Document> OpenDocument(const std::string& path);
+  int MainLoop() override;
 
   // Lsp listeners.
   void OnLspDiagnostics(const Uri&, std::vector<Diagnostic>&&);
 
 private:
   DocPane docpane;
-  bool running = true;
   std::unique_ptr<FrontEnd> frontend;
+
+  // TODO: Setting this false should "signal" all the thread to exit immediately.
+  std::atomic<bool> running = true;
+  ThreadSafeQueue<Event> event_queue;
 
   // All the documents that are currently opened.
   std::map<Uri, std::shared_ptr<Document>> documents;
@@ -152,5 +150,15 @@ private:
   // All the lsp clients running here are registered here where the key is the
   // code name of the lsp client. (ex: clangd).
   std::map<std::string, std::shared_ptr<LspClient>> lsp_clients;
+
+private:
+
+  // TODO: These are subjected to change.
+  std::shared_ptr<Document> OpenDocument(const std::string& path);
+
+  // blocking loop that collect event (blocking) from the front end and push it
+  // to our event queue. Run this asyncronusly.
+  void EventLoop();
+
 };
 

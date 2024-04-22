@@ -9,6 +9,14 @@
 #include "core/core.hpp"
 #include "editor.hpp"
 
+#include <thread>
+#include <future>
+
+// TODO: Added for open documet which is temproary at the moment.
+#include <iostream>
+#include <fstream>
+#include <sstream>
+
 
 std::unique_ptr<IEditor> IEditor::New() {
   return std::make_unique<Editor>();
@@ -27,7 +35,7 @@ uint32_t IEditor::XtermToRgb(uint8_t xterm) {
 
 Editor::Editor() {
   // Register LSP content listeners.
-  LspClient::cb_diagnostics = [&](const Uri& uri, std::vector<Diagnostic>&& diagnostics) {
+  LspClient::cb_diagnostics = [this](const Uri& uri, std::vector<Diagnostic>&& diagnostics) {
     this->OnLspDiagnostics(uri, std::move(diagnostics));
   };
 
@@ -44,52 +52,66 @@ void Editor::SetFrontEnd(std::unique_ptr<FrontEnd> frontend) {
 }
 
 
-bool Editor::Running() {
-  return running;
-}
-
-
-bool Editor::Initialize() {
-  return frontend->Initialize();
-}
-
-
-bool Editor::Cleanup() {
-  return frontend->Cleanup();
-}
-
-
-void Editor::HandleEvents() {
+// TODO: Check the code quality of this method.
+int Editor::MainLoop() {
 
   ASSERT(frontend != nullptr, "No frontend is available. Did you forgot to "
                               "call IEditor::SetFrontEnd() ?");
-  const std::vector<Event>& events = frontend->GetEvents();
 
-  for (const Event& event : events) {
-    if (event.type == Event::Type::CLOSE) running = false;
-    docpane.HandleEvent(event);
+  if (!frontend->Initialize()) {
+    fprintf(stdout, "Editor initialize failed.\n");
+    return 1;
   }
+
+  // What a mess.
+  OpenDocument("/Users/thakeenathees/Desktop/thakee/temp/lsp/main.c");
+
+  // Async run event loop.
+  std::thread event_loop([this]() { EventLoop(); });
+
+  // Main thread hot loop.
+  while (running) {
+
+    // Handle Events.
+    while (!event_queue.Empty()) {
+      docpane.HandleEvent(event_queue.Dequeue());
+    }
+
+    // FIXME: This needs to be re-factored and cleaned up.
+    // Draw to the front end buffer.
+    DrawBuffer buff = frontend->GetDrawBuffer();
+    uint8_t color_bg = RgbToXterm(0x272829);
+    // Clean the buffer.
+    for (int i    = 0; i < buff.width*buff.height; i++) {
+      Cell& cell  = buff.cells[i];
+      cell.ch     = ' ';
+      cell.fg     = 0;
+      cell.bg     = color_bg;
+      cell.attrib = 0;
+    }
+    docpane.Draw(buff, {0,0}, {buff.width, buff.height});
+    frontend->Display(color_bg); // FIXME: background color for raylib.
+  }
+
+  frontend->Cleanup();
+
+  global_thread_stop = true;
+  event_loop.join();
+  return 0;
 }
 
 
-void Editor::Draw() {
-
-  // FIXME: This needs to be re-factored and cleaned up.
-  DrawBuffer buff = frontend->GetDrawBuffer();
-
-  uint8_t color_bg = RgbToXterm(0x272829);
-
-  // Clean the buffer.
-  for (int i    = 0; i < buff.width*buff.height; i++) {
-    Cell& cell  = buff.cells[i];
-    cell.ch     = ' ';
-    cell.fg     = 0;
-    cell.bg     = color_bg;
-    cell.attrib = 0;
+void Editor::EventLoop() {
+  while (running.load() && !global_thread_stop.load()) {
+    const std::vector<Event>& events = frontend->GetEvents();
+    for (const Event& event : events) {
+      // FIXME: Handle the CLOSE event properly.
+      if (event.type == Event::Type::CLOSE) {
+        running = false;
+      }
+      event_queue.Enqueue(event);
+    }
   }
-
-  docpane.Draw(buff, {0,0}, {buff.width, buff.height});
-  frontend->Display(color_bg); // FIXME: background color.
 }
 
 
@@ -107,10 +129,11 @@ std::string ReadAll(const std::string& path) {
 // FIXME: Re implement this mess.
 std::shared_ptr<Document> Editor::OpenDocument(const std::string& path) {
 
-  std::string text = ReadAll(path);
-  std::shared_ptr<Buffer> buff = std::make_shared<Buffer>(text);
-  std::shared_ptr<Document> document = std::make_shared<Document>(buff);
   Uri uri = std::string("file://") + path;
+  std::string text = ReadAll(path);
+
+  std::shared_ptr<Buffer> buff = std::make_shared<Buffer>(text);
+  std::shared_ptr<Document> document = std::make_shared<Document>(uri, buff);
 
   LspConfig config;
   config.server = "clangd";
@@ -121,7 +144,8 @@ std::shared_ptr<Document> Editor::OpenDocument(const std::string& path) {
   auto client = std::make_shared<LspClient>(config);
   lsp_clients["clangd"] = client;
   client->StartServer(std::nullopt);
-  client->DidOpen(uri, text, "c");
+
+  document->SetLspClient(client);
 
   return document;
 }

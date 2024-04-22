@@ -32,7 +32,7 @@ DocPane::DocPane() {
   actions["undo"]           = [&] { if (this->document == nullptr) return; this->document->Undo();           EnsureCursorOnView(); };
   actions["redo"]           = [&] { if (this->document == nullptr) return; this->document->Redo();           EnsureCursorOnView(); };
 
-  auto get_binding = [&] (const char* name) {
+  auto get_binding = [this] (const char* name) {
     auto it = actions.find(name);
     if (it == actions.end()) return (FuncAction) [] {};
     return it->second;
@@ -213,8 +213,6 @@ void DocPane::Draw(DrawBuffer buff, Coord pos, Size area) {
     }
 
   }
-  return;
-
 }
 
 

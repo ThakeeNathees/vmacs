@@ -13,29 +13,16 @@
 #include "core/core.hpp"
 #include "os/os.hpp"
 
-#include <optional>
+#include <thread>
 
 #include <nlohmann/json.hpp>
 using Json = nlohmann::json;
 
+// The "hardcoded" id for initialize request.
+#define INITIALIZE_REQUSET_ID 0
 
-// RequestId = int | string
-struct RequestId {
-  int _int = 0;
-  std::string _str;
-
-  RequestId() {}
-  RequestId(int val) : _int(val) {}
-  RequestId(const std::string& val) : _str(val) {}
-
-  operator int() const { return _int; }
-  operator const std::string&() const { return _str; }
-
-  bool operator==(const RequestId& other);
-  bool operator==(int val);
-  bool operator==(const std::string& val);
-};
-
+// Unique Id for each request we make to the language server.
+typedef uint32_t RequestId;
 
 struct Diagnostic {
   uint32_t version;    // Document version where this diagnostic applied.
@@ -48,12 +35,17 @@ struct Diagnostic {
 };
 
 
+struct DocumentChange {
+  Coord start;
+  Coord end;
+  std::string text;
+};
+
+
 /******************************************************************************
  * Language Server Client.
  *****************************************************************************/
 
-// The "hardcoded" id for initialize request.
-#define INITIALIZE_REQUSET_ID 0
 
 typedef std::string Uri;
 typedef std::function<void(const Uri&, std::vector<Diagnostic>&&)> CallbackDiagnostic;
@@ -80,6 +72,8 @@ public:
 
   // Abstracted request/notification methods.
   void DidOpen(const Uri& uri, const std::string& text, const std::string& langauge);
+  void DidChange(const Uri& uri, uint32_t version, std::vector<DocumentChange> changes);
+  // TODO: did close.
 
   // Callbacks for content recieved from the server. These are global static
   // and should be set by the one that's listening for any server inputs.
@@ -93,7 +87,7 @@ private:
 
   // Id of the next request, it'll increment after each request. Note that we
   // set id=0 as the initialize request id.
-  std::atomic<int> next_id = INITIALIZE_REQUSET_ID;
+  std::atomic<uint32_t> next_request_id = INITIALIZE_REQUSET_ID;
 
   // All the request must sent to the server (except for the initialize request)
   // after we get a notification that server is initialized. we store that here.
@@ -102,6 +96,15 @@ private:
   std::atomic<bool> is_server_initialized = false;
   mutable std::mutex mutex_server_initialized;
   std::condition_variable cond_server_initialized;
+
+  // We set this to true when this object is destroied and that'll signal all
+  // the child threads to stop immediately.
+  std::atomic<bool> stop_all_threads = false;
+
+  // All the requests will wait for the server in this "thread pool" and will be
+  // joined once the client is destroied.
+  std::vector<std::thread> threads;
+
 
 private:
   static void StdoutCallback(void* user_data, const char* buff, size_t length);

@@ -53,6 +53,7 @@ public:
   int GetSize() const;
   int At(int index) const; // Returns the codepoint at the index.
   StringView GetSubString(int index, int count) const;
+  const String& GetData() const;
 
   int GetLineCount() const;
   Slice GetLine(int index) const;

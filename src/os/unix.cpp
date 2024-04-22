@@ -116,6 +116,9 @@ bool ShellExec(exec_options_t opt, pid_t* pid) {
   // Blocking IO loop.
   while (true) {
 
+    // If we're exiting don't run this anymore.
+    if (global_thread_stop.load()) break;
+
     // Write to the child process. This is non blocking.
     if (fdwrite_in >= 0 && writing_in) {
       int write_count = opt.cb_stdin(opt.user_data, fdwrite_in, &writing_in);

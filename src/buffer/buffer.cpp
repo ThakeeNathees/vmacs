@@ -62,6 +62,11 @@ StringView Buffer::GetSubString(int index, int count) const {
 }
 
 
+const String& Buffer::GetData() const {
+  return data;
+}
+
+
 int Buffer::GetLineCount() const {
   return (int)lines.Get().size();
 }

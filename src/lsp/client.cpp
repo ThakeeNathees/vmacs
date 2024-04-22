@@ -14,21 +14,6 @@
 CallbackDiagnostic LspClient::cb_diagnostics = nullptr;
 
 
-bool RequestId::operator==(const RequestId& other) {
-  return (_int == other._int && _str == other._str);
-}
-
-
-bool RequestId::operator==(int val) {
-  return (_str.length() == 0 && _int == val);
-}
-
-
-bool RequestId::operator==(const std::string& val) {
-  return (_str.length() > 0 && _str == val);
-}
-
-
 LspClient::LspClient(LspConfig config) : config(config) {
 
   IPC::IpcOptions opt;
@@ -44,7 +29,17 @@ LspClient::LspClient(LspConfig config) : config(config) {
 
 
 LspClient::~LspClient() {
-  SendNotification("exit", Json::object());
+  // TODO: send exit notification.
+  // SendNotification("exit", Json::object());
+
+  // It's possible the server is not initialized and all the requests are
+  // waiting still.
+  stop_all_threads = true;
+  cond_server_initialized.notify_all();
+
+  for (std::thread& thread : threads) {
+    if (thread.joinable()) thread.join();
+  }
 }
 
 
@@ -56,10 +51,10 @@ void LspClient::StartServer(std::optional<Uri> root_uri) {
 
 
 RequestId LspClient::SendRequest(const std::string& method, const Json& params) {
-  RequestId id = next_id++;
+  RequestId id = next_request_id++;
   SendServerContent({
     { "jsonrpc", "2.0" },
-    { "id",      (int) id },
+    { "id",      id },
     { "method",  method },
     { "params",  params },
   });
@@ -90,6 +85,23 @@ void LspClient::DidOpen(const Uri& uri, const std::string& text, const std::stri
 }
 
 
+void LspClient::DidChange(const Uri& uri, uint32_t version, std::vector<DocumentChange> changes) {
+  std::vector<Json> content_changes;
+  for (const DocumentChange& change : changes) {
+    content_changes.push_back({
+      {
+        "range", {
+          { "start", {{ "line", change.start.row }, { "character", change.start.col }}  },
+          { "end", {{ "line", change.end.row }, { "character", change.end.col }} },
+        },
+      },
+      { "text", change.text }
+    });
+  }
+  SendNotification("textDocument/didChange", content_changes);
+}
+
+
 void LspClient::SendServerContent(const Json& content) {
 
   std::string dump = content.dump();
@@ -108,16 +120,18 @@ void LspClient::SendServerContent(const Json& content) {
   if (is_initialize_request) {
     ipc->WriteToStdin(data);
 
-  } else { // Wait till the server initialized.
-    (void) std::async(std::launch::async, [&](){
+  } else {
+    // Wait in a thread till the server is initialized.
+    threads.emplace_back([this, data](){
       std::unique_lock<std::mutex> lock(mutex_server_initialized);
-      while (!is_server_initialized) {
+      while (!is_server_initialized && !stop_all_threads && !global_thread_stop) {
         cond_server_initialized.wait(lock);
       }
+      if (stop_all_threads || global_thread_stop) return;
       ipc->WriteToStdin(data);
     });
-  }
 
+  }
 }
 
 
@@ -130,16 +144,9 @@ void LspClient::HandleServerContent(const Json& content) {
   }
 
   if (!content.contains("id")) return;
+  if (!content["id"].is_number_integer()) return;
 
-  RequestId id;
-  Json content_id = content["id"];
-  if (content_id.is_number_integer()) {
-    id = content_id.template get<int>();
-  } else if (content_id.is_string()) {
-    id = content_id.template get<std::string>();
-  } else {
-    return;
-  }
+  RequestId id = content["id"].template get<int>();
 
   if (content.contains("method") && content.contains("params")) {
     HandleRequest(id, content["method"], content["params"]);
@@ -253,8 +260,14 @@ void LspClient::StdoutCallback(void* user_data, const char* buff, size_t length)
 }
 
 
+// FIXME: Clean up this mess.
 void LspClient::StderrCallback(void* user_data, const char* buff, size_t length) {
   // printf("[lsp-stderr] %*s\n", (int) length, buff);
+  static bool first = true;
+  FILE* f = fopen("./build/lsp.log", (first) ?  "w" : "a");
+  first = false;
+  fprintf(f, "%*s\n", (int) length, buff);
+  fclose(f);
 }
 
 

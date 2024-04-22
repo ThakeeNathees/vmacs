@@ -54,6 +54,7 @@
 //   change all comments to // insead of /**/
 //   change color values to 256, (terminal support first).
 //   restructure the source files.
+//   use String (typedef) for all std::string.
 //
 // Future:
 //   picker (fzf, rg, etc...)
@@ -157,24 +158,26 @@ int main(int argc, char** argv) {
 
   std::unique_ptr<IEditor> editor = IEditor::New();
   editor->SetFrontEnd(std::move(fe));
+
+  editor->MainLoop();
   
-  if (!editor->Initialize()) {
-    printf("initialize failed\n");
-    return 1;
-  }
+  // if (!editor->Initialize()) {
+  //   printf("initialize failed\n");
+  //   return 1;
+  // }
 
-  // What a mess.
-  Editor* e = (Editor*) editor.get();
-  e->OpenDocument("/Users/thakeenathees/Desktop/thakee/temp/lsp/main.c");
+  // // What a mess.
+  // Editor* e = (Editor*) editor.get();
+  // e->OpenDocument("/Users/thakeenathees/Desktop/thakee/temp/lsp/main.c");
 
-  while (editor->Running()) {
-    // FIXME: Draw first and handle because termbox is blocking, fix and
-    // change the order.
-    editor->Draw();
-    editor->HandleEvents();
+  // while (editor->Running()) {
+  //   // FIXME: Draw first and handle because termbox is blocking, fix and
+  //   // change the order.
+  //   editor->Draw();
+  //   editor->HandleEvents();
 
-  }
-  editor->Cleanup();
+  // }
+  // editor->Cleanup();
 
   return 0;
 }
