@@ -134,13 +134,20 @@ bool ShellExec(exec_options_t opt, pid_t* pid) {
       cb_stdout_f cb = cbs[i];
       bool is_stdout = (i == 0);
 
+      // FIXME: Need to support for milli/micro second timeout since this is
+      // only bound to seconds and we cannot do fraction here.
+      //
       // Since select will modify the timeout struct, we have to reset it before
       // calling select each time. Event if we're listening wihtout timeout
       // (timeout < 0) we set the timout to 1 seconds so the stdin in the above
       // will not be blocked.
-      int timeout_sec = (opt.timeout_sec < 0) ? 1 : opt.timeout_sec;
-      timeout.tv_sec = timeout_sec; // Seconds.
-      timeout.tv_usec = 0;          // Microseconds.
+      if (opt.timeout_sec < 0) {
+        timeout.tv_sec  = 0;      // Seconds.
+        timeout.tv_usec = 10000;  // Microseconds. // FIXME: Hadrcoded.
+      } else {
+        timeout.tv_sec  = opt.timeout_sec; // Seconds.
+        timeout.tv_usec = 0;               // Microseconds.
+      }
 
       FD_ZERO(&fds_waiting_for_read);
       FD_SET(fdread, &fds_waiting_for_read);

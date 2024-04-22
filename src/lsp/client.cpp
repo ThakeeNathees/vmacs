@@ -11,6 +11,9 @@
 #include <future>
 
 
+CallbackDiagnostic LspClient::cb_diagnostics = nullptr;
+
+
 bool RequestId::operator==(const RequestId& other) {
   return (_int == other._int && _str == other._str);
 }
@@ -41,18 +44,18 @@ LspClient::LspClient(LspConfig config) : config(config) {
 
 
 LspClient::~LspClient() {
-  SendNotification("exit", json::object());
+  SendNotification("exit", Json::object());
 }
 
 
 void LspClient::StartServer(std::optional<Uri> root_uri) {
   ipc->StartListening();
   // TODO: configure params.
-  SendRequest("initialize", json::object());
+  SendRequest("initialize", Json::object());
 }
 
 
-RequestId LspClient::SendRequest(const std::string& method, const json& params) {
+RequestId LspClient::SendRequest(const std::string& method, const Json& params) {
   RequestId id = next_id++;
   SendServerContent({
     { "jsonrpc", "2.0" },
@@ -64,7 +67,7 @@ RequestId LspClient::SendRequest(const std::string& method, const json& params) 
 }
 
 
-void LspClient::SendNotification(const std::string& method, const json& params) {
+void LspClient::SendNotification(const std::string& method, const Json& params) {
   SendServerContent({
     { "jsonrpc",  "2.0" },
     { "method",   method },
@@ -73,7 +76,21 @@ void LspClient::SendNotification(const std::string& method, const json& params) 
 }
 
 
-void LspClient::SendServerContent(const json& content) {
+void LspClient::DidOpen(const Uri& uri, const std::string& text, const std::string& language) {
+  SendNotification(
+    "textDocument/didOpen", {
+      {
+        "textDocument", {
+          { "uri", uri },
+          { "text", text },
+          { "languageId", language },
+        }
+      }
+    });
+}
+
+
+void LspClient::SendServerContent(const Json& content) {
 
   std::string dump = content.dump();
   std::string data = "";
@@ -104,7 +121,7 @@ void LspClient::SendServerContent(const json& content) {
 }
 
 
-void LspClient::HandleServerContent(const json& content) {
+void LspClient::HandleServerContent(const Json& content) {
 
   // TODO: check contains method and params, before getting.
   if (!content.contains("id") && content.contains("method") && content.contains("params")) {
@@ -115,7 +132,7 @@ void LspClient::HandleServerContent(const json& content) {
   if (!content.contains("id")) return;
 
   RequestId id;
-  json content_id = content["id"];
+  Json content_id = content["id"];
   if (content_id.is_number_integer()) {
     id = content_id.template get<int>();
   } else if (content_id.is_string()) {
@@ -141,15 +158,18 @@ void LspClient::HandleServerContent(const json& content) {
 }
 
 
-// FIXME: cleanup this mess.
-std::vector<Diagnostic> LspClient::diags = {};
-void LspClient::HandleNotify(const std::string& method, const json& params) {
+void LspClient::HandleNotify(const std::string& method, const Json& params) {
 
   if (method == "textDocument/publishDiagnostics") {
+
+    if (cb_diagnostics == nullptr) return;
+    std::vector<Diagnostic> diagnostics;
+
     // TODO: Do a try catch here since the bellow might also throw if the server
     // failed for some reason.
-    for (const json& diag : params["diagnostics"]) {
+    for (const Json& diag : params["diagnostics"]) {
       Diagnostic diagnostic;
+      diagnostic.version   = params["version"];
       diagnostic.code      = diag["code"].template get<std::string>();
       diagnostic.message   = diag["message"].template get<std::string>();
       diagnostic.severity  = diag["severity"].template get<int>();
@@ -158,35 +178,37 @@ void LspClient::HandleNotify(const std::string& method, const json& params) {
       diagnostic.start.col = diag["range"]["start"]["character"].template get<int>();
       diagnostic.end.row   = diag["range"]["end"]["line"].template get<int>();
       diagnostic.end.col   = diag["range"]["end"]["character"].template get<int>();
-      diags.push_back(diagnostic);
+
+      diagnostics.push_back(std::move(diagnostic));
     }
 
     Uri uri = params["uri"];
-    int version = params["version"];
+    cb_diagnostics(uri, std::move(diagnostics));
+    return;
   }
 
 }
 
 
-void LspClient::HandleResponse(RequestId id, const json& result) {
+void LspClient::HandleResponse(RequestId id, const Json& result) {
 
   // If the server is initialized, update the atomic bool and tell the server
   // we're initialized as well.
   if (id == INITIALIZE_REQUSET_ID) {
     is_server_initialized = true;
     cond_server_initialized.notify_all();
-    SendNotification("initialized", json::object());
+    SendNotification("initialized", Json::object());
   }
 
 }
 
 
-void LspClient::HandleRequest(RequestId id, const std::string& method, const json& params) {
+void LspClient::HandleRequest(RequestId id, const std::string& method, const Json& params) {
 
 }
 
 
-void LspClient::HandleError(RequestId id, const json& error) {
+void LspClient::HandleError(RequestId id, const Json& error) {
 
 }
 
@@ -217,7 +239,7 @@ void LspClient::StdoutCallback(void* user_data, const char* buff, size_t length)
     std::string_view content_str = data.substr(content_start, content_len);
 
     // TODO: This may throw, Handle (we shouldn't trust anything).
-    json content = json::parse(content_str);
+    Json content = Json::parse(content_str);
 
     // FIXME: this is temproary.
     // printf("[lsp-client] %s\n", content.dump(2).c_str());

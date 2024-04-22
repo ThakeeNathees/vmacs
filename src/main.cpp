@@ -25,6 +25,7 @@
 //   Each response from server should be sent to the Editor and will be handled. there.
 //
 // Bugs:
+//  Remove all the lsp clients when the editor die, or it'll block forever.
 //  <right> <left> on empty selection.
 //  startup time is a bit high, maybe because of raylib ??? try disabling.
 //
@@ -46,6 +47,7 @@
 //   Can't bind to 12j, d10|, ... with numbers.
 //
 // Code quality:
+//   ipc timeout value hardcoded fix.
 //   merge core + buffer (maybe)
 //   Refactor fronend (better file names).
 //   Maybe rename.
@@ -77,57 +79,59 @@
 #include "frontend/raylib/fe_raylib.hpp"
 #include "frontend/termbox2/fe_termbox2.hpp"
 
+#include "editor/editor.hpp"
 
-std::string ReadAll(const std::string& path) {
-  std::ifstream inputFile(path.data());
-  assert(inputFile.is_open() && "Failed to open file.");
-  std::stringstream buffer;
-  buffer << inputFile.rdbuf();
-  inputFile.close();
-  return buffer.str();
-}
 
-void lsp_test() {
+// std::string ReadAll(const std::string& path) {
+//   std::ifstream inputFile(path.data());
+//   assert(inputFile.is_open() && "Failed to open file.");
+//   std::stringstream buffer;
+//   buffer << inputFile.rdbuf();
+//   inputFile.close();
+//   return buffer.str();
+// }
 
-  LspConfig config;
-  config.server = "clangd";
+// void lsp_test() {
 
-  LspClient client(config);
-  client.StartServer(std::nullopt);
+//   LspConfig config;
+//   config.server = "clangd";
 
-  std::string path = "/Users/thakeenathees/Desktop/thakee/temp/lsp/main.c";
-  std::string x;
+//   LspClient client(config);
+//   client.StartServer(std::nullopt);
 
-  // std::cin >> x;
-  client.SendNotification(
-      "textDocument/didOpen", {
-      {
-        "textDocument", {
-          { "uri",  std::string("file://") + path },
-          { "text", ReadAll(path) },
-          { "languageId", "c" },
-        }
-      }
-  });
+//   std::string path = "/Users/thakeenathees/Desktop/thakee/temp/lsp/main.c";
+//   std::string x;
 
-  // goto definition.
-  // std::cin >> x;
-  client.SendRequest(
-    "textDocument/definition", {
-    {
-      "textDocument", {
-        { "uri",  std::string("file://") + path },
-      },
-    },
-    {
-      "position", {
-        { "line", 3  },
-        { "character", 2 },
-      },
-    }
-  });
+//   // std::cin >> x;
+//   client.SendNotification(
+//       "textDocument/didOpen", {
+//       {
+//         "textDocument", {
+//           { "uri",  std::string("file://") + path },
+//           { "text", ReadAll(path) },
+//           { "languageId", "c" },
+//         }
+//       }
+//   });
+
+//   // goto definition.
+//   // std::cin >> x;
+//   client.SendRequest(
+//     "textDocument/definition", {
+//     {
+//       "textDocument", {
+//         { "uri",  std::string("file://") + path },
+//       },
+//     },
+//     {
+//       "position", {
+//         { "line", 3  },
+//         { "character", 2 },
+//       },
+//     }
+//   });
   
-}
+// }
 
 
 
@@ -145,9 +149,6 @@ int main(int argc, char** argv) {
   //
   signal(SIGPIPE, SIG_IGN);
 
-  lsp_test();
-  // return 0;
-
   std::unique_ptr<FrontEnd> fe;
 
   // fe = std::make_unique<Termbox2>();
@@ -161,6 +162,10 @@ int main(int argc, char** argv) {
     printf("initialize failed\n");
     return 1;
   }
+
+  // What a mess.
+  Editor* e = (Editor*) editor.get();
+  e->OpenDocument("/Users/thakeenathees/Desktop/thakee/temp/lsp/main.c");
 
   while (editor->Running()) {
     // FIXME: Draw first and handle because termbox is blocking, fix and

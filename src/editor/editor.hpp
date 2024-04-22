@@ -12,6 +12,10 @@
 #include "buffer/buffer.hpp"
 #include "lsp/lsp.hpp"
 
+// TODO: Added for open documet which is temproary at the moment.
+#include <iostream>
+#include <fstream>
+#include <sstream>
 
 // TODO: Move this to somewhere else.
 #define BUFF_CELL(buff, x, y)\
@@ -31,6 +35,8 @@ class Document {
 
 public:
   Document(std::shared_ptr<Buffer> buffer);
+
+  void PushDiagnostics(std::vector<Diagnostic>&& diagnostics);
 
   // Actions.
   void CursorRight();
@@ -86,7 +92,9 @@ private:
 class DocPane {
 
 public:
-  DocPane(std::shared_ptr<Document> document);
+  DocPane();
+
+  void SetDocument(std::shared_ptr<Document> document);
 
   void HandleEvent(const Event& event);
   void Draw(DrawBuffer buff, Coord pos, Size area);
@@ -118,6 +126,7 @@ class Editor : public IEditor {
 
 public:
   Editor();
+  ~Editor();
 
   void SetFrontEnd(std::unique_ptr<FrontEnd> frontend) override;
   bool Initialize() override;
@@ -126,9 +135,22 @@ public:
   void Draw() override;
   bool Cleanup() override;
 
+  // TODO: These are subjected to change.
+  std::shared_ptr<Document> OpenDocument(const std::string& path);
+
+  // Lsp listeners.
+  void OnLspDiagnostics(const Uri&, std::vector<Diagnostic>&&);
+
 private:
   DocPane docpane;
   bool running = true;
   std::unique_ptr<FrontEnd> frontend;
+
+  // All the documents that are currently opened.
+  std::map<Uri, std::shared_ptr<Document>> documents;
+
+  // All the lsp clients running here are registered here where the key is the
+  // code name of the lsp client. (ex: clangd).
+  std::map<std::string, std::shared_ptr<LspClient>> lsp_clients;
 };
 

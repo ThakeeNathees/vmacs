@@ -10,27 +10,27 @@
 #include "editor.hpp"
 
 
-DocPane::DocPane(std::shared_ptr<Document> document)
-  : document(document) {
+DocPane::DocPane() {
 
-  actions["cursor_up"]      = [&] { this->document->CursorUp();       EnsureCursorOnView(); };
-  actions["cursor_down"]    = [&] { this->document->CursorDown();     EnsureCursorOnView(); };
-  actions["cursor_left"]    = [&] { this->document->CursorLeft();     EnsureCursorOnView(); };
-  actions["cursor_right"]   = [&] { this->document->CursorRight();    EnsureCursorOnView(); };
-  actions["cursor_end"]     = [&] { this->document->CursorEnd();      EnsureCursorOnView(); };
-  actions["cursor_home"]    = [&] { this->document->CursorHome();     EnsureCursorOnView(); };
-  actions["select_right"]   = [&] { this->document->SelectRight();    EnsureCursorOnView(); };
-  actions["select_left"]    = [&] { this->document->SelectLeft();     EnsureCursorOnView(); };
-  actions["select_up"]      = [&] { this->document->SelectUp();       EnsureCursorOnView(); };
-  actions["select_down"]    = [&] { this->document->SelectDown();     EnsureCursorOnView(); };
-  actions["select_home"]    = [&] { this->document->SelectHome();     EnsureCursorOnView(); };
-  actions["select_end"]     = [&] { this->document->SelectEnd();      EnsureCursorOnView(); };
-  actions["insert_space"]   = [&] { this->document->InsertText(" ");  EnsureCursorOnView(); };
-  actions["insert_newline"] = [&] { this->document->InsertText("\n"); EnsureCursorOnView(); };
-  actions["insert_tab"]     = [&] { this->document->InsertText("\t"); EnsureCursorOnView(); };
-  actions["backspace"]      = [&] { this->document->Backspace();      EnsureCursorOnView(); };
-  actions["undo"]           = [&] { this->document->Undo();           EnsureCursorOnView(); };
-  actions["redo"]           = [&] { this->document->Redo();           EnsureCursorOnView(); };
+  // FIXME: This mess needs to be re-implemented better.
+  actions["cursor_up"]      = [&] { if (this->document == nullptr) return; this->document->CursorUp();       EnsureCursorOnView(); };
+  actions["cursor_down"]    = [&] { if (this->document == nullptr) return; this->document->CursorDown();     EnsureCursorOnView(); };
+  actions["cursor_left"]    = [&] { if (this->document == nullptr) return; this->document->CursorLeft();     EnsureCursorOnView(); };
+  actions["cursor_right"]   = [&] { if (this->document == nullptr) return; this->document->CursorRight();    EnsureCursorOnView(); };
+  actions["cursor_end"]     = [&] { if (this->document == nullptr) return; this->document->CursorEnd();      EnsureCursorOnView(); };
+  actions["cursor_home"]    = [&] { if (this->document == nullptr) return; this->document->CursorHome();     EnsureCursorOnView(); };
+  actions["select_right"]   = [&] { if (this->document == nullptr) return; this->document->SelectRight();    EnsureCursorOnView(); };
+  actions["select_left"]    = [&] { if (this->document == nullptr) return; this->document->SelectLeft();     EnsureCursorOnView(); };
+  actions["select_up"]      = [&] { if (this->document == nullptr) return; this->document->SelectUp();       EnsureCursorOnView(); };
+  actions["select_down"]    = [&] { if (this->document == nullptr) return; this->document->SelectDown();     EnsureCursorOnView(); };
+  actions["select_home"]    = [&] { if (this->document == nullptr) return; this->document->SelectHome();     EnsureCursorOnView(); };
+  actions["select_end"]     = [&] { if (this->document == nullptr) return; this->document->SelectEnd();      EnsureCursorOnView(); };
+  actions["insert_space"]   = [&] { if (this->document == nullptr) return; this->document->InsertText(" ");  EnsureCursorOnView(); };
+  actions["insert_newline"] = [&] { if (this->document == nullptr) return; this->document->InsertText("\n"); EnsureCursorOnView(); };
+  actions["insert_tab"]     = [&] { if (this->document == nullptr) return; this->document->InsertText("\t"); EnsureCursorOnView(); };
+  actions["backspace"]      = [&] { if (this->document == nullptr) return; this->document->Backspace();      EnsureCursorOnView(); };
+  actions["undo"]           = [&] { if (this->document == nullptr) return; this->document->Undo();           EnsureCursorOnView(); };
+  actions["redo"]           = [&] { if (this->document == nullptr) return; this->document->Redo();           EnsureCursorOnView(); };
 
   auto get_binding = [&] (const char* name) {
     auto it = actions.find(name);
@@ -73,7 +73,15 @@ DocPane::DocPane(std::shared_ptr<Document> document)
 }
 
 
+void DocPane::SetDocument(std::shared_ptr<Document> document) {
+  this->document = document;
+}
+
+
 void DocPane::HandleEvent(const Event& event) {
+
+  // FIXME:
+  if (this->document == nullptr) return;
 
   switch (event.type) {
 
@@ -119,6 +127,9 @@ void DocPane::HandleEvent(const Event& event) {
 
 void DocPane::Draw(DrawBuffer buff, Coord pos, Size area) {
 
+  // FIXME:
+  if (this->document == nullptr) return;
+
   uint8_t color_black         = RgbToXterm(0x000000);
   uint8_t color_cursor        = RgbToXterm(0x1b4f8f);
   uint8_t color_text          = RgbToXterm(0xffffff);
@@ -153,7 +164,8 @@ void DocPane::Draw(DrawBuffer buff, Coord pos, Size area) {
 
       // FIXME: cleanup this mess.
       bool underline = false;
-      for (auto& diag : LspClient::diags) {
+      
+      for (auto& diag : document->diagnostics) {
         Coord coord = document->buffer->IndexToCoord(index);
 
         do {

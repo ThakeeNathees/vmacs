@@ -25,12 +25,18 @@ uint32_t IEditor::XtermToRgb(uint8_t xterm) {
 }
 
 
-// FIXME: cleanup this mess.
-// #define TEST_FILE_CONTENT "#include <stdio.h>\n\nint main() {\n  printf(\"%i\");\n  x\n  return 0;\n}\n"
-#define TEST_FILE_CONTENT "#include <stdio.h>\n\nint main() {\n  printf(\"%llu\");\n  abcx\n  return 0;\n}\n"
-Editor::Editor():
-  docpane(std::make_shared<Document>(std::make_shared<Buffer>(std::string(TEST_FILE_CONTENT))))
-{}
+Editor::Editor() {
+  // Register LSP content listeners.
+  LspClient::cb_diagnostics = [&](const Uri& uri, std::vector<Diagnostic>&& diagnostics) {
+    this->OnLspDiagnostics(uri, std::move(diagnostics));
+  };
+
+}
+
+
+Editor::~Editor() {
+  LspClient::cb_diagnostics = nullptr;
+}
 
 
 void Editor::SetFrontEnd(std::unique_ptr<FrontEnd> frontend) {
@@ -84,4 +90,45 @@ void Editor::Draw() {
 
   docpane.Draw(buff, {0,0}, {buff.width, buff.height});
   frontend->Display(color_bg); // FIXME: background color.
+}
+
+
+// FIXME: Revmove this mess from here.
+std::string ReadAll(const std::string& path) {
+  std::ifstream inputFile(path.data());
+  assert(inputFile.is_open() && "Failed to open file.");
+  std::stringstream buffer;
+  buffer << inputFile.rdbuf();
+  inputFile.close();
+  return buffer.str();
+}
+
+
+// FIXME: Re implement this mess.
+std::shared_ptr<Document> Editor::OpenDocument(const std::string& path) {
+
+  std::string text = ReadAll(path);
+  std::shared_ptr<Buffer> buff = std::make_shared<Buffer>(text);
+  std::shared_ptr<Document> document = std::make_shared<Document>(buff);
+  Uri uri = std::string("file://") + path;
+
+  LspConfig config;
+  config.server = "clangd";
+
+  documents[uri] = document;
+  docpane.SetDocument(document);
+
+  auto client = std::make_shared<LspClient>(config);
+  lsp_clients["clangd"] = client;
+  client->StartServer(std::nullopt);
+  client->DidOpen(uri, text, "c");
+
+  return document;
+}
+
+
+void Editor::OnLspDiagnostics(const Uri& uri, std::vector<Diagnostic>&& diagnostics) {
+  auto it = documents.find(uri);
+  if (it == documents.end()) return;
+  it->second->PushDiagnostics(std::move(diagnostics));
 }

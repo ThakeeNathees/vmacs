@@ -16,12 +16,7 @@
 #include <optional>
 
 #include <nlohmann/json.hpp>
-using json = nlohmann::json;
-
-typedef std::string Uri;
-
-// The "hardcoded" id for initialize request.
-#define INITIALIZE_REQUSET_ID 0
+using Json = nlohmann::json;
 
 
 // RequestId = int | string
@@ -43,8 +38,9 @@ struct RequestId {
 
 
 struct Diagnostic {
-  std::string message; // A human readable message for the code.
+  uint32_t version;    // Document version where this diagnostic applied.
   std::string code;    // unique code of the error/warning etc.
+  std::string message; // A human readable message for the code.
   Coord start;         // Start position of the diagnostic.
   Coord end;           // Start position of the diagnostic.
   int severity;        // 1 = error, 2 = warning, ...
@@ -56,6 +52,12 @@ struct Diagnostic {
  * Language Server Client.
  *****************************************************************************/
 
+// The "hardcoded" id for initialize request.
+#define INITIALIZE_REQUSET_ID 0
+
+typedef std::string Uri;
+typedef std::function<void(const Uri&, std::vector<Diagnostic>&&)> CallbackDiagnostic;
+
 
 struct LspConfig {
   std::string server; // Currently only the IPC method is supported.
@@ -65,8 +67,6 @@ struct LspConfig {
 class LspClient {
 
 public:
-  // FIXME: this is temp quick fix.
-  static std::vector<Diagnostic> diags;
 
   LspClient(LspConfig config);
   ~LspClient();
@@ -75,8 +75,15 @@ public:
   // server to respond with initialized. And send client initialized.
   void StartServer(std::optional<Uri> root_uri);
 
-  RequestId SendRequest(const std::string& method, const json& params);
-  void SendNotification(const std::string& method, const json& params);
+  RequestId SendRequest(const std::string& method, const Json& params);
+  void SendNotification(const std::string& method, const Json& params);
+
+  // Abstracted request/notification methods.
+  void DidOpen(const Uri& uri, const std::string& text, const std::string& langauge);
+
+  // Callbacks for content recieved from the server. These are global static
+  // and should be set by the one that's listening for any server inputs.
+  static CallbackDiagnostic cb_diagnostics;
 
 private:
   LspConfig config;
@@ -101,12 +108,12 @@ private:
   static void StderrCallback(void* user_data, const char* buff, size_t length);
   static void ExitCallback(void* user_data, int exit_code);
 
-  void SendServerContent(const json& content);
-  void HandleServerContent(const json& content);
+  void SendServerContent(const Json& content);
+  void HandleServerContent(const Json& content);
 
   // Handle content from the server.
-  void HandleNotify(const std::string& method, const json& params);
-  void HandleResponse(RequestId id, const json& result);
-  void HandleRequest(RequestId id, const std::string& method, const json& params);
-  void HandleError(RequestId id, const json& error);
+  void HandleNotify(const std::string& method, const Json& params);
+  void HandleResponse(RequestId id, const Json& result);
+  void HandleRequest(RequestId id, const std::string& method, const Json& params);
+  void HandleError(RequestId id, const Json& error);
 };

@@ -18,6 +18,14 @@ Document::Document(std::shared_ptr<Buffer> buffer)
 }
 
 
+void Document::PushDiagnostics(std::vector<Diagnostic>&& diagnostics) {
+  for (Diagnostic& diag : diagnostics) {
+    // TODO: Ignore if the version isn't our current version.
+    this->diagnostics.push_back(std::move(diag));
+  }
+}
+
+
 // -----------------------------------------------------------------------------
 // Actions.
 // -----------------------------------------------------------------------------
