@@ -1,320 +1,112 @@
+//
 // .--.--.--------.-----.----.-----. vmacs text editor and more.
 // |  |  |        |  _  |  __|__ --| version 0.1.0
 //  \___/|__|__|__|__.__|____|_____| https://github.com/thakeenathees/vmacs
 //
-// Copyright (c) 2023 Thakee Nathees
+// Copyright (c) 2024 Thakee Nathees
 // Licenced under: MIT
 
 #pragma once
 
-/*
- * https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/
- */
+// https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/
 
-#include <stdint.h>
-#include <string>
+#include "core/core.hpp"
+#include "os/os.hpp"
+
 #include <optional>
 
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
 
+typedef std::string Uri;
 
-// Once this (https://github.com/nlohmann/json/pull/4033) merged, I can get rid of these macros
-// and use the "standard" macros of theirs.
-#define JSON_DEFINE(Type, ...) NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(Type, __VA_ARGS__)
-
-#define JSON_DEFINE_SUB(Type, Parent, ...)                                                  \
-  friend void to_json(nlohmann::json& nlohmann_json_j, const Type& nlohmann_json_t) {       \
-    to_json(nlohmann_json_j, static_cast<const Parent&>(nlohmann_json_t));                  \
-    NLOHMANN_JSON_EXPAND(NLOHMANN_JSON_PASTE(NLOHMANN_JSON_TO, __VA_ARGS__))                \
-  }                                                                                         \
-  friend void from_json(const nlohmann::json& nlohmann_json_j, Type& nlohmann_json_t) {     \
-    from_json(nlohmann_json_j, static_cast<Parent&>(nlohmann_json_t));                      \
-    const Type nlohmann_json_default_obj{};                                                 \
-    NLOHMANN_JSON_EXPAND(NLOHMANN_JSON_PASTE(NLOHMANN_JSON_FROM_WITH_DEFAULT, __VA_ARGS__)) \
-  }
-
-#define JSON_ENUM(Type)                                  \
-  enum class Type;                                       \
-  static inline void to_json(json& j, const Type& t) {   \
-    j = (int) t;                                         \
-  }                                                      \
-  static inline void from_json(const json& j, Type& t) { \
-    t = (Type) j.get<int>();                             \
-  }                                                      \
-  enum class Type
+// The "hardcoded" id for initialize request.
+#define INITIALIZE_REQUSET_ID 0
 
 
-typedef std::string_view DocumentUri;
-
-
-// std::optional<T> serialization and de-serialization.
-namespace nlohmann {
-  template <typename T>
-  struct adl_serializer<std::optional<T>> {
-    static void to_json(json& j, const std::optional<T>& opt) {
-      if (opt.has_value()) {
-        j = *opt; // this will call adl_serializer<T>::to_json which will
-      } else {
-        j = nullptr; // find the free function to_json in T's namespace!
-      }
-    }
-
-    static void from_json(const json& j, std::optional<T>& opt) {
-      if (!j.is_null()) {
-        opt = j.template get<T>(); // same as above, but with
-      }
-    }
-  };
-}
-
-
-JSON_ENUM(CompletionItemKind) {
-  Text = 1,
-  Method = 2,
-  Function = 3,
-  Constructor = 4,
-  Field = 5,
-  Variable = 6,
-  Class = 7,
-  Interface = 8,
-  Module = 9,
-  Property = 10,
-  Unit = 11,
-  Value = 12,
-  Enum = 13,
-  Keyword = 14,
-  Snippet = 15,
-  Color = 16,
-  File = 17,
-  Reference = 18,
-  Folder = 19,
-  EnumMember = 20,
-  Constant = 21,
-  Struct = 22,
-  Event = 23,
-  Operator = 24,
-  TypeParameter = 25,
-};
-
-
-JSON_ENUM(SymbolKind) {
-  File = 1,
-  Module = 2,
-  Namespace = 3,
-  Package = 4,
-  Class = 5,
-  Method = 6,
-  Property = 7,
-  Field = 8,
-  Constructor = 9,
-  Enum = 10,
-  Interface = 11,
-  Function = 12,
-  Variable = 13,
-  Constant = 14,
-  String = 15,
-  Number = 16,
-  Boolean = 17,
-  Array = 18,
-  Object = 19,
-  Key = 20,
-  Null = 21,
-  EnumMember = 22,
-  Struct = 23,
-  Event = 24,
-  Operator = 25,
-  TypeParameter = 26,
-};
-
-
-JSON_ENUM(CompletionTriggerKind) {
-  Invoked = 1,
-  TriggerCharacter = 2,
-  TriggerForIncompleteCompletions = 3,
-};
-
-
+// RequestId = int | string
 struct RequestId {
-
   int _int = 0;
-  std::string _str; // If it's empty string we consider int part.
+  std::string _str;
 
   RequestId() {}
   RequestId(int val) : _int(val) {}
   RequestId(const std::string& val) : _str(val) {}
-  RequestId(const char* val) : _str(val) {}
+
+  operator int() const { return _int; }
+  operator const std::string&() const { return _str; }
 
   bool operator==(const RequestId& other);
   bool operator==(int val);
   bool operator==(const std::string& val);
-  bool operator==(const char* val);
-
-  friend void to_json(json& j, const RequestId& t);
-  friend void from_json(const json& j, RequestId& t);
 };
 
 
-struct Position {
-  uint32_t line;
-  uint32_t character;
-  JSON_DEFINE(Position, line, character)
+struct Diagnostic {
+  std::string message; // A human readable message for the code.
+  std::string code;    // unique code of the error/warning etc.
+  Coord start;         // Start position of the diagnostic.
+  Coord end;           // Start position of the diagnostic.
+  int severity;        // 1 = error, 2 = warning, ...
+  std::string source;  // clangd, pyls, etc.
 };
 
 
-struct Range {
-  Position start;
-  Position end;
-  JSON_DEFINE(Range, start, end)
+/******************************************************************************
+ * Language Server Client.
+ *****************************************************************************/
+
+
+struct LspConfig {
+  std::string server; // Currently only the IPC method is supported.
 };
 
 
-struct Location {
-  DocumentUri uri;
-  Range range;
-  JSON_DEFINE(Location, uri, range)
-};
+class LspClient {
 
+public:
+  // FIXME: this is temp quick fix.
+  static std::vector<Diagnostic> diags;
 
-struct RequestMessage {
-  std::string_view jsonrpc;
-  RequestId id;
-  std::string_view method;
-  json params;
-  JSON_DEFINE(RequestMessage, jsonrpc, id, method, params)
-};
+  LspClient(LspConfig config);
+  ~LspClient();
 
+  // This will start the server and send initialize request, async wait for
+  // server to respond with initialized. And send client initialized.
+  void StartServer(std::optional<Uri> root_uri);
 
-struct ResponseError {
-  int code;
-  std::string_view message;
-  std::optional<json> data;
-  JSON_DEFINE(ResponseError, code, message, data)
-};
+  RequestId SendRequest(const std::string& method, const json& params);
+  void SendNotification(const std::string& method, const json& params);
 
+private:
+  LspConfig config;
 
-struct ResponseMessage {
-  std::string_view jsonrpc;
-  RequestId id;
-  std::optional<json> result;
-  std::optional<ResponseError> error;
-  JSON_DEFINE(ResponseMessage, jsonrpc, id, result, error)
-};
+  // The Interprocess communication proxy.
+  std::unique_ptr<IPC> ipc;
 
+  // Id of the next request, it'll increment after each request. Note that we
+  // set id=0 as the initialize request id.
+  std::atomic<int> next_id = INITIALIZE_REQUSET_ID;
 
-struct NotificationMessage {
-  std::string_view jsonrpc;
-  std::string_view method;
-  json params;
-  JSON_DEFINE(NotificationMessage, jsonrpc, method, params)
-};
+  // All the request must sent to the server (except for the initialize request)
+  // after we get a notification that server is initialized. we store that here.
+  // The bellow condition_variable will wait for the atomic boolean to becomd
+  // true before it sends any request to the server.
+  std::atomic<bool> is_server_initialized = false;
+  mutable std::mutex mutex_server_initialized;
+  std::condition_variable cond_server_initialized;
 
+private:
+  static void StdoutCallback(void* user_data, const char* buff, size_t length);
+  static void StderrCallback(void* user_data, const char* buff, size_t length);
+  static void ExitCallback(void* user_data, int exit_code);
 
-struct InitializeParams {
-  std::optional<uint32_t> processId;
-  json capabilities = json::object(); // TODO: Make a struct.
-  std::optional<DocumentUri> rootUri;
-  JSON_DEFINE(InitializeParams, processId, capabilities, rootUri)
-};
+  void SendServerContent(const json& content);
+  void HandleServerContent(const json& content);
 
-
-struct InitializeResult {
-  json capabilities = json::object(); // TODO: Make a struct.
-  json serverInfo = json::object();
-};
-
-
-struct TextDocumentItem {
-  DocumentUri uri;
-  std::string_view languageId;
-  int version = 0;
-  std::string_view text;
-  JSON_DEFINE(TextDocumentItem, uri, languageId, version, text)
-};
-
-
-struct TextDocumentIdentifier {
-  DocumentUri uri;
-  JSON_DEFINE(TextDocumentIdentifier, uri)
-};
-
-
-struct TextDocumentPositionParams {
-  TextDocumentIdentifier textDocument;
-  Position position;
-  JSON_DEFINE(TextDocumentPositionParams, textDocument, position)
-};
-
-
-struct VersionedTextDocumentIdentifier : public TextDocumentIdentifier {
-  /**
-   * The version number of this document.
-   *
-   * The version number of a document will increase after each change,
-   * including undo/redo. The number doesn't need to be consecutive.
-   */
-  int version;
-  JSON_DEFINE_SUB(VersionedTextDocumentIdentifier, TextDocumentIdentifier, version)
-};
-
-
-struct TextDocumentContentChangeEvent {
-  Range range;
-  std::string_view text; // New text for the provided range.
-  JSON_DEFINE(TextDocumentContentChangeEvent, range, text)
-};
-
-
-struct DidOpenTextDocumentParams {
-  TextDocumentItem textDocument;
-  JSON_DEFINE(DidOpenTextDocumentParams, textDocument)
-};
-
-
-struct DidCloseTextDocumentParams {
-  TextDocumentIdentifier textDocument;
-  JSON_DEFINE(DidCloseTextDocumentParams, textDocument)
-};
-
-
-struct DidChangeTextDocumentParams {
-  /**
-   * The document that did change. The version number points
-   * to the version after all provided content changes have
-   * been applied.
-   */
-  VersionedTextDocumentIdentifier textDocument;
-
-  /**
-   * The actual content changes. The content changes describe single state
-   * changes to the document. So if there are two content changes c1 (at
-   * array index 0) and c2 (at array index 1) for a document in state S then
-   * c1 moves the document from S to S' and c2 from S' to S''. So c1 is
-   * computed on the state S and c2 is computed on the state S'.
-   *
-   * To mirror the content of a document using change events use the following
-   * approach:
-   * - start with the same initial content
-   * - apply the 'textDocument/didChange' notifications in the order you
-   *   receive them.
-   * - apply the `TextDocumentContentChangeEvent`s in a single notification
-   *   in the order you receive them.
-   */
-  std::vector<TextDocumentContentChangeEvent> contentChanges;
-
-  JSON_DEFINE(DidChangeTextDocumentParams, textDocument, contentChanges)
-};
-
-
-struct CompletionContext {
-  // How the completion was triggered.
-  CompletionTriggerKind triggerKind;
-  std::optional<std::string_view> triggerCharacter;
-  JSON_DEFINE(CompletionContext, triggerKind, triggerCharacter)
-};
-
-
-struct CompletionParams : public TextDocumentPositionParams {
-  std::optional<CompletionContext> context;
-  JSON_DEFINE_SUB(CompletionParams, TextDocumentPositionParams, context)
+  // Handle content from the server.
+  void HandleNotify(const std::string& method, const json& params);
+  void HandleResponse(RequestId id, const json& result);
+  void HandleRequest(RequestId id, const std::string& method, const json& params);
+  void HandleError(RequestId id, const json& error);
 };

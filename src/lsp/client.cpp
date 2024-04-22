@@ -1,33 +1,202 @@
+//
 // .--.--.--------.-----.----.-----. vmacs text editor and more.
 // |  |  |        |  _  |  __|__ --| version 0.1.0
 //  \___/|__|__|__|__.__|____|_____| https://github.com/thakeenathees/vmacs
 //
-// Copyright (c) 2023 Thakee Nathees
+// Copyright (c) 2024 Thakee Nathees
 // Licenced under: MIT
 
-#include "client.hpp"
+#include "lsp.hpp"
+
+#include <future>
 
 
-LspClient::LspClient(std::string_view server_cmd, std::string_view cwd) {
-
-  cp = Process::New();
-
-  cp->Config(server_cmd, cwd,
-    [=](const std::string& data) {
-      LspClient::_OnStdoutReady(this, data);
-    },
-    [](const std::string& data) {
-      printf("[stderr] %s\n", data.c_str());
-    });
-
-  bool ok = cp->Run();
-  assert(ok && "child process creation failed!");
+bool RequestId::operator==(const RequestId& other) {
+  return (_int == other._int && _str == other._str);
 }
 
 
-void LspClient::_OnStdoutReady(LspClient* client, std::string_view data) {
+bool RequestId::operator==(int val) {
+  return (_str.length() == 0 && _int == val);
+}
+
+
+bool RequestId::operator==(const std::string& val) {
+  return (_str.length() > 0 && _str == val);
+}
+
+
+LspClient::LspClient(LspConfig config) : config(config) {
+
+  IPC::IpcOptions opt;
+  opt.user_data      = this;
+  opt.cmd            = config.server;
+  opt.timeout_sec    = -1;
+  opt.sending_inputs = true;
+  opt.stdout_cb      = LspClient::StdoutCallback;
+  opt.stderr_cb      = LspClient::StderrCallback;
+  opt.exit_cb        = LspClient::ExitCallback;
+  ipc                = IPC::New(opt);
+}
+
+
+LspClient::~LspClient() {
+  SendNotification("exit", json::object());
+}
+
+
+void LspClient::StartServer(std::optional<Uri> root_uri) {
+  ipc->StartListening();
+  // TODO: configure params.
+  SendRequest("initialize", json::object());
+}
+
+
+RequestId LspClient::SendRequest(const std::string& method, const json& params) {
+  RequestId id = next_id++;
+  SendServerContent({
+    { "jsonrpc", "2.0" },
+    { "id",      (int) id },
+    { "method",  method },
+    { "params",  params },
+  });
+  return id;
+}
+
+
+void LspClient::SendNotification(const std::string& method, const json& params) {
+  SendServerContent({
+    { "jsonrpc",  "2.0" },
+    { "method",   method },
+    { "params",   params },
+  });
+}
+
+
+void LspClient::SendServerContent(const json& content) {
+
+  std::string dump = content.dump();
+  std::string data = "";
+  std::string content_len = std::to_string(dump.length());
+
+  data = "Content-Length: " + content_len + "\r\n";
+  data += "\r\n";
+  data += dump;
+
+  bool is_initialize_request = (
+    content.contains("id") &&
+    content["id"].is_number_integer() &&
+    (content["id"].template get<int>() == INITIALIZE_REQUSET_ID));
+
+  if (is_initialize_request) {
+    ipc->WriteToStdin(data);
+
+  } else { // Wait till the server initialized.
+    (void) std::async(std::launch::async, [&](){
+      std::unique_lock<std::mutex> lock(mutex_server_initialized);
+      while (!is_server_initialized) {
+        cond_server_initialized.wait(lock);
+      }
+      ipc->WriteToStdin(data);
+    });
+  }
+
+}
+
+
+void LspClient::HandleServerContent(const json& content) {
+
+  // TODO: check contains method and params, before getting.
+  if (!content.contains("id") && content.contains("method") && content.contains("params")) {
+    HandleNotify(content["method"], content["params"]);
+    return;
+  }
+
+  if (!content.contains("id")) return;
+
+  RequestId id;
+  json content_id = content["id"];
+  if (content_id.is_number_integer()) {
+    id = content_id.template get<int>();
+  } else if (content_id.is_string()) {
+    id = content_id.template get<std::string>();
+  } else {
+    return;
+  }
+
+  if (content.contains("method") && content.contains("params")) {
+    HandleRequest(id, content["method"], content["params"]);
+    return;
+  }
+
+  if (content.contains("result")) {
+    HandleResponse(id, content["result"]);
+    return;
+  }
+
+  if (content.contains("error")) {
+    HandleError(id, content["error"]);
+    return;
+  }
+}
+
+
+// FIXME: cleanup this mess.
+std::vector<Diagnostic> LspClient::diags = {};
+void LspClient::HandleNotify(const std::string& method, const json& params) {
+
+  if (method == "textDocument/publishDiagnostics") {
+    // TODO: Do a try catch here since the bellow might also throw if the server
+    // failed for some reason.
+    for (const json& diag : params["diagnostics"]) {
+      Diagnostic diagnostic;
+      diagnostic.code      = diag["code"].template get<std::string>();
+      diagnostic.message   = diag["message"].template get<std::string>();
+      diagnostic.severity  = diag["severity"].template get<int>();
+      diagnostic.source    = diag["source"].template get<std::string>();
+      diagnostic.start.row = diag["range"]["start"]["line"].template get<int>();
+      diagnostic.start.col = diag["range"]["start"]["character"].template get<int>();
+      diagnostic.end.row   = diag["range"]["end"]["line"].template get<int>();
+      diagnostic.end.col   = diag["range"]["end"]["character"].template get<int>();
+      diags.push_back(diagnostic);
+    }
+
+    Uri uri = params["uri"];
+    int version = params["version"];
+  }
+
+}
+
+
+void LspClient::HandleResponse(RequestId id, const json& result) {
+
+  // If the server is initialized, update the atomic bool and tell the server
+  // we're initialized as well.
+  if (id == INITIALIZE_REQUSET_ID) {
+    is_server_initialized = true;
+    cond_server_initialized.notify_all();
+    SendNotification("initialized", json::object());
+  }
+
+}
+
+
+void LspClient::HandleRequest(RequestId id, const std::string& method, const json& params) {
+
+}
+
+
+void LspClient::HandleError(RequestId id, const json& error) {
+
+}
+
+
+void LspClient::StdoutCallback(void* user_data, const char* buff, size_t length) {
+  LspClient* self = (LspClient*) user_data;
+  std::string_view data(buff, length);
 
   do {
+
     size_t len_start = data.find("Content-Length:");
     if (len_start == std::string::npos) return;
     len_start += strlen("Content-Length:");
@@ -35,193 +204,39 @@ void LspClient::_OnStdoutReady(LspClient* client, std::string_view data) {
     size_t len_end = data.find("\r\n", len_start);
     if (len_end == std::string::npos) return;
 
-    std::string str_len = std::string(data.data() + len_start, len_end - len_start);
-    int content_len = std::stoi(str_len);
+    std::string len_str = std::string(data.data() + len_start, len_end - len_start);
+    int content_len = std::stoi(len_str); // TODO: This may throw (we shouldn't anything).
 
     size_t content_start = data.find("\r\n\r\n");
     if (content_start == std::string::npos) return;
     content_start += strlen("\r\n\r\n");
 
-    // Something went wrong from server.
+    // Something went wrong from the server.
     if (data.length() - content_start < content_len) return;
 
     std::string_view content_str = data.substr(content_start, content_len);
 
+    // TODO: This may throw, Handle (we shouldn't trust anything).
     json content = json::parse(content_str);
+
+    // FIXME: this is temproary.
+    // printf("[lsp-client] %s\n", content.dump(2).c_str());
+
+    self->HandleServerContent(content);
+
+    // Update data for the next iteration.
     data = data.substr(content_start + content_len);
-
-    printf("\n%s\n", content.dump(2).c_str());
-    client->_HandleServerContent(content);
-
   } while (data.length() > 0);
-}
-
-
-void LspClient::_HandleServerContent(const json& content) {
-  if (!content.contains("id") && content.contains("params")) {
-    OnNotify(content["method"], content["params"]);
-    return;
-  }
-
-  RequestId id = content["id"];
-
-  if (content.contains("method")) {
-    std::string_view method = content["method"].template get<std::string_view>();
-    OnRequest(id, method, content["params"]);
-    return;
-  }
-
-  if (content.contains("result")) {
-    OnResponse(id, content["result"]);
-    return;
-  }
-
-  if (content.contains("error")) {
-    OnError(id, content["error"]);
-    return;
-  }
-}
-
-
-void LspClient::_WriteToServer(std::string_view content) {
-  assert(cp->IsRunning() && "Child process is not running!");
-
-  std::string data;
-  data += "Content-Length: " + std::to_string(content.length()) + "\r\n";
-  data += "\r\n";
-  data += content;
-
-  cp->WriteStdin(data);
-}
-
-
-RequestId LspClient::SendRequest(std::string_view method, const json& params) {
-  // Except for "initialize" method all other request should be send after the
-  // server is initialized.
-  RequestMessage message;
-  message.jsonrpc = "2.0";
-  message.id      = next_id++;
-  message.method  = method;
-  message.params  = params;
-  _WriteToServer(json(message).dump());
-  return message.id;
-}
-
-
-void LspClient::SendNotification(std::string_view method, const json& params) {
-  NotificationMessage message;
-  message.jsonrpc = "2.0";
-  message.method = method;
-  message.params = params;
-  _WriteToServer(json(message).dump());
-}
-
-
-RequestId LspClient::Initialize(std::optional<DocumentUri> root_uri) {
-  InitializeParams params;
-  params.rootUri = root_uri;
-  return SendRequest("initialize", params);
-}
-
-
-RequestId LspClient::Shutdown() {
-  return SendRequest("shutdown", json());
-}
-
-
-RequestId LspClient::Completion(DocumentUri uri, Position position, std::optional<CompletionContext> context) {
-  CompletionParams params;
-  params.textDocument.uri = uri;
-  params.position = position;
-  params.context = context;
-  return SendRequest("textDocument/completion", params);
-}
-
-
-RequestId LspClient::SignatureHelp(DocumentUri uri, Position position) {
-  TextDocumentPositionParams params;
-  params.textDocument.uri = uri;
-  params.position = position;
-  return SendRequest("textDocument/signatureHelp", params);
-}
-
-
-RequestId LspClient::GotoDefinition(DocumentUri uri, Position position) {
-  TextDocumentPositionParams params;
-  params.textDocument.uri = uri;
-  params.position = position;
-  return SendRequest("textDocument/definition", params);
-}
-
-
-RequestId LspClient::GotoDeclaration(DocumentUri uri, Position position) {
-  TextDocumentPositionParams params;
-  params.textDocument.uri = uri;
-  params.position = position;
-  return SendRequest("textDocument/declaration", params);
-}
-
-
-RequestId LspClient::Hover(DocumentUri uri, Position position) {
-  TextDocumentPositionParams params;
-  params.textDocument.uri = uri;
-  params.position = position;
-  return SendRequest("textDocument/hover", params);
-}
-
-
-void LspClient::Initialized() {
-  SendNotification("initialized", json::object());
-}
-
-
-void LspClient::Exit() {
-  SendNotification("exit", json());
-}
-
-
-void LspClient::DidOpen(DocumentUri uri, std::string_view text, std::string_view lang_id) {
-  DidOpenTextDocumentParams params;
-  params.textDocument.uri = uri;
-  params.textDocument.text = text;
-  params.textDocument.languageId = lang_id;
-  SendNotification("textDocument/didOpen", params);
-}
-
-
-void LspClient::DidClose(DocumentUri uri) {
-  DidCloseTextDocumentParams params;
-  params.textDocument.uri = uri;
-  SendNotification("textDocument/didClose", params);
-}
-
-
-void LspClient::DidChange(DocumentUri uri, std::vector<TextDocumentContentChangeEvent>&& changes) {
-  DidChangeTextDocumentParams params;
-  params.textDocument.uri = uri;
-  params.contentChanges = std::move(changes);
-  SendNotification("textDocument/didChange", params);
-}
-
-
-void LspClient::OnNotify(const std::string& method, const json& params) {
 
 }
 
 
-void LspClient::OnResponse(RequestId id, const json& result) {
-  if (id == 0) {
-    is_server_initialized = true;
-    Initialized();
-  }
+void LspClient::StderrCallback(void* user_data, const char* buff, size_t length) {
+  // printf("[lsp-stderr] %*s\n", (int) length, buff);
 }
 
 
-void LspClient::OnRequest(RequestId id, std::string_view method, const json& params) {
-
-}
-
-
-void LspClient::OnError(RequestId id, const json& error) {
-
+void LspClient::ExitCallback(void* user_data, int exit_code) {
+  // FIXME: this is temproary.
+  printf("[lsp-client] exit_code=%i\n", exit_code);
 }

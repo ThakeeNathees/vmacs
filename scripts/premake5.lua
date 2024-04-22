@@ -1,20 +1,16 @@
--- Copyright (c) 2023 Thakee Nathees
+-- Copyright (c) 2023 - 2024 Thakee Nathees
 
 -- ---------------------------------------------------------------------------
 -- Variables
 -- ---------------------------------------------------------------------------
 
 local root_dir_rel      = ".."
-local root_dir_abs      = path.getdirectory(os.getcwd())
-local project_name      = path.getbasename(root_dir_abs)
+local project_name      = path.getbasename(path.getdirectory(os.getcwd()))
 local build_dir         = root_dir_rel .. "/build"
 
-local raylib_dir        = root_dir_rel .. "/thirdparty/raylib"
-local ts_dir            = root_dir_rel .. "/thirdparty/tree-sitter"
-local ts_parsers_dir    = root_dir_rel .. "/thirdparty/treesitter-parsers"
+local raylib_dir        = root_dir_rel .. "/thirdparty/raylib-5.0"
 
 local raylib_bin_dir    = build_dir .. "/bin/%{cfg.buildcfg}/raylib"
-local ts_bin_dir        = build_dir .. "/bin/%{cfg.buildcfg}/parsers"
 local project_bin_dir   = build_dir .. "/bin/%{cfg.buildcfg}/" .. project_name
 
 -- ---------------------------------------------------------------------------
@@ -121,71 +117,24 @@ project "raylib"
   filter{}
 
   print ("Using raylib dir " .. raylib_dir);
-  includedirs {raylib_dir .. "/src", raylib_dir .. "/src/external/glfw/include" }
+  
+  includedirs {
+    raylib_dir .. "/src",
+    raylib_dir .. "/src/external/glfw/include"
+  }
+
   vpaths {
     ["Header Files"] = { raylib_dir .. "/src/**.h"},
     ["Source Files/*"] = { raylib_dir .. "/src/**.c"},
   }
-  files { raylib_dir .. "/src/*.h", raylib_dir .. "/src/*.c" }
-  filter {
-    "system:macosx",
-    "files:" .. raylib_dir .. "/src/rglfw.c"
-  }
-  compileas "Objective-C"
-
-  filter{}
-
-
--- ---------------------------------------------------------------------------
--- Treesitter
--- ---------------------------------------------------------------------------
-
-function link_parsers()
-  links { "treesitter" }
-
-  filter "action:vs*"
-    defines{ "_WINSOCK_DEPRECATED_NO_WARNINGS", "_CRT_SECURE_NO_WARNINGS" }
-    dependson { "treesitter" }
-    links { "treesitter.lib" }
-    characterset ("MBCS")
-    libdirs { ts_bin_dir }
-  filter "system:windows"
-    defines{"_WIN32"}
-    libdirs { ts_bin_dir }
-  filter {}
-
-  includedirs {
-    ts_dir .. "/include",
-    ts_parsers_dir .. "/",
-  }
-end
-
-
-project "treesitter"
-  kind "StaticLib"
-  location (build_dir)
-  language "C"
-  targetdir (ts_bin_dir)
-
-  filter "action:vs*"
-    defines{"_WINSOCK_DEPRECATED_NO_WARNINGS", "_CRT_SECURE_NO_WARNINGS"}
-    characterset ("MBCS")
-  filter{}
-
-  includedirs {
-    ts_dir .. "/include",
-    ts_dir .. "/src",
-  }
-  vpaths {
-    ["Header Files"] = { ts_dir .. "/src/**.h", ts_dir .. "/include/**.h" },
-    ["Source Files/*"] = { ts_dir .. "/src/**.c", ts_parsers_dir .. "/**.c"},
-  }
 
   files {
-    ts_dir .. "/include/**.h",
-    ts_dir .. "/src/lib.c",
-    ts_parsers_dir .. "/**.c",
+    raylib_dir .. "/src/*.h",
+    raylib_dir .. "/src/*.c"
   }
+
+  filter { "system:macosx", "files:" .. raylib_dir .. "/src/rglfw.c" }
+    compileas "Objective-C"
 
   filter{}
 
@@ -220,18 +169,12 @@ project (project_name)
     root_dir_rel .. "/src/**.h",
     root_dir_rel .. "/src/**.cpp",
     root_dir_rel .. "/src/**.hpp",
-
-    -- TODO: Maybe move to a different project..
-    root_dir_rel .. "/thirdparty/tomlcpp/**.c",
-    root_dir_rel .. "/thirdparty/tomlcpp/**.cpp",
-    root_dir_rel .. "/thirdparty/tomlcpp/**.h",
-    root_dir_rel .. "/thirdparty/tomlcpp/**.hpp",
   }
 
   includedirs {
     root_dir_rel .. "/src/",
+    root_dir_rel .. "/include/",
     root_dir_rel .. "/thirdparty/",
-    root_dir_rel .. "/thirdparty/tomlcpp/",
   }
 
   -- Enable if needed.
@@ -242,10 +185,9 @@ project (project_name)
   filter {}
 
   link_raylib()
-  link_parsers()
 
 
 -- Copy files files after build.
 postbuildcommands {
-  "cp " .. root_dir_abs .. "/src/res/config.toml " .. project_bin_dir
+  -- "cp " .. root_dir_abs .. "/src/res/config.toml " .. project_bin_dir
 }
