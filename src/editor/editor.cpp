@@ -12,7 +12,7 @@
 #include <thread>
 #include <future>
 
-// TODO: Added for open documet which is temproary at the moment.
+// FIXME: Added for open documet which is temproary at the moment.
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -134,6 +134,7 @@ std::shared_ptr<Document> Editor::OpenDocument(const std::string& path) {
 
   std::shared_ptr<Buffer> buff = std::make_shared<Buffer>(text);
   std::shared_ptr<Document> document = std::make_shared<Document>(uri, buff);
+  document->SetLanguage("c");
 
   LspConfig config;
   config.server = "clangd";
@@ -141,10 +142,10 @@ std::shared_ptr<Document> Editor::OpenDocument(const std::string& path) {
   documents[uri] = document;
   docpane.SetDocument(document);
 
+  // FIXME: the document itself request for the client from the editor.
   auto client = std::make_shared<LspClient>(config);
   lsp_clients["clangd"] = client;
   client->StartServer(std::nullopt);
-
   document->SetLspClient(client);
 
   return document;

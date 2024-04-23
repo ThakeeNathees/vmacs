@@ -7,7 +7,7 @@
 // Licenced under: MIT
 
 #include "core/core.hpp"
-#include "buffer.hpp"
+#include "document.hpp"
 
 
 Buffer::Buffer(const std::string& data) : data(data) {

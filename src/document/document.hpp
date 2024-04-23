@@ -321,3 +321,78 @@ private:
 };
 
 
+class Document : public HistoryListener {
+
+public:
+  Document(const Uri& uri, std::shared_ptr<Buffer> buffer);
+  ~Document();
+
+  // Getters.
+  const std::string& GetLanguage() const;
+  bool IsReadOnly() const;
+
+  // Setters.
+  void SetLspClient(std::shared_ptr<LspClient> client);
+  void SetReadOnly(bool readonly);
+  void SetLanguage(const std::string& language);
+
+  // If any language server send notification the editor will recieve it first
+  // and send to the corresponded document.
+  void PushDiagnostics(std::vector<Diagnostic>&& diagnostics);
+
+  void OnHistoryChanged(const std::vector<DocumentChange>& changes) override;
+
+  // Cursor actions.
+  void CursorRight();
+  void CursorLeft();
+  void CursorUp();
+  void CursorDown();
+  void CursorHome();
+  void CursorEnd();
+
+  void SelectRight();
+  void SelectLeft();
+  void SelectUp();
+  void SelectDown();
+  void SelectHome();
+  void SelectEnd();
+
+  // Multi cursor action.
+  void AddCursorDown();
+  void AddCursorUp();
+
+  // Buffer actions.
+  void InsertText(const std::string& text);
+  void Backspace();
+  void Undo();
+  void Redo();
+
+private:
+  MultiCursor cursors;
+  std::shared_ptr<Buffer> buffer;
+  History history;
+
+  // Uri is simply "file://" + "the/file/path/in/the/disk".
+  //
+  // If the file is a new buffer the uri will be empty and the editor will ask
+  // a path before save. If we started the editor like `vim test.c` the uri is
+  // `file://path/to/cwd/test.c` even thought the file isn't exists in the disk
+  // we'll create a new one.
+  Uri uri;
+
+  std::shared_ptr<LspClient> lsp_client;
+  std::vector<Diagnostic> diagnostics;
+
+  // Document settings.
+  std::string language;
+  bool readonly = false;
+  // TODO:
+  // Encoding: utf8, utf16, etc.
+  // Line Ending.
+  // Indent style (\t, or ' ').
+  // readonly;
+
+  // DocPane need cursor and buffer to draw the document, this might not be the
+  // "oop" way I don't know.
+  friend class DocPane;
+};

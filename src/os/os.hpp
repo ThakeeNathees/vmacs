@@ -22,7 +22,7 @@ uint64_t GetPid();
 
 
 // A platform independent abstract interface for two way inter process
-// communication mainly used for the 
+// communication mainly used for the language server communication.
 class IPC {
 
 public:

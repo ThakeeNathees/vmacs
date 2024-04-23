@@ -8,8 +8,7 @@
 
 
 #include "core/core.hpp"
-#include "buffer/buffer.hpp"
-#include "editor.hpp"
+#include "document.hpp"
 
 
 Document::Document(const Uri& uri, std::shared_ptr<Buffer> buffer)
@@ -24,11 +23,29 @@ Document::~Document() {
 }
 
 
+const std::string& Document::GetLanguage() const {
+  return language;
+}
+
+
+bool Document::IsReadOnly() const {
+  return readonly;
+}
+
+
+void Document::SetReadOnly(bool readonly) {
+  this->readonly = readonly;
+}
+
+
+void Document::SetLanguage(const std::string& language) {
+  this->language = language;
+}
+
+
 void Document::SetLspClient(std::shared_ptr<LspClient> client) {
   lsp_client = client;
-
-  // FIXME: language id of the document (c/c++, etc).
-  lsp_client->DidOpen(uri, buffer->GetData(), "c");
+  lsp_client->DidOpen(uri, buffer->GetData(), language);
 }
 
 

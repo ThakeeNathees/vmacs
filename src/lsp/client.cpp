@@ -62,9 +62,11 @@ LspClient::~LspClient() {
   // with it or its callback before we cleanup.
   ipc = nullptr;
 
-  std::lock_guard<std::mutex> lock_pool(mutex_threads_pool);
-  for (std::thread& thread : threads) {
-    if (thread.joinable()) thread.join();
+  {
+    std::lock_guard<std::mutex> lock_pool(mutex_threads_pool);
+    for (std::thread& thread : threads) {
+      if (thread.joinable()) thread.join();
+    }
   }
 }
 
@@ -132,6 +134,10 @@ void LspClient::DidChange(const Uri& uri, uint32_t version, const std::vector<Do
 
 
 void LspClient::SendServerContent(const Json& content) {
+
+  // It's possible for the ipc to be nullptr if we're waiting for the threads
+  // to join in the destructor and this method is called by some other threads.
+  if (ipc == nullptr) return;
 
   std::string dump = content.dump();
   std::string data = "";

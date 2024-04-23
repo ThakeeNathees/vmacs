@@ -105,7 +105,6 @@ void DocPane::HandleEvent(const Event& event) {
       bool more = false;
 
       FuncAction action = keytree.ConsumeEvent(EncodeKeyEvent(event.key), &more);
-
       // if (action && more) { } // TODO: timeout and perform action.
 
       if (action) {
@@ -135,9 +134,9 @@ void DocPane::HandleEvent(const Event& event) {
 
 void DocPane::Draw(DrawBuffer buff, Coord pos, Size area) {
 
-  // FIXME:
-  if (this->document == nullptr) return;
+  ASSERT(this->document != nullptr, OOPS);
 
+  // FIXME: Move this to themes.
   uint8_t color_red           = RgbToXterm(0xff0000);
   uint8_t color_yellow        = RgbToXterm(0xcccc2d);
   uint8_t color_black         = RgbToXterm(0x000000);
@@ -147,10 +146,15 @@ void DocPane::Draw(DrawBuffer buff, Coord pos, Size area) {
   uint8_t color_bg            = RgbToXterm(0x272829);
   uint8_t color_tab_indicator = RgbToXterm(0x656966);
 
-  int line_count   = document->buffer->GetLineCount();
+  // We draw an indicator for the tab character.
+  // 0x2102 : '→'
+  int tab_indicator = 0x2192;
 
-  // TODO: 
+  // Update our text area so we'll know about the viewing area when we're not
+  // drawing, needed to ensure the cursors are on the view area, etc.
   text_area = area;
+
+  int line_count   = document->buffer->GetLineCount();
 
   // y is the current relative y coordinate from pos we're drawing.
   for (int y = 0; y < area.height; y++) {
@@ -168,37 +172,18 @@ void DocPane::Draw(DrawBuffer buff, Coord pos, Size area) {
 
     while (x < area.width && index <= line.end) {
 
+      // Current cell configuration.
       int c = document->buffer->At(index);
-
-      // Diagnostics ---------------------------------------------------------
-      Diagnostic*  diag_ptr = nullptr;
-      // FIXME: cleanup this mess.
-      bool underline = false;
-      for (auto& diag : document->diagnostics) {
-        Coord coord = document->buffer->IndexToCoord(index);
-        if (coord.row < diag.start.row || (coord.row == diag.start.row && coord.col < diag.start.col)) {
-          continue;
-        }
-        if (coord.row > diag.end.row || (coord.row == diag.end.row && coord.col >= diag.end.col)) {
-          continue;
-        }
-        underline = true;
-        if (index == document->cursors.GetPrimaryCursor().GetIndex()) {
-          diag_ptr = &diag;
-        }
-        break;
-      }
-      int attrib = 0;
-      if (underline) attrib |= VMACS_CELL_UNDERLINE;
-      // Diagnostics ---------------------------------------------------------
-
-      // Color for the cell.
       uint8_t fg = color_text;
       uint8_t bg = color_bg;
+      int attrib = 0;
 
+      const Diagnostic* diagnos =  GetDiagnosticAt(index);
+      if (diagnos != nullptr) attrib |= VMACS_CELL_UNDERLINE;
+
+      // Check if current cell is in cursor / selection.
       bool in_selection = false;
       bool in_cursor    = false;
-
       for (const Cursor& cursor : document->cursors.Get()) {
         if (index == cursor.GetIndex()) in_cursor = true;
         Slice selection = cursor.GetSelection();
@@ -211,15 +196,13 @@ void DocPane::Draw(DrawBuffer buff, Coord pos, Size area) {
       if (in_cursor) bg = color_cursor;
       else if (in_selection) bg = color_sel;
 
+      // Handle tab character.
       bool istab = (c == '\t');
       if (isspace(c) || c == '\0') c = ' ';
 
       if (istab) {
-        // TODO: Clean up this mess. If front end is raylib load this codepoint
-        // from the glyph.
         // First cell we draw an indecator and draw cursor only in the first cell.
-        // 0x2102 : '→'
-        SET_CELL(buff, pos.col+x, pos.row+y, 0x2192, color_tab_indicator, bg, attrib);
+        SET_CELL(buff, pos.col+x, pos.row+y, tab_indicator, color_tab_indicator, bg, attrib);
         x++;
 
         bg = (in_selection) ? color_sel : color_bg;
@@ -233,12 +216,13 @@ void DocPane::Draw(DrawBuffer buff, Coord pos, Size area) {
         x++;
       }
 
-      // Draw diagnostic if exists.
-      if (diag_ptr) {
-          int color = (diag_ptr->severity == 1) ? color_red : color_yellow;
-        for (int i = 0; i < diag_ptr->message.size(); i++) {
+      // FIXME: This is temproary mess.
+      // Draw diagnostic text.
+      if (diagnos && index == document->cursors.GetPrimaryCursor().GetIndex()) {
+        int color = (diagnos->severity == 1) ? color_red : color_yellow;
+        for (int i = 0; i < diagnos->message.size(); i++) {
           if (i >= area.width) break;
-          char ch = diag_ptr->message[i];
+          char ch = diagnos->message[i];
           SET_CELL(buff, pos.col + i, pos.row, ch, color, color_bg, 0);
         }
       }
@@ -267,3 +251,27 @@ void DocPane::EnsureCursorOnView() {
   }
 }
 
+
+const Diagnostic* DocPane::GetDiagnosticAt(int index) const {
+
+  // TODO: sort the diagnostics when recieved and do a binary search.
+  for (Diagnostic& diag : document->diagnostics) {
+    Coord coord = document->buffer->IndexToCoord(index);
+
+    // Check if the coordinate comes before this diagnostic.
+    if ((coord.row < diag.start.row) ||
+        (coord.row == diag.start.row && coord.col < diag.start.col)) {
+      continue;
+    }
+
+    // Check if the coordinate comes after this diagnostic.
+    if ((coord.row > diag.end.row) ||
+        (coord.row == diag.end.row && coord.col >= diag.end.col)) {
+      continue;
+    }
+
+    return &diag;
+  }
+
+  return nullptr;
+}

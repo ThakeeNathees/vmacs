@@ -13,10 +13,8 @@
 #include <functional>
 
 
-/*
- * Actions are functions which are "bindable" to keys, and associated with a
- * key/key combination that invoke the action.
- */
+// Actions are functions which are "bindable" to keys, and associated with a
+// key/key combination that invoke the action.
 typedef std::function<void()> FuncAction;
 
 // Attribute of the cells.
@@ -25,11 +23,10 @@ typedef std::function<void()> FuncAction;
 #define VMACS_CELL_ITALIC    0x04
 #define VMACS_CELL_REVERSE   0x08
 
-/*
- * The UI is considered as a grid of cells, each cell has foreground and
- * background colors. The color values are xterm-256 compatible single byte
- * value. if rbg hex values needed use XtermToRgb() function defined bellow.
- */
+
+// The UI is considered as a grid of cells, each cell has foreground and
+// background colors. The color values are xterm-256 compatible single byte
+// value. if rbg hex values needed use XtermToRgb() function defined bellow.
 typedef struct {
   uint32_t ch; // Unicode codepoint.
   uint8_t fg;  // Foreground color.
@@ -38,11 +35,9 @@ typedef struct {
 } Cell;
 
 
-/*
- * DrawBuffer will be provided by the front end which will be filled with the
- * cell values, at the backend draw call which then will be displaied by the
- * front end.
- */
+// DrawBuffer will be provided by the front end which will be filled with the
+// cell values, at the backend draw call which then will be displaied by the
+// front end.
 typedef struct {
   Cell* cells;
   int width;
@@ -50,10 +45,8 @@ typedef struct {
 } DrawBuffer;
 
 
-/*
- * All the event enums here are copied from raylib, since the core should be
- * independed from any frontend (reusable and not coupled with anything).
- */
+// All the event enums here are copied from raylib, since the core should be
+// independed from any frontend (reusable and not coupled with anything).
 struct Event {
 
   typedef enum {
@@ -236,10 +229,8 @@ struct Event {
 };
 
 
-/*
- * The abstract class representing the front end. Any front end implementation
- * should be able to provide events and handle drawings.
- */
+// The abstract class representing the front end. Any front end implementation
+// should be able to provide events and handle drawings.
 class FrontEnd {
 public:
   virtual bool Initialize() = 0;
@@ -247,14 +238,12 @@ public:
 
   virtual std::vector<Event> GetEvents() = 0;
 
-  /*
-   * The front end should own a draw buffer which needs to be passed to the
-   * backend by the bellow method. We'll be fill the buffer with the cells and
-   * call the display method, that'll display the filled buffer. Note that
-   * the display takes a cleaer color argument which needed to clear the color
-   * outside of the grid otherwise the color outside gride will be different and
-   * also raylib requires a clear_color swap a new buffer and start drawing.
-   */
+  // The front end should own a draw buffer which needs to be passed to the
+  // backend by the bellow method. We'll be fill the buffer with the cells and
+  // call the display method, that'll display the filled buffer. Note that
+  // the display takes a cleaer color argument which needed to clear the color
+  // outside of the grid otherwise the color outside gride will be different and
+  // also raylib requires a clear_color swap a new buffer and start drawing.
   virtual DrawBuffer GetDrawBuffer() = 0;
  
   // TODO: Remove the clear color and get the color for raylib from the theme

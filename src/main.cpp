@@ -18,22 +18,31 @@
 // Bugs:
 //  startup time is a bit high, maybe because of raylib ??? try disabling.
 //
+//  Cleanup things:
+//    make docpane takes document as a parameter when constucted.
+//    Registry of language server, and language => lsp mapping in the Editor:
+//      { "clangd" : LspClient(), "pyright" : LspClient(), ...  }
+//      { "c" : "clangd", "c++": "clangd",  "python" : "pyright", etc. }
+//    Theme manager...
+//    Global Configs.
+//
 // Pending:
 //
 // Alt+shift+arrow not detected by termbox: Add this entry:
 // {"\x1b[1;10B",   TB_KEY_ARROW_DOWN,  TB_MOD_ALT | TB_MOD_SHIFT },
 //
+//   helix them system + tree sitter.
+//
 //   editor send events and ask draw in a structured manner.
 //   proper draw system. (request client for buffer and fill only if it needs to re-draw).
-//   line numbers
+//   line numbers.
 //   global configs (tabwidth, ).
 //   debug print that accumilate logs and dumps at the end.
 //   pair and auto indent
 //   editor modes implement properly.
 //   default bindnigs and tmeme settings.
 //   treesitter and syntax highlighting.
-//   status bar
-//   prompt bar
+//   status bar; prompt bar
 //   global atomic bool to say all the while (true) loop thread to end.
 //
 //   Can't bind to 12j, d10|, ... with numbers.
@@ -99,18 +108,6 @@ void lsp_test() {
 
   client.DidOpen(uri, ReadAll2(path), "c");
 
-  // std::cin >> x;
-  // client.SendNotification(
-  //     "textDocument/didOpen", {
-  //     {
-  //       "textDocument", {
-  //         { "uri",  std::string("file://") + path },
-  //         { "text", ReadAll2(path) },
-  //         { "languageId", "c" },
-  //       }
-  //     }
-  // });
-
   // goto definition.
   // std::cin >> x;
   client.SendRequest(
@@ -158,9 +155,6 @@ int main(int argc, char** argv) {
 
   // lsp_test();
   // return 0;
-
-
-
 
   std::unique_ptr<FrontEnd> fe;
 
