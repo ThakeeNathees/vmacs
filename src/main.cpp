@@ -10,23 +10,12 @@
 // TODO:
 //
 // Now:
-//   cleanup diagnostic mess make it properly structured.
-//   range include check algo.
-//
-//
-// LSP:
-//   Lsp working proto:
-//     Diagnos & goto def should work
 //
 //
 // Top priority:
-//   Editor has a "registry" of {uri: document}. (can be used with lsp)
-//   LSP methods instead of direct json.
-//   Each response from server should be sent to the Editor and will be handled. there.
+//
 //
 // Bugs:
-//  Remove all the lsp clients when the editor die, or it'll block forever.
-//  <right> <left> on empty selection.
 //  startup time is a bit high, maybe because of raylib ??? try disabling.
 //
 // Pending:
@@ -34,12 +23,12 @@
 // Alt+shift+arrow not detected by termbox: Add this entry:
 // {"\x1b[1;10B",   TB_KEY_ARROW_DOWN,  TB_MOD_ALT | TB_MOD_SHIFT },
 //
-//   multi cursor.
+//   editor send events and ask draw in a structured manner.
+//   proper draw system. (request client for buffer and fill only if it needs to re-draw).
 //   line numbers
 //   global configs (tabwidth, ).
 //   debug print that accumilate logs and dumps at the end.
 //   pair and auto indent
-//   termbox non-blocking event polling.
 //   editor modes implement properly.
 //   default bindnigs and tmeme settings.
 //   treesitter and syntax highlighting.
@@ -50,6 +39,7 @@
 //   Can't bind to 12j, d10|, ... with numbers.
 //
 // Code quality:
+//   write tests (if I have time)
 //   ipc timeout value hardcoded fix.
 //   merge core + buffer (maybe)
 //   Refactor fronend (better file names).

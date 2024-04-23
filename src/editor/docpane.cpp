@@ -25,6 +25,10 @@ DocPane::DocPane() {
   actions["select_down"]    = [&] { if (this->document == nullptr) return; this->document->SelectDown();     EnsureCursorOnView(); };
   actions["select_home"]    = [&] { if (this->document == nullptr) return; this->document->SelectHome();     EnsureCursorOnView(); };
   actions["select_end"]     = [&] { if (this->document == nullptr) return; this->document->SelectEnd();      EnsureCursorOnView(); };
+
+  actions["add_cursor_down"] = [&] { if (this->document == nullptr) return; this->document->AddCursorDown(); EnsureCursorOnView(); };
+  actions["add_cursor_up"]   = [&] { if (this->document == nullptr) return; this->document->AddCursorUp();   EnsureCursorOnView(); };
+
   actions["insert_space"]   = [&] { if (this->document == nullptr) return; this->document->InsertText(" ");  EnsureCursorOnView(); };
   actions["insert_newline"] = [&] { if (this->document == nullptr) return; this->document->InsertText("\n"); EnsureCursorOnView(); };
   actions["insert_tab"]     = [&] { if (this->document == nullptr) return; this->document->InsertText("\t"); EnsureCursorOnView(); };
@@ -57,6 +61,10 @@ DocPane::DocPane() {
   REGISTER_BINDING("*", "<S-down>",    "select_down");
   REGISTER_BINDING("*", "<S-home>",    "select_home");
   REGISTER_BINDING("*", "<S-end>",     "select_end");
+
+  REGISTER_BINDING("*", "<M-down>",    "add_cursor_down");
+  REGISTER_BINDING("*", "<M-up>",      "add_cursor_up");
+
   REGISTER_BINDING("*", "<space>",     "insert_space");
   REGISTER_BINDING("*", "<enter>",     "insert_newline");
   REGISTER_BINDING("*", "<tab>",       "insert_tab");
@@ -130,6 +138,8 @@ void DocPane::Draw(DrawBuffer buff, Coord pos, Size area) {
   // FIXME:
   if (this->document == nullptr) return;
 
+  uint8_t color_red           = RgbToXterm(0xff0000);
+  uint8_t color_yellow        = RgbToXterm(0xcccc2d);
   uint8_t color_black         = RgbToXterm(0x000000);
   uint8_t color_cursor        = RgbToXterm(0x1b4f8f);
   uint8_t color_text          = RgbToXterm(0xffffff);
@@ -138,8 +148,6 @@ void DocPane::Draw(DrawBuffer buff, Coord pos, Size area) {
   uint8_t color_tab_indicator = RgbToXterm(0x656966);
 
   int line_count   = document->buffer->GetLineCount();
-  Slice selection  = document->cursor.GetSelection();
-  int cursor_index = document->cursor.GetIndex();
 
   // TODO: 
   text_area = area;
@@ -162,26 +170,43 @@ void DocPane::Draw(DrawBuffer buff, Coord pos, Size area) {
 
       int c = document->buffer->At(index);
 
+      // Diagnostics ---------------------------------------------------------
+      Diagnostic*  diag_ptr = nullptr;
       // FIXME: cleanup this mess.
       bool underline = false;
-      
       for (auto& diag : document->diagnostics) {
         Coord coord = document->buffer->IndexToCoord(index);
-        do {
-          if (coord.row < diag.start.row || (coord.row == diag.start.row && coord.col < diag.start.col)) break;
-          if (coord.row > diag.end.row || (coord.row == diag.end.row && coord.col >= diag.end.col)) break;
-          underline = true;
-        } while (false);
+        if (coord.row < diag.start.row || (coord.row == diag.start.row && coord.col < diag.start.col)) {
+          continue;
+        }
+        if (coord.row > diag.end.row || (coord.row == diag.end.row && coord.col >= diag.end.col)) {
+          continue;
+        }
+        underline = true;
+        if (index == document->cursors.GetPrimaryCursor().GetIndex()) {
+          diag_ptr = &diag;
+        }
+        break;
       }
       int attrib = 0;
       if (underline) attrib |= VMACS_CELL_UNDERLINE;
+      // Diagnostics ---------------------------------------------------------
 
       // Color for the cell.
       uint8_t fg = color_text;
       uint8_t bg = color_bg;
 
-      bool in_selection = selection.start <= index && index < selection.end;
-      bool in_cursor = index == cursor_index;
+      bool in_selection = false;
+      bool in_cursor    = false;
+
+      for (const Cursor& cursor : document->cursors.Get()) {
+        if (index == cursor.GetIndex()) in_cursor = true;
+        Slice selection = cursor.GetSelection();
+        if (selection.start <= index && index < selection.end) {
+          in_selection = true;
+        }
+        if (in_selection && in_cursor) break;
+      }
 
       if (in_cursor) bg = color_cursor;
       else if (in_selection) bg = color_sel;
@@ -208,6 +233,16 @@ void DocPane::Draw(DrawBuffer buff, Coord pos, Size area) {
         x++;
       }
 
+      // Draw diagnostic if exists.
+      if (diag_ptr) {
+          int color = (diag_ptr->severity == 1) ? color_red : color_yellow;
+        for (int i = 0; i < diag_ptr->message.size(); i++) {
+          if (i >= area.width) break;
+          char ch = diag_ptr->message[i];
+          SET_CELL(buff, pos.col + i, pos.row, ch, color, color_bg, 0);
+        }
+      }
+
       index++;
     }
 
@@ -217,7 +252,7 @@ void DocPane::Draw(DrawBuffer buff, Coord pos, Size area) {
 
 void DocPane::EnsureCursorOnView() {
 
-  Coord coord = document->cursor.GetCoord();
+  Coord coord = document->cursors.GetPrimaryCursor().GetCoord();
 
   if (coord.col <= view_start.col) {
     view_start.col = coord.col;

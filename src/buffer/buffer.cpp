@@ -114,6 +114,23 @@ int Buffer::CoordToIndex(Coord coord) const {
 }
 
 
+int Buffer::ColumnToIndex(int column, int line_num) {
+
+  Slice line = GetLine(line_num);
+
+  int curr_column = 0; // Column of the current character.
+  for (int i = line.start; i <= line.end; i++) {
+    if (curr_column == column) return i;
+    if (curr_column > column) return i-1;
+    curr_column += (At(i) == '\t') ? TABSIZE : 1;
+  }
+
+  // The column is way beyond the end of the line so we just return the end of
+  // the line index.
+  return line.end;
+}
+
+
 void Buffer::InsertText(int index, const String& text) {
   ASSERT_INDEX(index, (int)data.size() + 1);
   data.insert(index, text);

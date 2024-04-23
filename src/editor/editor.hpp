@@ -40,7 +40,7 @@ public:
   void PushDiagnostics(std::vector<Diagnostic>&& diagnostics);
   void SetLspClient(std::shared_ptr<LspClient> client);
 
-  // Actions.
+  // Cursor actions.
   void CursorRight();
   void CursorLeft();
   void CursorUp();
@@ -55,13 +55,18 @@ public:
   void SelectHome();
   void SelectEnd();
 
+  // Multi cursor action.
+  void AddCursorDown();
+  void AddCursorUp();
+
+  // Buffer actions.
   void InsertText(const std::string& text);
   void Backspace();
   void Undo();
   void Redo();
 
 private:
-  Cursor cursor;
+  MultiCursor cursors;
   std::shared_ptr<Buffer> buffer;
   History history;
 

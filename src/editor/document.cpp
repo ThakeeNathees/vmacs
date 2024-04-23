@@ -13,7 +13,7 @@
 
 
 Document::Document(const Uri& uri, std::shared_ptr<Buffer> buffer)
-  : uri(uri), buffer(buffer), cursor(buffer.get()), history(buffer)
+  : uri(uri), buffer(buffer), cursors(buffer.get()), history(buffer)
 {
   history.RegisterListener(this);
 }
@@ -63,208 +63,293 @@ void Document::OnHistoryChanged(const std::vector<DocumentChange>& changes) {
 
 
 void Document::InsertText(const std::string& text) {
-  cursor = history.CommitInsertText(cursor, text);
+  cursors = history.CommitInsertText(cursors, text);
 }
 
 
 void Document::Backspace() {
-  cursor = history.CommitRemoveText(cursor, -1);
+  cursors = history.CommitRemoveText(cursors, -1);
 }
 
 
 void Document::Undo() {
   if (!history.HasUndo()) return;
-  cursor = history.Undo();
+  cursors = history.Undo();
 }
 
 
 void Document::Redo() {
   if (!history.HasRedo()) return;
-  cursor = history.Redo();
+  cursors = history.Redo();
 }
 
 
 void Document::CursorRight() {
-  int buffsz = buffer->GetSize();
-  int cursor_index = cursor.GetIndex();
+  for (Cursor& cursor : cursors.Get()) {
 
-  if (cursor.HasSelection()) {
-    int next = cursor.GetSelection().end;
-    cursor.SetIndex(next);
-    cursor.ClearSelection();
-    return;
+    if (cursor.HasSelection()) {
+      const Slice selection = cursor.GetSelection();
+      cursor.SetIndex(selection.end);
+      cursor.ClearSelection();
+    } else if (cursor.GetIndex() < buffer->GetSize()) {
+      cursor.SetIndex(cursor.GetIndex() + 1);
+    }
+
+    cursor.UpdateColumn();
   }
-  
-  if (cursor_index >= buffsz) return;
-  int index = cursor_index + 1;
-  cursor.SetIndex(index);
-  cursor.UpdateColumn();
+  cursors.Changed();
 }
 
 
 void Document::CursorLeft() {
-  int buffsz = buffer->GetSize();
-  int cursor_index = cursor.GetIndex();
+  for (Cursor& cursor : cursors.Get()) {
 
-  if (cursor.HasSelection()) {
-    int next = cursor.GetSelection().start;
-    cursor.SetIndex(next);
-    cursor.ClearSelection();
-    return;
+    if (cursor.HasSelection()) {
+      const Slice selection = cursor.GetSelection();
+      cursor.SetIndex(selection.start);
+      cursor.ClearSelection();
+    } else if (cursor.GetIndex() > 0) {
+      cursor.SetIndex(cursor.GetIndex() - 1);
+    }
+
+    cursor.UpdateColumn();
   }
-
-  if (cursor_index <= 0) return;
-
-  int index = cursor_index - 1;
-  cursor.SetIndex(index);
-  cursor.UpdateColumn();
+  cursors.Changed();
 }
 
 
 void Document::CursorUp() {
-  cursor.ClearSelection();
-  Coord coord = cursor.GetCoord();
-  if (coord.row == 0) {
-    cursor.SetIndex(0);
-    cursor.UpdateColumn();
-    return;
-  }
+  for (Cursor& cursor : cursors.Get()) {
+    cursor.ClearSelection();
+    const Coord coord = cursor.GetCoord();
 
-  int index = cursor.ColumnToIndex(cursor.GetColumn(), coord.row-1);
-  cursor.SetIndex(index);
+    if (coord.row == 0) {
+      cursor.SetIndex(0);
+      cursor.SetColumn(0);
+    } else {
+      const int index = buffer->ColumnToIndex(cursor.GetColumn(), coord.row-1);
+      cursor.SetIndex(index);
+    }
+
+  }
+  cursors.Changed();
 }
 
 
 void Document::CursorDown() {
-  cursor.ClearSelection();
-  Coord coord = cursor.GetCoord();
-  int line_count = buffer->GetLineCount();
-  if (coord.row == line_count-1) {
-    Slice last_line = buffer->GetLine(line_count-1);
-    cursor.SetIndex(last_line.end);
-    cursor.UpdateColumn();
-    return;
-  }
+  for (Cursor& cursor : cursors.Get()) {
+    cursor.ClearSelection();
+    const Coord coord = cursor.GetCoord();
+    const int line_count = buffer->GetLineCount();
 
-  int index = cursor.ColumnToIndex(cursor.GetColumn(), coord.row+1);
-  cursor.SetIndex(index);
+    if (coord.row == buffer->GetLineCount() - 1) {
+      cursor.SetIndex(buffer->GetLine(line_count-1).end);
+      cursor.UpdateColumn();
+    } else {
+      int index = buffer->ColumnToIndex(cursor.GetColumn(), coord.row+1);
+      cursor.SetIndex(index);
+    }
+
+  }
+  cursors.Changed();
 }
 
 
 void Document::CursorHome() {
-  cursor.ClearSelection();
-  Coord coord = cursor.GetCoord();
-  Slice line = buffer->GetLine(coord.row);
-  cursor.SetIndex(line.start);
-  cursor.UpdateColumn();
+  for (Cursor& cursor : cursors.Get()) {
+    cursor.ClearSelection();
+    const Coord coord = cursor.GetCoord();
+    const Slice& line = buffer->GetLine(coord.row);
+
+    // "ptr" will be the index of first non whitespace character.
+    int ptr = line.start, buffsize = buffer->GetSize();
+    for (; ptr <= line.end && ptr < buffsize; ptr++) {
+      if (buffer->At(ptr) != ' ' && buffer->At(ptr) != '\t') break;
+    }
+
+    if (coord.col == 0 || coord.col > ptr - line.start) {
+      cursor.SetIndex(ptr);
+    } else {
+      cursor.SetIndex(line.start);
+    }
+
+    cursor.UpdateColumn();
+  }
+  cursors.Changed();
 }
 
 
 void Document::CursorEnd() {
-  cursor.ClearSelection();
-  Coord coord = cursor.GetCoord();
-  Slice line = buffer->GetLine(coord.row);
-  cursor.SetIndex(line.end);
-  cursor.UpdateColumn();
+  for (Cursor& cursor : cursors.Get()) {
+    cursor.ClearSelection();
+    Coord coord = cursor.GetCoord();
+    const Slice& line = buffer->GetLine(coord.row);
+    cursor.SetIndex(line.end);
+    cursor.UpdateColumn();
+  }
+  cursors.Changed();
 }
 
 
 void Document::SelectRight() {
-  if (buffer->GetSize() == cursor.GetIndex()) return;
-  int cursor_index = cursor.GetIndex();
-  if (!cursor.HasSelection()) {
-    cursor.SetSelectionStart(cursor_index);
+  for (Cursor& cursor : cursors.Get()) {
+    const int index = cursor.GetIndex();
+
+    if (index < buffer->GetSize()) {
+      if (!cursor.HasSelection()) cursor.SetSelectionStart(index);
+      cursor.SetIndex(index + 1);
+      if (cursor.GetSelectionStart() == cursor.GetIndex()) {
+        cursor.ClearSelection();
+      }
+    }
+
+    cursor.UpdateColumn();
   }
-  cursor_index++;
-  cursor.SetIndex(cursor_index);
-  cursor.UpdateColumn();
+  cursors.Changed();
 }
 
 
 void Document::SelectLeft() {
-  if (buffer->GetSize() == 0) return;
-  int cursor_index = cursor.GetIndex();
-  if (!cursor.HasSelection()) {
-    cursor.SetSelectionStart(cursor_index);
+  for (Cursor& cursor : cursors.Get()) {
+    int index = cursor.GetIndex();
+
+    if (index > 0) {
+      if (!cursor.HasSelection()) cursor.SetSelectionStart(index);
+      cursor.SetIndex(index - 1);
+      if (cursor.GetSelectionStart() == cursor.GetIndex()) {
+        cursor.ClearSelection();
+      }
+    }
+
+    cursor.UpdateColumn();
   }
-  cursor_index--;
-  cursor.SetIndex(cursor_index);
-  cursor.UpdateColumn();
+  cursors.Changed();
 }
 
 
 void Document::SelectUp() {
-  Coord coord = cursor.GetCoord();
-  int cursor_index = cursor.GetIndex();
+  for (Cursor& cursor : cursors.Get()) {
+    Coord coord = cursor.GetCoord();
+    const int cursor_index = cursor.GetIndex();
 
-  // Edge case, don't select anything just return.
-  if (cursor_index == 0) return;
+    // Edge case, don't select anything just return.
+    if (cursor_index == 0) continue;
 
-  if (!cursor.HasSelection()) {
-    cursor.SetSelectionStart(cursor_index);
+    if (!cursor.HasSelection()) {
+      cursor.SetSelectionStart(cursor_index);
+    }
+
+    if (coord.row == 0) {
+      cursor.SetIndex(0);
+      cursor.UpdateColumn();
+      continue;
+    }
+
+    int index = buffer->ColumnToIndex(cursor.GetColumn(), coord.row-1);
+    cursor.SetIndex(index);
+
+    if (cursor.GetSelectionStart() == cursor.GetIndex()) {
+      cursor.ClearSelection();
+    }
   }
 
-  if (coord.row == 0) {
-    cursor.SetIndex(0);
-    cursor.UpdateColumn();
-    return;
-  }
-
-  int index = cursor.ColumnToIndex(cursor.GetColumn(), coord.row-1);
-  cursor.SetIndex(index);
+  cursors.Changed();
 }
 
 
 void Document::SelectDown() {
-  Coord coord = cursor.GetCoord();
-  int line_count = buffer->GetLineCount();
-  int cursor_index = cursor.GetIndex();
-  int buffsz = buffer->GetSize();
+  for (Cursor& cursor : cursors.Get()) {
+    Coord coord = cursor.GetCoord();
+    int line_count = buffer->GetLineCount();
+    int cursor_index = cursor.GetIndex();
+    int buffsz = buffer->GetSize();
 
-  // Edge case, don't select anything just return.
-  if (coord.row == line_count - 1 && cursor_index == buffsz) return;
+    // Edge case, don't select anything just return.
+    if (coord.row == line_count - 1 && cursor_index == buffsz) continue;
 
-  if (!cursor.HasSelection()) {
-    cursor.SetSelectionStart(cursor_index);
+    if (!cursor.HasSelection()) {
+      cursor.SetSelectionStart(cursor_index);
+    }
+
+    if (coord.row == line_count - 1) {
+      Slice last_line = buffer->GetLine(line_count-1);
+      cursor.SetIndex(last_line.end);
+      cursor.UpdateColumn();
+      continue;
+    }
+
+    int index = buffer->ColumnToIndex(cursor.GetColumn(), coord.row+1);
+    cursor.SetIndex(index);
+
+    if (cursor.GetSelectionStart() == cursor.GetIndex()) {
+      cursor.ClearSelection();
+    }
   }
 
-  if (coord.row == line_count - 1) {
-    Slice last_line = buffer->GetLine(line_count-1);
-    cursor.SetIndex(last_line.end);
-    cursor.UpdateColumn();
-    return;
-  }
-
-  int index = cursor.ColumnToIndex(cursor.GetColumn(), coord.row+1);
-  cursor.SetIndex(index);
+  cursors.Changed();
 }
 
 
 void Document::SelectHome() {
-  Coord coord = cursor.GetCoord();
-  if (coord.col == 0) return;
+  for (Cursor& cursor : cursors.Get()) {
+    const Coord coord = cursor.GetCoord();
+    const Slice& line = buffer->GetLine(coord.row);
+    const int index = cursor.GetIndex();
 
-  int cursor_index = cursor.GetIndex();
-  if (!cursor.HasSelection()) {
-    cursor.SetSelectionStart(cursor_index);
+    if (!cursor.HasSelection()) {
+      cursor.SetSelectionStart(index);
+    }
+
+    // "ptr" will be the index of first non whitespace character.
+    int ptr = line.start, buffsize = buffer->GetSize();
+    for (; ptr <= line.end && ptr < buffsize; ptr++) {
+      if (buffer->At(ptr) != ' ' && buffer->At(ptr) != '\t') break;
+    }
+
+    if (coord.col == 0 || coord.col > ptr - line.start) {
+      cursor.SetIndex(ptr);
+    } else {
+      cursor.SetIndex(line.start);
+    }
+
+    cursor.UpdateColumn();
+
+    if (cursor.GetSelectionStart() == cursor.GetIndex()) {
+      cursor.ClearSelection();
+    }
   }
-
-  Slice line = buffer->GetLine(coord.row);
-  cursor.SetIndex(line.start);
-  cursor.UpdateColumn();
+  cursors.Changed();
 }
 
 
 void Document::SelectEnd() {
-  Coord coord = cursor.GetCoord();
-  Slice line = buffer->GetLine(coord.row);
-  if (coord.col == (line.end-line.start)) return;
+  for (Cursor& cursor : cursors.Get()) {
+    Coord coord = cursor.GetCoord();
+    Slice line = buffer->GetLine(coord.row);
 
-  int cursor_index = cursor.GetIndex();
-  if (!cursor.HasSelection()) {
-    cursor.SetSelectionStart(cursor_index);
+    if (coord.col == (line.end-line.start)) continue;
+
+    int cursor_index = cursor.GetIndex();
+    if (!cursor.HasSelection()) {
+      cursor.SetSelectionStart(cursor_index);
+    }
+
+    cursor.SetIndex(line.end);
+    cursor.UpdateColumn();
+
+    if (cursor.GetSelectionStart() == cursor.GetIndex()) {
+      cursor.ClearSelection();
+    }
   }
-
-  cursor.SetIndex(line.end);
-  cursor.UpdateColumn();
 }
+
+
+void Document::AddCursorDown() {
+  cursors.AddCursorDown();
+}
+
+
+void Document::AddCursorUp() {
+  cursors.AddCursorUp();
+}
+

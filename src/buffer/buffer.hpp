@@ -76,6 +76,7 @@ public:
 
   Coord IndexToCoord(int index) const;
   int CoordToIndex(Coord coord) const;
+  int ColumnToIndex(int column, int line_num);
 
   // Methods that modify the buffer.
   void InsertText(int index, const String& text);
@@ -126,9 +127,6 @@ public:
   // Adjust the column based on the current coordiante it's on now.
   void UpdateColumn();
 
-  // Returns the buffer index at a certain view column.
-  int ColumnToIndex(int column, int line_num);
-
 private:
   Buffer* buffer = nullptr;  // A weak reference to the buffer it's in.
   int index      = 0;        // Index of the cursor in the buffer.
@@ -149,6 +147,47 @@ private:
    * in that case, the selection exists but the selected text is empty.
    */
   int selection_start = -1;
+};
+
+
+// Simply a collection of Cursor instances.
+class MultiCursor {
+
+public:
+  MultiCursor(Buffer* buffer = nullptr);
+
+  // This will returns the sorted cursors.
+  std::vector<Cursor>& Get();
+
+  // Primary cursor is the only cursor we'll be focused on the view and new
+  // cursors will be added from which.
+  const Cursor& GetPrimaryCursor() const;
+
+  void AddCursor(const Cursor& cursor);
+  void AddCursorDown();
+  void AddCursorUp();
+  void ClearMultiCursors();
+  void ClearSelections();
+
+  // This should be called every time the underlying cursors were changed
+  // outside of the Multicursor class to make sure all the cursors are sorted,
+  // remove duplicates, and merge selections.
+  void Changed();
+
+private:
+  // A weak reference to the current buffer we're in.
+  Buffer* buffer = nullptr;
+
+  // Invariant: We'll always have at least one cursor. We'll add the primary
+  // cursor at the constructor.
+  std::vector<Cursor> cursors;
+
+  // If reversed, the primary cursor will be the first cursor, otherwise it'll
+  // be the last cursor in the cursors list.
+  bool reversed = false;
+
+private:
+  void SortCursors();
 };
 
 
@@ -177,8 +216,8 @@ struct Change {
 
 struct Action {
   // The state of the cursors before and after the changes.
-  Cursor before;
-  Cursor after;
+  MultiCursor before;
+  MultiCursor after;
   std::vector<Change> changes;
 
   /*
@@ -215,18 +254,18 @@ public:
 
   /* If the cursor has selection it'll remove the selection and then add the
    * text for each cursor. */
-  Cursor CommitInsertText(const Cursor& cursor, const std::string& text);
+  MultiCursor CommitInsertText(const MultiCursor& cursors, const std::string& text);
 
   /* Here if the direction is
    *   -1: perform backspace at the cursor.
    *   +1: perform delete at the cursor. */
-  Cursor CommitRemoveText(const Cursor& cursor, int direction);
+  MultiCursor CommitRemoveText(const MultiCursor& cursors, int direction);
 
   bool HasUndo() const;
   bool HasRedo() const;
 
-  const Cursor& Undo();
-  const Cursor& Redo();
+  const MultiCursor& Undo();
+  const MultiCursor& Redo();
 
   // History listener methods.
   void RegisterListener(HistoryListener* listener);
@@ -270,7 +309,7 @@ private:
   /* Returns the current listening action on which we'll append our changes.
    * If we're not started any action "session" it'll create and return a new
    * action. */
-  Action& _GetListeningAction(const Cursor& cursor);
+  Action& _GetListeningAction(const MultiCursor& cursor);
 
   // Listeners for the history.
   std::vector<HistoryListener*> listeners;
