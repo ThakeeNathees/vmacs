@@ -167,7 +167,6 @@ void DocPane::Draw(DrawBuffer buff, Coord pos, Size area) {
       
       for (auto& diag : document->diagnostics) {
         Coord coord = document->buffer->IndexToCoord(index);
-
         do {
           if (coord.row < diag.start.row || (coord.row == diag.start.row && coord.col < diag.start.col)) break;
           if (coord.row > diag.end.row || (coord.row == diag.end.row && coord.col >= diag.end.col)) break;

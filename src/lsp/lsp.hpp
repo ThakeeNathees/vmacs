@@ -10,10 +10,10 @@
 
 // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/
 
+// This "module" doesn't depend on anything else other than core and os.
 #include "core/core.hpp"
 #include "os/os.hpp"
 
-#include <thread>
 
 #include <nlohmann/json.hpp>
 using Json = nlohmann::json;
@@ -72,7 +72,7 @@ public:
 
   // Abstracted request/notification methods.
   void DidOpen(const Uri& uri, const std::string& text, const std::string& langauge);
-  void DidChange(const Uri& uri, uint32_t version, std::vector<DocumentChange> changes);
+  void DidChange(const Uri& uri, uint32_t version, const std::vector<DocumentChange>& changes);
   // TODO: did close.
 
   // Callbacks for content recieved from the server. These are global static

@@ -142,11 +142,11 @@ bool ShellExec(exec_options_t opt, pid_t* pid) {
       //
       // Since select will modify the timeout struct, we have to reset it before
       // calling select each time. Event if we're listening wihtout timeout
-      // (timeout < 0) we set the timout to 1 seconds so the stdin in the above
-      // will not be blocked.
+      // (timeout < 0) we set the timout to 0.01 seconds so the stdin in the
+      // above will not be blocked.
       if (opt.timeout_sec < 0) {
         timeout.tv_sec  = 0;      // Seconds.
-        timeout.tv_usec = 10000;  // Microseconds. // FIXME: Hadrcoded.
+        timeout.tv_usec = 10000;  // Microseconds.
       } else {
         timeout.tv_sec  = opt.timeout_sec; // Seconds.
         timeout.tv_usec = 0;               // Microseconds.

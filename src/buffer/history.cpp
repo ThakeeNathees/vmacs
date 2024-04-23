@@ -58,6 +58,11 @@ History::History(std::shared_ptr<Buffer> buffer)
 }
 
 
+uint32_t History::GetVersion() const {
+  return version;
+}
+
+
 void History::StartAction() {
   listening_action = true;
 }
@@ -78,40 +83,70 @@ Cursor History::CommitInsertText(const Cursor& cursor_, const std::string& text)
 
   Action& action = _GetListeningAction(cursor);
 
+  std::vector<DocumentChange> lsp_changes; // Required to send to lsp server.
+  DocumentChange lsp_change;
+
   if (cursor.HasSelection()) {
+
     Slice selection = cursor.GetSelection();
     int count = selection.end - selection.start;
+
+    // Update the lsp change.
+    lsp_change.start = buffer->IndexToCoord(selection.start);
+    lsp_change.end   = buffer->IndexToCoord(selection.end);
+    lsp_change.text  = text;
 
     // It's possible for the selection to have the same start and end, and be
     // an empty selection.
     if (count != 0) {
+
+      // Update the action.
       Change change;
       change.added = false;
       change.index = selection.start;
       change.text = buffer->GetSubString(selection.start, count);
       action.PushChange(std::move(change));
 
+      // Update the buffer.
       buffer->RemoveText(selection.start, count);
       cursor.SetIndex(selection.start);
     }
+
     cursor.ClearSelection();
+
+  } else {
+    // Update the lsp change.
+    lsp_change.start = cursor.GetCoord();
+    lsp_change.end   = cursor.GetCoord();
+    lsp_change.text  = text;
   }
 
-  int cursor_index = cursor.GetIndex();
+  // Current index after the selection is removed (if any).
+  const int cursor_index = cursor.GetIndex();
 
+  // Update the action.
   Change change;
   change.added = true;
   change.index = cursor_index;
   change.text = text;
   action.PushChange(std::move(change));
 
+  // Update the lsp changes.
+  lsp_changes.push_back(lsp_change);
+
+  // Update the buffer.
   buffer->InsertText(cursor_index, text);
+  version++;
 
   int next_index = cursor_index + text.size();
   cursor.SetIndex(next_index);
   cursor.UpdateColumn();
 
   action.after = cursor;
+
+  // Notify the history changes.
+  OnHistoryChanged(lsp_changes);
+
   return cursor;
 }
 
@@ -124,23 +159,40 @@ Cursor History::CommitRemoveText(const Cursor& cursor_, int direction) {
 
   Action& action = _GetListeningAction(cursor);
 
-  Slice selection = cursor.GetSelection();
-  int count = selection.end - selection.start;
+  // It's possible that the history doesn't changed by the remove commit since
+  // there isn't anything to remove. We'll notify OnHistoryChanged if only there
+  // is an actual change.
+  bool history_changed = false;
+
+  std::vector<DocumentChange> lsp_changes; // Required to send to lsp server.
+  DocumentChange lsp_change;
 
   // If it's an empty selection, just ignore it and do regular backspace/delete
   // operation in the below else block.
+  Slice selection = cursor.GetSelection();
+  int count = selection.end - selection.start;
   if (cursor.HasSelection() && count == 0) {
     cursor.ClearSelection();
   }
 
   if (cursor.HasSelection()) {
+
+    // Update the action.
     Change change;
     change.added = false;
     change.index = selection.start;
     change.text = buffer->GetSubString(selection.start, count);
     action.PushChange(std::move(change));
 
-    buffer->RemoveText(selection.start, count);
+    // Update the lsp changes.
+    lsp_change.start = buffer->IndexToCoord(selection.start);
+    lsp_change.end   = buffer->IndexToCoord(selection.end);
+    lsp_change.text  = "";
+    history_changed = true;
+
+    // Update the buffer.
+    buffer->RemoveText(selection.start, count); 
+    version++;
 
     cursor.SetIndex(selection.start);
     cursor.ClearSelection();
@@ -157,12 +209,20 @@ Cursor History::CommitRemoveText(const Cursor& cursor_, int direction) {
 
       if (direction == -1) index--;
 
+      // Update the action.
       Change change;
       change.added = false;
       change.index = index;
       change.text = buffer->GetSubString(index, 1);
       action.PushChange(std::move(change));
 
+      // Update the lsp changes.
+      lsp_change.start = buffer->IndexToCoord(index);
+      lsp_change.end   = buffer->IndexToCoord(index + 1);
+      lsp_change.text  = "";
+      history_changed = true;
+
+      // Update the buffer.
       buffer->RemoveText(index, 1);
 
       cursor.SetIndex(index);
@@ -171,6 +231,13 @@ Cursor History::CommitRemoveText(const Cursor& cursor_, int direction) {
   }
 
   action.after = cursor;
+
+  // Notify listeners.
+  if (history_changed) {
+    lsp_changes.push_back(lsp_change);
+    OnHistoryChanged(lsp_changes);
+  }
+
   return cursor;
 }
 
@@ -188,18 +255,32 @@ bool History::HasRedo() const {
 const Cursor& History::Undo() {
   ASSERT(HasUndo(), OOPS);
   const Action& action = actions[--ptr];
+  std::vector<DocumentChange> lsp_changes;
 
   for (int i = action.changes.size() -1; i >= 0; i--) {
     const Change& change = action.changes[i];
+    DocumentChange lsp_change;
+
     if (change.added) {
       ASSERT(change.text == buffer->GetSubString(change.index, change.text.size()), OOPS);
+      lsp_change.start = buffer->IndexToCoord(change.index);
+      lsp_change.end   = buffer->IndexToCoord(change.index + change.text.size());
+      lsp_change.text  = "";
+      lsp_changes.push_back(lsp_change);
       buffer->RemoveText(change.index, change.text.size());
     } else {
+      lsp_change.start = buffer->IndexToCoord(change.index);
+      lsp_change.end   = lsp_change.start;
+      lsp_change.text  = change.text;
+      lsp_changes.push_back(lsp_change);
       buffer->InsertText(change.index, change.text);
     }
   }
+  version++;
 
   EndAction();
+
+  OnHistoryChanged(lsp_changes);
   return action.before;
 }
 
@@ -207,17 +288,30 @@ const Cursor& History::Undo() {
 const Cursor& History::Redo() {
   ASSERT(HasRedo(), OOPS);
   const Action& action = actions[ptr++];
+  std::vector<DocumentChange> lsp_changes;
 
   for (const Change& change : action.changes) {
+    DocumentChange lsp_change;
     if (change.added) {
+      lsp_change.start = buffer->IndexToCoord(change.index);
+      lsp_change.end   = lsp_change.start;
+      lsp_change.text  = change.text;
+      lsp_changes.push_back(lsp_change);
       buffer->InsertText(change.index, change.text);
     } else {
       ASSERT(change.text == buffer->GetSubString(change.index, change.text.size()), OOPS);
+      lsp_change.start = buffer->IndexToCoord(change.index);
+      lsp_change.end   = buffer->IndexToCoord(change.index + change.text.size());
+      lsp_change.text  = "";
+      lsp_changes.push_back(lsp_change);
       buffer->RemoveText(change.index, change.text.size());
     }
   }
+  version++;
 
   EndAction();
+
+  OnHistoryChanged(lsp_changes);
   return action.after;
 }
 
@@ -246,3 +340,23 @@ Action& History::_GetListeningAction(const Cursor& cursor) {
   return listening;
 }
 
+void History::RegisterListener(HistoryListener* listener) {
+  listeners.push_back(listener);
+}
+
+
+void History::UnRegisterListener(HistoryListener* listener) {
+  for (int i = 0; i < listeners.size(); i++) {
+    if (listeners[i] == listener) {
+      listeners.erase(listeners.begin() + i);
+      return;
+    }
+  }
+}
+
+
+void History::OnHistoryChanged(const std::vector<DocumentChange>& changes) {
+  for (HistoryListener* listener : listeners) {
+    listener->OnHistoryChanged(changes);
+  }
+}

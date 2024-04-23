@@ -14,6 +14,17 @@
 CallbackDiagnostic LspClient::cb_diagnostics = nullptr;
 
 
+#define GET_STRING_OR(json, key, or)                 \
+  (((json).contains(key) && (json)[key].is_string()) \
+    ? (json)[key].template get<std::string>()        \
+    : or)
+
+#define GET_INT_OR(json, key, or)                            \
+  (((json).contains(key) && (json)[key].is_number_integer()) \
+    ? (json)[key].template get<int>()                        \
+    : or)
+
+
 LspClient::LspClient(LspConfig config) : config(config) {
 
   IPC::IpcOptions opt;
@@ -100,7 +111,7 @@ void LspClient::DidOpen(const Uri& uri, const std::string& text, const std::stri
 }
 
 
-void LspClient::DidChange(const Uri& uri, uint32_t version, std::vector<DocumentChange> changes) {
+void LspClient::DidChange(const Uri& uri, uint32_t version, const std::vector<DocumentChange>& changes) {
   std::vector<Json> content_changes;
   for (const DocumentChange& change : changes) {
     content_changes.push_back({
@@ -199,24 +210,29 @@ void LspClient::HandleNotify(const std::string& method, const Json& params) {
     if (cb_diagnostics == nullptr) return;
     std::vector<Diagnostic> diagnostics;
 
-    // TODO: Do a try catch here since the bellow might also throw if the server
-    // failed for some reason.
     for (const Json& diag : params["diagnostics"]) {
       Diagnostic diagnostic;
-      diagnostic.version   = params["version"];
-      diagnostic.code      = diag["code"].template get<std::string>();
-      diagnostic.message   = diag["message"].template get<std::string>();
-      diagnostic.severity  = diag["severity"].template get<int>();
-      diagnostic.source    = diag["source"].template get<std::string>();
+
+      // Not optional.
+      diagnostic.message   = GET_STRING_OR(diag, "message", "");
+
+      // TODO: Assuming "range" will always exists, fix this. Figure out a better
+      // way to convert back and forth json to c++ types.
       diagnostic.start.row = diag["range"]["start"]["line"].template get<int>();
       diagnostic.start.col = diag["range"]["start"]["character"].template get<int>();
       diagnostic.end.row   = diag["range"]["end"]["line"].template get<int>();
       diagnostic.end.col   = diag["range"]["end"]["character"].template get<int>();
+      
+      diagnostic.version   = GET_INT_OR(params, "version", 0);
+      diagnostic.severity  = GET_INT_OR(diag, "severity", 3);
+      // diagnostic.code      = GET_STRING_OR(diag, "code", "");
+      diagnostic.source    = GET_STRING_OR(diag, "source", "");
+
 
       diagnostics.push_back(std::move(diagnostic));
     }
 
-    Uri uri = params["uri"];
+    Uri uri = GET_STRING_OR(params, "uri", "");
     cb_diagnostics(uri, std::move(diagnostics));
     return;
   }
@@ -275,10 +291,14 @@ void LspClient::StdoutCallback(void* user_data, const char* buff, size_t length)
     // TODO: This may throw, Handle (we shouldn't trust anything).
     Json content = Json::parse(content_str);
 
-    // FIXME: this is temproary.
-    printf(" [lsp-client] %s\n", content.dump(2).c_str());
+    // FIXME: cleanup this mess.
+    // printf(" [lsp-client] %s\n", content.dump(2).c_str());
+    FILE* f = fopen("./build/lsp.log", "a");
+    fprintf(f, "%s\n", content.dump(2).c_str());
+    fclose(f);
 
-    // Just in case an extra protection.
+    // TODO: Maybe log the error or something.
+    // Json things may throw, we catch and ignore.
     try {
       self->HandleServerContent(content);
     } catch (std::exception) {
@@ -294,10 +314,12 @@ void LspClient::StdoutCallback(void* user_data, const char* buff, size_t length)
 
 // FIXME: Clean up this mess.
 void LspClient::StderrCallback(void* user_data, const char* buff, size_t length) {
-  printf(" [lsp-stderr] %*s\n", (int) length, buff);
+  // printf(" [lsp-stderr] %*s\n", (int) length, buff);
 
-  // FILE* f = fopen("./build/lsp.log", (0) ?  "w" : "a");
-  // fclose(f);
+  // FIXME: cleanup this mess.
+  FILE* f = fopen("./build/lsp.log", "a");
+  fprintf(f, "%*s", (int) length, buff);
+  fclose(f);
 }
 
 

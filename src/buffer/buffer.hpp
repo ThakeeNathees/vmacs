@@ -9,6 +9,22 @@
 #pragma once
 
 #include "core/core.hpp"
+#include "lsp/lsp.hpp"
+
+
+class BufferListener {
+public:
+  virtual void OnBufferChanged() = 0;
+  virtual ~BufferListener() = default;
+};
+
+
+class HistoryListener {
+public:
+  virtual void OnHistoryChanged(const std::vector<DocumentChange>& changes) = 0;
+  virtual ~HistoryListener() = default;
+};
+
 
 /*
  * text    = "hello\nworld"
@@ -41,13 +57,6 @@ public:
 
 private:
   std::vector<Slice> slices = { {0, 0} };
-};
-
-
-class BufferListener {
-public:
-  virtual void OnBufferChanged() = 0;
-  virtual ~BufferListener() = default;
 };
 
 
@@ -190,8 +199,10 @@ class History {
 public:
   History(std::shared_ptr<Buffer> buffer);
 
-  /*
-   * Between these calls all the changes are grouped into the same action.
+  // Returns the current version of the document (version according to the lsp).
+  uint32_t GetVersion() const;
+
+  /* Between these calls all the changes are grouped into the same action.
    * This is usefull if we're running macro in to a single action.
    *
    * Example:
@@ -202,17 +213,13 @@ public:
   void StartAction();
   void EndAction();
 
-  /*
-   * If the cursor has selection it'll remove the selection and then add the
-   * text for each cursor.
-   */
+  /* If the cursor has selection it'll remove the selection and then add the
+   * text for each cursor. */
   Cursor CommitInsertText(const Cursor& cursor, const std::string& text);
 
-  /*
-   * Here if the direction is
+  /* Here if the direction is
    *   -1: perform backspace at the cursor.
-   *   +1: perform delete at the cursor.
-   */
+   *   +1: perform delete at the cursor. */
   Cursor CommitRemoveText(const Cursor& cursor, int direction);
 
   bool HasUndo() const;
@@ -221,9 +228,12 @@ public:
   const Cursor& Undo();
   const Cursor& Redo();
 
+  // History listener methods.
+  void RegisterListener(HistoryListener* listener);
+  void UnRegisterListener(HistoryListener* listener);
+
 private:
-  /*
-   * Say we commited 4 actions like this:
+  /* Say we commited 4 actions like this:
    *
    *    a1 -> a2 -> a3 -> NULL
    *                      ^-- ptr
@@ -242,25 +252,33 @@ private:
    */
   int ptr = 0;
   std::vector<Action> actions;
+
   std::shared_ptr<Buffer> buffer;
 
-  /*
-   * This is basically we start an action and all changes will go to that one
+  /* Current version of the buffer, It'll increase after each change of the
+   * buffer, including undo/redo according to the lsp specification. */
+  uint32_t version = 0;
+
+  /* This is basically we start an action and all changes will go to that one
    * action till we stop the action and create another new action.
    * If this is true:
    *   assert ptr == actions.size
    *   assert actions.size > 0
-   *   listening_action = actions[ptr-1] // It'll be used to append changes.
-   */
+   *   listening_action = actions[ptr-1] // It'll be used to append changes. */
   bool listening_action = false;
 
-  /*
-   * Returns the current listening action on which we'll append our changes.
+  /* Returns the current listening action on which we'll append our changes.
    * If we're not started any action "session" it'll create and return a new
-   * action.
-   */
+   * action. */
   Action& _GetListeningAction(const Cursor& cursor);
 
+  // Listeners for the history.
+  std::vector<HistoryListener*> listeners;
+
+
+private:
+  // This should be called by every time the history is modified.
+  void OnHistoryChanged(const std::vector<DocumentChange>& changes);
 };
 
 

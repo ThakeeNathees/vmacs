@@ -15,20 +15,12 @@
 Document::Document(const Uri& uri, std::shared_ptr<Buffer> buffer)
   : uri(uri), buffer(buffer), cursor(buffer.get()), history(buffer)
 {
-  buffer->RegisterListener(this);
+  history.RegisterListener(this);
 }
 
 
 Document::~Document() {
-  buffer->UnRegisterListener(this);
-}
-
-
-void Document::PushDiagnostics(std::vector<Diagnostic>&& diagnostics) {
-  for (Diagnostic& diag : diagnostics) {
-    // TODO: Ignore if the version isn't our current version.
-    this->diagnostics.push_back(std::move(diag));
-  }
+  history.UnRegisterListener(this);
 }
 
 
@@ -40,8 +32,28 @@ void Document::SetLspClient(std::shared_ptr<LspClient> client) {
 }
 
 
-void Document::OnBufferChanged() {
-  version++;
+void Document::PushDiagnostics(std::vector<Diagnostic>&& diagnostics) {
+
+  // TOOD: check if the version of the incomming diagnostics are matching the
+  // current version. This could be a very delaied reply from the server and
+  // we've gone so far.
+  this->diagnostics.clear();
+
+  for (Diagnostic& diag : diagnostics) {
+    // TODO: Ignore if the version isn't our current version.
+    this->diagnostics.push_back(std::move(diag));
+  }
+}
+
+
+void Document::OnHistoryChanged(const std::vector<DocumentChange>& changes) {
+  // TODO: Consider moving the diagnostics coordinates a little till the next
+  // diagnostics comes from the server or maybe consider removing the current
+  // diagnostics after a certain time in the update() method.
+
+  if (lsp_client) {
+    lsp_client->DidChange(uri, history.GetVersion(), changes);
+  }
 }
 
 

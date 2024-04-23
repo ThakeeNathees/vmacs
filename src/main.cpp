@@ -31,6 +31,9 @@
 //
 // Pending:
 //
+// Alt+shift+arrow not detected by termbox: Add this entry:
+// {"\x1b[1;10B",   TB_KEY_ARROW_DOWN,  TB_MOD_ALT | TB_MOD_SHIFT },
+//
 //   multi cursor.
 //   line numbers
 //   global configs (tabwidth, ).
@@ -101,19 +104,22 @@ void lsp_test() {
   client.StartServer(std::nullopt);
 
   std::string path = "/Users/thakeenathees/Desktop/thakee/temp/lsp/main.c";
+  Uri uri = std::string("file://") + path;
   std::string x;
 
+  client.DidOpen(uri, ReadAll2(path), "c");
+
   // std::cin >> x;
-  client.SendNotification(
-      "textDocument/didOpen", {
-      {
-        "textDocument", {
-          { "uri",  std::string("file://") + path },
-          { "text", ReadAll2(path) },
-          { "languageId", "c" },
-        }
-      }
-  });
+  // client.SendNotification(
+  //     "textDocument/didOpen", {
+  //     {
+  //       "textDocument", {
+  //         { "uri",  std::string("file://") + path },
+  //         { "text", ReadAll2(path) },
+  //         { "languageId", "c" },
+  //       }
+  //     }
+  // });
 
   // goto definition.
   // std::cin >> x;
@@ -126,11 +132,19 @@ void lsp_test() {
     },
     {
       "position", {
-        { "line", 3  },
+        { "line", 5  },
         { "character", 2 },
       },
     }
   });
+
+  std::vector<DocumentChange> chs;
+  DocumentChange ch;
+  ch.start = {1, 0};
+  ch.end = {1, 0};
+  ch.text = "void";
+  chs.push_back(ch);
+  client.DidChange(uri, 1, chs);
 
   // Prevent the client from destroy before we got response from server.
   std::string s; std::cin >> s;
@@ -152,8 +166,8 @@ int main(int argc, char** argv) {
   //
   signal(SIGPIPE, SIG_IGN);
 
-  lsp_test();
-  return 0;
+  // lsp_test();
+  // return 0;
 
 
 
