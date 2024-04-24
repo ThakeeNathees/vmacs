@@ -15,6 +15,7 @@ Document::Document(const Uri& uri, std::shared_ptr<Buffer> buffer)
   : uri(uri), buffer(buffer), cursors(buffer.get()), history(buffer)
 {
   history.RegisterListener(this);
+  buffer->RegisterListener(this);
 }
 
 
@@ -23,8 +24,9 @@ Document::~Document() {
 }
 
 
-const std::string& Document::GetLanguage() const {
-  return language;
+LanguageId Document::GetLanguageId() const {
+  if (language) return language->id;
+  return "";
 }
 
 
@@ -38,18 +40,22 @@ void Document::SetReadOnly(bool readonly) {
 }
 
 
-void Document::SetLanguage(const std::string& language) {
+void Document::SetLanguage(std::shared_ptr<const Language> language) {
   this->language = language;
+  syntax.Parse(language.get(), buffer.get());
 }
 
 
+// Fixme: this is not how we set client (mess). it'll be set when we call
+// SetLanguage() above.
 void Document::SetLspClient(std::shared_ptr<LspClient> client) {
+  ASSERT(language != nullptr, "TODO: Right now hardcoded, do it properly");
   lsp_client = client;
-  lsp_client->DidOpen(uri, buffer->GetData(), language);
+  lsp_client->DidOpen(uri, buffer->GetData(), language->id);
 }
 
 
-void Document::PushDiagnostics(std::vector<Diagnostic>&& diagnostics) {
+void Document::PushDiagnostics(uint32_t version, std::vector<Diagnostic>&& diagnostics) {
 
   // TOOD: check if the version of the incomming diagnostics are matching the
   // current version. This could be a very delaied reply from the server and
@@ -71,6 +77,11 @@ void Document::OnHistoryChanged(const std::vector<DocumentChange>& changes) {
   if (lsp_client) {
     lsp_client->DidChange(uri, history.GetVersion(), changes);
   }
+}
+
+
+void Document::OnBufferChanged() {
+  syntax.Parse(language.get(), buffer.get());
 }
 
 

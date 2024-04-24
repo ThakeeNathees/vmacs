@@ -169,20 +169,30 @@ project (project_name)
     root_dir_rel .. "/src/**.h",
     root_dir_rel .. "/src/**.cpp",
     root_dir_rel .. "/src/**.hpp",
+
+    -- Thirdparty source files.
+    root_dir_rel .. "/thirdparty/tomlcpp/**.c",
+    root_dir_rel .. "/thirdparty/tomlcpp/**.cpp",
+    root_dir_rel .. "/thirdparty/tomlcpp/**.h",
+    root_dir_rel .. "/thirdparty/tomlcpp/**.hpp",
+    root_dir_rel .. "/thirdparty/tree-sitter/include/**.h",
+    root_dir_rel .. "/thirdparty/tree-sitter/src/lib.c",
+    root_dir_rel .. "/thirdparty/tree-sitter/parsers/*.c",
   }
 
   includedirs {
     root_dir_rel .. "/src/",
     root_dir_rel .. "/include/",
+
+    -- Thirdparty includes.
     root_dir_rel .. "/thirdparty/",
+    root_dir_rel .. "/thirdparty/tree-sitter/include/",
+    root_dir_rel .. "/thirdparty/tree-sitter/src/",
+    root_dir_rel .. "/thirdparty/tomlcpp/",
   }
 
   -- Enable if needed.
   -- buildoptions { "-Wall" }
-
-  filter "system:windows"
-    links { "winmm.lib" }
-  filter {}
 
   link_raylib()
 

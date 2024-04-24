@@ -10,6 +10,12 @@
 
 #include "core/core.hpp"
 #include "lsp/lsp.hpp"
+#include <tree_sitter/api.h>
+
+
+// TODO: move this somewhere general (core maybe).
+// Unique identifier for the language.
+typedef std::string LanguageId;
 
 
 class BufferListener {
@@ -321,26 +327,104 @@ private:
 };
 
 
-class Document : public HistoryListener {
+// A HighlightSlice is a range in the buffer with a tag called 'capture', we use
+// that capture to know what sytle we should apply. The capture rule is defined
+// in the highlight query of the language.
+//
+//   string = "while"
+//   capture = "keyword.control.repeat"
+// 
+//   string = "if"
+//   capture = "keyword.control.conditional"
+//
+struct HighlightSlice {
+  uint32_t start      = 0; // Start index in the buffer.
+  uint32_t end        = 0; // End index in the buffer.
+  const char* capture = NULL;
+};
+
+
+// Note that this struct is (once constructed) read only and it's safe to share
+// accross threads.
+// - Note that the life time of this `Language` type is the entire application
+//   and it won't "die" at the middle of a highlighting process, So no need to
+//   mutex lock. (Fix this behavior if I'm wrong).
+// - The TSQuery objects it holds are the reslt of ts_query_new of treesitter
+//   and we take the ownership here and will destroy at the destructor.
+struct Language {
+  LanguageId id;
+  const TSLanguage* data    = nullptr;
+  TSQuery* query_highlight  = nullptr;
+  TSQuery* query_textobject = nullptr;
+
+  Language() = default;
+  Language(Language&& other);
+
+  // No copies are allowed since it contains pointers that it needs to be the
+  // owner and copy constructor will copy the ownershipt via pointer and result
+  // in a double free situation.
+  NO_COPY_CONSTRUCTOR(Language);
+
+  // This will cleanup if any of the above are allocated.
+  ~Language();
+};
+
+
+// Note that this class will hold the syntax tree information of a document and
+// it's a stateful instance. It's not mento to be shared between threads.
+class Syntax {
+
+public:
+  Syntax() = default;
+  ~Syntax();
+  NO_COPY_CONSTRUCTOR(Syntax);
+
+  // This will parse and update it's syntax tree, highlight information textobjects.
+  void Parse(const Language* language, const Buffer* buffer);
+  const std::vector<Style>& GetHighlights() const;
+
+private:
+  TSParser* parser = NULL;
+  TSTree* tree     = NULL;
+
+  // We'll generate the highlight slices when we do the parsing of the buffer,
+  // which will be used to generte the highlights array, at which the i'th element
+  // represent the style of the i'th character in the buffer.
+  std::vector<HighlightSlice> slices;
+  std::vector<Style> highlights;
+
+private:
+  void CacheHighlightSlices(const TSQuery* query, const Buffer* buffer);
+  void CacheBufferStyle(const Buffer* buffer);
+};
+
+
+class Document : public HistoryListener, public BufferListener {
 
 public:
   Document(const Uri& uri, std::shared_ptr<Buffer> buffer);
   ~Document();
 
   // Getters.
-  const std::string& GetLanguage() const;
+  LanguageId GetLanguageId() const;
   bool IsReadOnly() const;
 
   // Setters.
-  void SetLspClient(std::shared_ptr<LspClient> client);
   void SetReadOnly(bool readonly);
-  void SetLanguage(const std::string& language);
+  void SetLanguage(std::shared_ptr<const Language> language);
+
+  // --------------------------
+  // FIXME: Language client will be fetched from the global registry once the
+  // language is set by the above method.
+  void SetLspClient(std::shared_ptr<LspClient> client);
+  // --------------------------
 
   // If any language server send notification the editor will recieve it first
   // and send to the corresponded document.
-  void PushDiagnostics(std::vector<Diagnostic>&& diagnostics);
+  void PushDiagnostics(uint32_t version, std::vector<Diagnostic>&& diagnostics);
 
   void OnHistoryChanged(const std::vector<DocumentChange>& changes) override;
+  void OnBufferChanged() override;
 
   // Cursor actions.
   void CursorRight();
@@ -368,9 +452,15 @@ public:
   void Redo();
 
 private:
+
   MultiCursor cursors;
   std::shared_ptr<Buffer> buffer;
   History history;
+
+  // Syntax tree of this document, can be used for syntax based navigation and
+  // highlight.
+  std::shared_ptr<const Language> language;
+  Syntax syntax;
 
   // Uri is simply "file://" + "the/file/path/in/the/disk".
   //
@@ -384,7 +474,6 @@ private:
   std::vector<Diagnostic> diagnostics;
 
   // Document settings.
-  std::string language;
   bool readonly = false;
   // TODO:
   // Encoding: utf8, utf16, etc.

@@ -25,7 +25,6 @@ using Json = nlohmann::json;
 typedef uint32_t RequestId;
 
 struct Diagnostic {
-  uint32_t version;    // Document version where this diagnostic applied.
   std::string code;    // unique code of the error/warning etc.
   std::string message; // A human readable message for the code.
   Coord start;         // Start position of the diagnostic.
@@ -48,7 +47,7 @@ struct DocumentChange {
 
 
 typedef std::string Uri;
-typedef std::function<void(const Uri&, std::vector<Diagnostic>&&)> CallbackDiagnostic;
+typedef std::function<void(const Uri&, uint32_t version, std::vector<Diagnostic>&&)> CallbackDiagnostic;
 
 
 struct LspConfig {

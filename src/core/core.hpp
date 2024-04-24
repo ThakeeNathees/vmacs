@@ -23,12 +23,21 @@
 #include <unordered_map>
 #include <queue>
 
+#include <algorithm>
+#include <regex>
+
 #include <thread>
 #include <atomic>
 #include <future>
 
 // Commonly used macros and utility C things.
 #include "common.h"
+
+// This will mark a class non-copiable by deleting the copy constructor and
+// copy assignment.
+#define NO_COPY_CONSTRUCTOR(T) \
+  T (const T&) = delete; \
+  T operator= (const T&) = delete
 
 
 // The key event is serialized into a single integer to be used in map keys and
@@ -39,32 +48,29 @@ typedef uint32_t event_t;
 // threads to stop what they're doing and join.
 extern std::atomic<bool> global_thread_stop;
 
-/*
- * TODO:
- * This is incomplete as there are resize events and mouse events. Also I
- * need to re-consider that in key events, only unicode or keycode exists at a
- * time so we don't need more space for storing both at the same time.
- *
- * Largest key code we use is 336 whish will fit into 9 bits so we're using 10
- * bits for the keycode here.
- *
- *   0000 0000 0000 0000   0000 0000 0000 0000
- *             ^       ^      ^ ^^^-- keycode  mask = 0x3ff, shift = 0
- *             '-------'      | |`---- ctrl    mask = 0x400
- *                 |          | '----- alt     mask = 0x800
- *                 |          '------- shift   mask = 0x1000
- *                 '------------------ ascii   mask = 0xff0000, shift = 16
- */
+// TODO:
+// This is incomplete as there are resize events and mouse events. Also I
+// need to re-consider that in key events, only unicode or keycode exists at a
+// time so we don't need more space for storing both at the same time.
+//
+// Largest key code we use is 336 whish will fit into 9 bits so we're using 10
+// bits for the keycode here.
+//
+//   0000 0000 0000 0000   0000 0000 0000 0000
+//             ^       ^      ^ ^^^-- keycode  mask = 0x3ff, shift = 0
+//             '-------'      | |`---- ctrl    mask = 0x400
+//                 |          | '----- alt     mask = 0x800
+//                 |          '------- shift   mask = 0x1000
+//                 '------------------ ascii   mask = 0xff0000, shift = 16
+//
 #define KEY_CODE(code, ascii, ctrl, alt, shift) \
   Event::Keycode::code | \
   (ctrl?0x400:0) | (alt?0x800:0) | (shift?0x1000:0) | ((ascii & 0xff) << 13)
 
 
-/*
- * The string type used by the buffer type defined in case if we want to change
- * it in the future and implement our own string system which support first
- * class utf8 handling.
- */
+// The string type used by the buffer type defined in case if we want to change
+// it in the future and implement our own string system which support first
+// class utf8 handling.
 typedef std::string String;
 typedef std::string_view StringView;
 
@@ -174,6 +180,35 @@ private:
 };
 
 
+// Style is a foreground, background color and attribute (bold, italic, etc).
+// Each capture "keyword", "constant", "string-literal", has it's own style.
+// which we'll use to highlight a buffer.
+struct Style {
+  uint8_t fg;
+  uint8_t bg;
+  uint8_t attrib;
+};
+
+class Theme {
+
+public:
+
+  // Returns the Style for the given capture.
+  // For a key like "keyword.control.conditional" if not exists, we again
+  // search for "keyword.control" and then "keyword". If found it'll return true
+  // and the style parameter will be updated, otherwise, return false.
+  bool GetStyle(Style* style, const std::string& capture) const;
+
+  // FIXME: This is public.
+  static Theme Get();
+
+// private:
+  // An entry is a pair of capture name ("keyword", "constant", "string-literal")
+  // and the style for that cpature.
+  std::map<std::string, Style> entries;
+};
+
+
 // ----------------------------------------------------------------------------
 // Util function definitions.
 // ----------------------------------------------------------------------------
@@ -204,15 +239,13 @@ uint32_t XtermToRgb(uint8_t xterm);
 event_t EncodeKeyEvent(Event::Key key);
 Event::Key DecodeKeyEvent(event_t key);
 
-/*
- * On a successfull parse, it'll return true and push all the keys are parsed
- * from that string.
- *
- * - Note that it'll not clear the events vector, but just push along with
- *   whatever is already in the vector, so make sure it's empty before calling.
- *
- * - Note that an empty string is valid here and result empty events.
- *
- */
+// On a successfull parse, it'll return true and push all the keys are parsed
+// from that string.
+//
+// - Note that it'll not clear the events vector, but just push along with
+//   whatever is already in the vector, so make sure it's empty before calling.
+//
+// - Note that an empty string is valid here and result empty events.
+//
 bool ParseKeyBindingString(std::vector<event_t>& events, const char* binding);
 

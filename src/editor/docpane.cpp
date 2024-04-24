@@ -224,7 +224,12 @@ void DocPane::Draw(DrawBuffer buff, Coord pos, Size area) {
         }
 
       } else {
-        SET_CELL(buff, pos.col+x, pos.row+y, c, fg, bg, attrib);
+
+        Style style = { .fg = fg, .bg = bg, .attrib = (uint8_t) attrib };
+        auto& highlights = document->syntax.GetHighlights();
+        if (highlights.size() > index) style = highlights[index];
+        // or'ing the bellow attrib for diagnostic underline.
+        SET_CELL(buff, pos.col+x, pos.row+y, c, style.fg, bg, style.attrib | attrib);
         x++;
       }
 

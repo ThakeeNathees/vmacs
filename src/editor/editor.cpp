@@ -22,12 +22,37 @@ std::unique_ptr<IEditor> IEditor::New() {
   return std::make_unique<Editor>();
 }
 
+// FIXME: move this to somewhere else.
+extern "C" const TSLanguage* tree_sitter_c(void);
+extern "C" const TSLanguage* tree_sitter_javascript(void);
 
 Editor::Editor() {
+
   // Register LSP content listeners.
-  LspClient::cb_diagnostics = [this](const Uri& uri, std::vector<Diagnostic>&& diagnostics) {
-    this->OnLspDiagnostics(uri, std::move(diagnostics));
+  LspClient::cb_diagnostics = [this](const Uri& uri, uint32_t version, std::vector<Diagnostic>&& diagnostics) {
+    this->OnLspDiagnostics(uri, version, std::move(diagnostics));
   };
+
+  // FIXME: Implement a proper language loading system with support to load from
+  // dynamic linked library.
+  std::shared_ptr<Language> lang_c = std::make_shared<Language>();
+  lang_c->id = "c";
+  lang_c->data = tree_sitter_c();
+
+  uint32_t error_offset;
+  TSQueryError err;
+  const char* source =
+#include "../../res/c.scm.hpp"
+    ;
+  TSQuery* query = ts_query_new(
+    lang_c->data,
+    source,
+    strlen(source),
+    &error_offset,
+    &err
+  );
+  lang_c->query_highlight = query;
+  languages["c"] = lang_c;
 }
 
 
@@ -136,7 +161,8 @@ std::shared_ptr<Document> Editor::OpenDocument(const std::string& path) {
 
   std::shared_ptr<Buffer> buff = std::make_shared<Buffer>(text);
   std::shared_ptr<Document> document = std::make_shared<Document>(uri, buff);
-  document->SetLanguage("c");
+
+  document->SetLanguage(languages["c"]);
 
   LspConfig config;
   config.server = "clangd";
@@ -154,8 +180,8 @@ std::shared_ptr<Document> Editor::OpenDocument(const std::string& path) {
 }
 
 
-void Editor::OnLspDiagnostics(const Uri& uri, std::vector<Diagnostic>&& diagnostics) {
+void Editor::OnLspDiagnostics(const Uri& uri, uint32_t version, std::vector<Diagnostic>&& diagnostics) {
   auto it = documents.find(uri);
   if (it == documents.end()) return;
-  it->second->PushDiagnostics(std::move(diagnostics));
+  it->second->PushDiagnostics(version, std::move(diagnostics));
 }

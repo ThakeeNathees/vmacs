@@ -229,7 +229,6 @@ void LspClient::HandleNotify(const std::string& method, const Json& params) {
       diagnostic.end.row   = diag["range"]["end"]["line"].template get<int>();
       diagnostic.end.col   = diag["range"]["end"]["character"].template get<int>();
       
-      diagnostic.version   = GET_INT_OR(params, "version", 0);
       diagnostic.severity  = GET_INT_OR(diag, "severity", 3);
       // diagnostic.code      = GET_STRING_OR(diag, "code", "");
       diagnostic.source    = GET_STRING_OR(diag, "source", "");
@@ -239,7 +238,8 @@ void LspClient::HandleNotify(const std::string& method, const Json& params) {
     }
 
     Uri uri = GET_STRING_OR(params, "uri", "");
-    cb_diagnostics(uri, std::move(diagnostics));
+    uint32_t version = GET_INT_OR(params, "version", 0);
+    cb_diagnostics(uri, version, std::move(diagnostics));
     return;
   }
 
@@ -289,27 +289,27 @@ void LspClient::StdoutCallback(void* user_data, const char* buff, size_t length)
     if (content_start == std::string::npos) return;
     content_start += strlen("\r\n\r\n");
 
-    // Something went wrong from the server.
+    // FIXME: In this case we have to fetch more bytes from the server and process.
     if (data.length() - content_start < content_len) return;
 
     std::string_view content_str = data.substr(content_start, content_len);
 
     // TODO: This may throw, Handle (we shouldn't trust anything).
-    Json content = Json::parse(content_str);
-
-    // FIXME: cleanup this mess.
-    // printf(" [lsp-client] %s\n", content.dump(2).c_str());
-    FILE* f = fopen("./build/lsp.log", "a");
-    fprintf(f, "%s\n", content.dump(2).c_str());
-    fclose(f);
-
-    // TODO: Maybe log the error or something.
-    // Json things may throw, we catch and ignore.
     try {
+      Json content = Json::parse(content_str);
+
+      // FIXME: cleanup this mess.
+      // printf(" [lsp-client] %s\n", content.dump(2).c_str());
+      FILE* f = fopen("./build/lsp.log", "a");
+      fprintf(f, "%s\n", content.dump(2).c_str());
+      fclose(f);
+
       self->HandleServerContent(content);
+
     } catch (std::exception) {
-      return;
+      // TODO: log it.
     }
+
 
     // Update data for the next iteration.
     data = data.substr(content_start + content_len);

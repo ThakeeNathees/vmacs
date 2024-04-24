@@ -86,15 +86,19 @@ public:
   int MainLoop() override;
 
   // Lsp listeners.
-  void OnLspDiagnostics(const Uri&, std::vector<Diagnostic>&&);
+  void OnLspDiagnostics(const Uri&, uint32_t version, std::vector<Diagnostic>&&);
 
 private:
   DocPane docpane;
   std::unique_ptr<FrontEnd> frontend;
 
-  // TODO: Setting this false should "signal" all the thread to exit immediately.
   std::atomic<bool> running = true;
   ThreadSafeQueue<Event> event_queue;
+
+  // TODO:
+  // Note that the bellow maps are "global" registry where, and if it's shared
+  // and modified between multiple threads, they needs to be locked and unlocked.
+  // properly (at the moment It's not doing that).
 
   // All the documents that are currently opened.
   std::map<Uri, std::shared_ptr<Document>> documents;
@@ -102,6 +106,9 @@ private:
   // All the lsp clients running here are registered here where the key is the
   // code name of the lsp client. (ex: clangd).
   std::map<std::string, std::shared_ptr<LspClient>> lsp_clients;
+
+  // All the languages registered.
+  std::map<LanguageId, std::shared_ptr<const Language>> languages;
 
 private:
 
