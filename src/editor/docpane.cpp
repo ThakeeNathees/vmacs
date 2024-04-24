@@ -13,28 +13,28 @@
 DocPane::DocPane() {
 
   // FIXME: This mess needs to be re-implemented better.
-  actions["cursor_up"]      = [&] { if (this->document == nullptr) return; this->document->CursorUp();       EnsureCursorOnView(); };
-  actions["cursor_down"]    = [&] { if (this->document == nullptr) return; this->document->CursorDown();     EnsureCursorOnView(); };
-  actions["cursor_left"]    = [&] { if (this->document == nullptr) return; this->document->CursorLeft();     EnsureCursorOnView(); };
-  actions["cursor_right"]   = [&] { if (this->document == nullptr) return; this->document->CursorRight();    EnsureCursorOnView(); };
-  actions["cursor_end"]     = [&] { if (this->document == nullptr) return; this->document->CursorEnd();      EnsureCursorOnView(); };
-  actions["cursor_home"]    = [&] { if (this->document == nullptr) return; this->document->CursorHome();     EnsureCursorOnView(); };
-  actions["select_right"]   = [&] { if (this->document == nullptr) return; this->document->SelectRight();    EnsureCursorOnView(); };
-  actions["select_left"]    = [&] { if (this->document == nullptr) return; this->document->SelectLeft();     EnsureCursorOnView(); };
-  actions["select_up"]      = [&] { if (this->document == nullptr) return; this->document->SelectUp();       EnsureCursorOnView(); };
-  actions["select_down"]    = [&] { if (this->document == nullptr) return; this->document->SelectDown();     EnsureCursorOnView(); };
-  actions["select_home"]    = [&] { if (this->document == nullptr) return; this->document->SelectHome();     EnsureCursorOnView(); };
-  actions["select_end"]     = [&] { if (this->document == nullptr) return; this->document->SelectEnd();      EnsureCursorOnView(); };
+  actions["cursor_up"]      = [&] { if (this->document == nullptr) return; this->document->CursorUp();       EnsureCursorOnView(); ResetCursorBlink(); };
+  actions["cursor_down"]    = [&] { if (this->document == nullptr) return; this->document->CursorDown();     EnsureCursorOnView(); ResetCursorBlink(); };
+  actions["cursor_left"]    = [&] { if (this->document == nullptr) return; this->document->CursorLeft();     EnsureCursorOnView(); ResetCursorBlink(); };
+  actions["cursor_right"]   = [&] { if (this->document == nullptr) return; this->document->CursorRight();    EnsureCursorOnView(); ResetCursorBlink(); };
+  actions["cursor_end"]     = [&] { if (this->document == nullptr) return; this->document->CursorEnd();      EnsureCursorOnView(); ResetCursorBlink(); };
+  actions["cursor_home"]    = [&] { if (this->document == nullptr) return; this->document->CursorHome();     EnsureCursorOnView(); ResetCursorBlink(); };
+  actions["select_right"]   = [&] { if (this->document == nullptr) return; this->document->SelectRight();    EnsureCursorOnView(); ResetCursorBlink(); };
+  actions["select_left"]    = [&] { if (this->document == nullptr) return; this->document->SelectLeft();     EnsureCursorOnView(); ResetCursorBlink(); };
+  actions["select_up"]      = [&] { if (this->document == nullptr) return; this->document->SelectUp();       EnsureCursorOnView(); ResetCursorBlink(); };
+  actions["select_down"]    = [&] { if (this->document == nullptr) return; this->document->SelectDown();     EnsureCursorOnView(); ResetCursorBlink(); };
+  actions["select_home"]    = [&] { if (this->document == nullptr) return; this->document->SelectHome();     EnsureCursorOnView(); ResetCursorBlink(); };
+  actions["select_end"]     = [&] { if (this->document == nullptr) return; this->document->SelectEnd();      EnsureCursorOnView(); ResetCursorBlink(); };
 
-  actions["add_cursor_down"] = [&] { if (this->document == nullptr) return; this->document->AddCursorDown(); EnsureCursorOnView(); };
-  actions["add_cursor_up"]   = [&] { if (this->document == nullptr) return; this->document->AddCursorUp();   EnsureCursorOnView(); };
+  actions["add_cursor_down"] = [&] { if (this->document == nullptr) return; this->document->AddCursorDown(); EnsureCursorOnView(); ResetCursorBlink(); };
+  actions["add_cursor_up"]   = [&] { if (this->document == nullptr) return; this->document->AddCursorUp();   EnsureCursorOnView(); ResetCursorBlink(); };
 
-  actions["insert_space"]   = [&] { if (this->document == nullptr) return; this->document->InsertText(" ");  EnsureCursorOnView(); };
-  actions["insert_newline"] = [&] { if (this->document == nullptr) return; this->document->InsertText("\n"); EnsureCursorOnView(); };
-  actions["insert_tab"]     = [&] { if (this->document == nullptr) return; this->document->InsertText("\t"); EnsureCursorOnView(); };
-  actions["backspace"]      = [&] { if (this->document == nullptr) return; this->document->Backspace();      EnsureCursorOnView(); };
-  actions["undo"]           = [&] { if (this->document == nullptr) return; this->document->Undo();           EnsureCursorOnView(); };
-  actions["redo"]           = [&] { if (this->document == nullptr) return; this->document->Redo();           EnsureCursorOnView(); };
+  actions["insert_space"]   = [&] { if (this->document == nullptr) return; this->document->InsertText(" ");  EnsureCursorOnView(); ResetCursorBlink(); };
+  actions["insert_newline"] = [&] { if (this->document == nullptr) return; this->document->InsertText("\n"); EnsureCursorOnView(); ResetCursorBlink(); };
+  actions["insert_tab"]     = [&] { if (this->document == nullptr) return; this->document->InsertText("\t"); EnsureCursorOnView(); ResetCursorBlink(); };
+  actions["backspace"]      = [&] { if (this->document == nullptr) return; this->document->Backspace();      EnsureCursorOnView(); ResetCursorBlink(); };
+  actions["undo"]           = [&] { if (this->document == nullptr) return; this->document->Undo();           EnsureCursorOnView(); ResetCursorBlink(); };
+  actions["redo"]           = [&] { if (this->document == nullptr) return; this->document->Redo();           EnsureCursorOnView(); ResetCursorBlink(); };
 
   auto get_binding = [this] (const char* name) {
     auto it = actions.find(name);
@@ -132,6 +132,18 @@ void DocPane::HandleEvent(const Event& event) {
 }
 
 
+void DocPane::Update() {
+  // Update the cursor blink.
+  if (cursor_blink_period > 0) {
+    int now = GetElapsedTime();
+    if (now - cursor_last_blink >= cursor_blink_period) {
+      cursor_last_blink = now;
+      cursor_blink_show = !cursor_blink_show;
+    }
+  }
+}
+
+
 void DocPane::Draw(DrawBuffer buff, Coord pos, Size area) {
 
   ASSERT(this->document != nullptr, OOPS);
@@ -193,7 +205,7 @@ void DocPane::Draw(DrawBuffer buff, Coord pos, Size area) {
         if (in_selection && in_cursor) break;
       }
 
-      if (in_cursor) bg = color_cursor;
+      if (in_cursor && cursor_blink_show) bg = color_cursor;
       else if (in_selection) bg = color_sel;
 
       // Handle tab character.
@@ -231,6 +243,12 @@ void DocPane::Draw(DrawBuffer buff, Coord pos, Size area) {
     }
 
   }
+}
+
+
+void DocPane::ResetCursorBlink() {
+  cursor_blink_show = true;
+  cursor_last_blink = GetElapsedTime();
 }
 
 

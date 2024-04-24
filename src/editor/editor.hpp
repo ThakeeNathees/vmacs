@@ -37,6 +37,7 @@ public:
   void SetDocument(std::shared_ptr<Document> document);
 
   void HandleEvent(const Event& event);
+  void Update();
   void Draw(DrawBuffer buff, Coord pos, Size area);
 
 
@@ -55,8 +56,16 @@ private:
   // We "cache" the draw area for the text needed in some method.
   Size text_area = {0, 0};
 
+  // We set it to the time it was blinked last time and
+  // if (time_now - last_blink > blink_period) we blink again.
+  // if cursor_blink_period <= 0, that means we won't blink.
+  int cursor_blink_period = 0;  // Time in milliseconds.
+  int cursor_last_blink   = 0;
+  bool cursor_blink_show  = true;
 
 private:
+
+  void ResetCursorBlink();
   void EnsureCursorOnView();
 
   // Returns the diagnostics at the given index if has any, otherwise it'll

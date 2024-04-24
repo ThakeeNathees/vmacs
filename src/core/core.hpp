@@ -193,6 +193,7 @@ std::size_t constexpr operator "" _hash(const char* s, size_t) {
 }
 
 
+// Returns the Elapsed time since the program starts in milliseconds.
 int GetElapsedTime();
 bool EndsWith(StringView str, StringView suffix);
 bool StartsWith(StringView str, StringView suffix);

@@ -10,6 +10,7 @@
 // TODO:
 //
 // Now:
+//   cursor blink
 //
 //
 // Top priority:

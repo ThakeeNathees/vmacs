@@ -23,22 +23,11 @@ std::unique_ptr<IEditor> IEditor::New() {
 }
 
 
-uint8_t IEditor::RgbToXterm(uint32_t rgb) {
-  return ::RgbToXterm(rgb);
-}
-
-
-uint32_t IEditor::XtermToRgb(uint8_t xterm) {
-  return ::XtermToRgb(xterm);
-}
-
-
 Editor::Editor() {
   // Register LSP content listeners.
   LspClient::cb_diagnostics = [this](const Uri& uri, std::vector<Diagnostic>&& diagnostics) {
     this->OnLspDiagnostics(uri, std::move(diagnostics));
   };
-
 }
 
 
@@ -77,6 +66,9 @@ int Editor::MainLoop() {
       docpane.HandleEvent(event_queue.Dequeue());
     }
 
+    // Update call.
+    docpane.Update();
+
     // FIXME: This needs to be re-factored and cleaned up.
     // Draw to the front end buffer.
     DrawBuffer buff = frontend->GetDrawBuffer();
@@ -112,6 +104,16 @@ void Editor::EventLoop() {
       event_queue.Enqueue(event);
     }
   }
+}
+
+
+uint8_t IEditor::RgbToXterm(uint32_t rgb) {
+  return ::RgbToXterm(rgb);
+}
+
+
+uint32_t IEditor::XtermToRgb(uint8_t xterm) {
+  return ::XtermToRgb(xterm);
 }
 
 
