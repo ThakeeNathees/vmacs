@@ -37,6 +37,71 @@ using Json = nlohmann::json;
 namespace fs = std::filesystem;
 
 
+void lsp_test() {
+
+  LspConfig config;
+  config.server = "clangd";
+
+  LspClient client(config);
+  client.StartServer(std::nullopt);
+
+  std::string path = "/Users/thakeenathees/Desktop/thakee/repos/vmacs/build/main.c";
+  Uri uri = std::string("file://") + path;
+  std::string x;
+
+  client.DidOpen(uri, ReadAll(path), "c");
+
+  // goto definition.
+  // std::cin >> x;
+  // client.SendRequest(
+  //   "textDocument/definition", {
+  //   {
+  //     "textDocument", {
+  //       { "uri",  std::string("file://") + path },
+  //     },
+  //   },
+  //   {
+  //     "position", {
+  //       { "line", 5  },
+  //       { "character", 2 },
+  //     },
+  //   }
+  // });
+
+
+
+  { std::string s; std::cin >> s; }
+  client.SendRequest(
+    "textDocument/completion", {
+    {
+      "textDocument", {
+        { "uri",  std::string("file://") + path },
+      },
+    },
+    {
+      "position", {
+        { "line", 2 },
+        { "character", 9 },
+      },
+    }
+  });
+
+
+  // std::vector<DocumentChange> chs;
+  // DocumentChange ch;
+  // ch.start = {1, 0};
+  // ch.end = {1, 0};
+  // ch.text = "void";
+  // chs.push_back(ch);
+  // client.DidChange(uri, 1, chs);
+
+  // Prevent the client from destroy before we got response from server.
+  { std::string s; std::cin >> s; }
+
+  // Otherwise it'll wait forever.
+  global_thread_stop = true;
+}
+
 void theme_test() {
 
   std::map<std::string, Json> themes;
@@ -272,57 +337,6 @@ void tree_sitter_test() {
 
 
 
-
-
-
-void lsp_test() {
-
-  LspConfig config;
-  config.server = "clangd";
-
-  LspClient client(config);
-  client.StartServer(std::nullopt);
-
-  std::string path = "/Users/thakeenathees/Desktop/thakee/temp/lsp/main.c";
-  Uri uri = std::string("file://") + path;
-  std::string x;
-
-  client.DidOpen(uri, ReadAll(path), "c");
-
-  // goto definition.
-  // std::cin >> x;
-  client.SendRequest(
-    "textDocument/definition", {
-    {
-      "textDocument", {
-        { "uri",  std::string("file://") + path },
-      },
-    },
-    {
-      "position", {
-        { "line", 5  },
-        { "character", 2 },
-      },
-    }
-  });
-
-  std::vector<DocumentChange> chs;
-  DocumentChange ch;
-  ch.start = {1, 0};
-  ch.end = {1, 0};
-  ch.text = "void";
-  chs.push_back(ch);
-  client.DidChange(uri, 1, chs);
-
-  // Prevent the client from destroy before we got response from server.
-  std::string s; std::cin >> s;
-
-  // Otherwise it'll wait forever.
-  global_thread_stop = true;
-}
-
-
-
 int main(int argc, char** argv) {
 
 
@@ -342,8 +356,8 @@ int main(int argc, char** argv) {
   // tree_sitter_test();
   // return 0;
 
-  // lsp_test();
-  // return 0;
+  lsp_test();
+  return 0;
 
   std::unique_ptr<FrontEnd> fe;
 

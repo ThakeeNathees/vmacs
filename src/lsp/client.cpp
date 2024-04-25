@@ -10,6 +10,8 @@
 
 #include <future>
 
+// FIXME: Remove this (mess), for debugging.
+#define DUMP_TO_TERM
 
 CallbackDiagnostic LspClient::cb_diagnostics = nullptr;
 
@@ -272,12 +274,15 @@ void LspClient::HandleError(RequestId id, const Json& error) {
 void LspClient::ParseAndHandleResponse(LspClient* self, std::string_view json_string) {
   try {
     Json content = Json::parse(json_string);
-
+#ifdef DUMP_TO_TERM
+    printf("%s\n", content.dump(2).c_str());
+#else
     // FIXME: cleanup this mess.
     // printf(" [lsp-client] %s\n", content.dump(2).c_str());
     FILE* f = fopen("./build/lsp.log", "a");
     fprintf(f, "%s\n", content.dump(2).c_str());
     fclose(f);
+#endif
 
     self->HandleServerContent(content);
 
@@ -344,11 +349,14 @@ void LspClient::StdoutCallback(void* user_data, const char* buff, size_t length)
 // FIXME: Clean up this mess.
 void LspClient::StderrCallback(void* user_data, const char* buff, size_t length) {
   // printf(" [lsp-stderr] %*s\n", (int) length, buff);
-
+#ifdef DUMP_TO_TERM
+  printf("%*s", (int) length, buff);
+#else
   // FIXME: cleanup this mess.
   FILE* f = fopen("./build/lsp.log", "a");
   fprintf(f, "%*s", (int) length, buff);
   fclose(f);
+#endif
 }
 
 
