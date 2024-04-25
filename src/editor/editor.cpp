@@ -9,6 +9,7 @@
 #include "core/core.hpp"
 #include "editor.hpp"
 
+#include <chrono>
 #include <thread>
 #include <future>
 
@@ -83,6 +84,14 @@ int Editor::MainLoop() {
   // Async run event loop.
   std::thread event_loop([this]() { EventLoop(); });
 
+  // We'll use this to limit the frame rate and sleep for other threads to run
+  // while we sleep.
+  int time_ms = GetElapsedTime();
+
+  // 30 FPS : 33 milliseconds
+  // 60 FPS : 16 milliseconds
+  const int WAIT_TIME_MS = 33;
+
   // Main thread hot loop.
   while (running) {
 
@@ -97,7 +106,9 @@ int Editor::MainLoop() {
     // FIXME: This needs to be re-factored and cleaned up.
     // Draw to the front end buffer.
     DrawBuffer buff = frontend->GetDrawBuffer();
+
     uint8_t color_bg = RgbToXterm(0x272829);
+
     // Clean the buffer.
     for (int i    = 0; i < buff.width*buff.height; i++) {
       Cell& cell  = buff.cells[i];
@@ -108,6 +119,15 @@ int Editor::MainLoop() {
     }
     docpane.Draw(buff, {0,0}, {buff.width, buff.height});
     frontend->Display(color_bg); // FIXME: background color for raylib.
+
+    // Wait till we reach the frame rate limit.
+    int now = GetElapsedTime();
+    int delta = now - time_ms;
+    if (delta < WAIT_TIME_MS) {
+      time_ms = now;
+      std::this_thread::sleep_for(std::chrono::milliseconds(delta));
+    }
+
   }
 
   frontend->Cleanup();

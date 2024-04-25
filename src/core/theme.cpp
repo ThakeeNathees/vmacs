@@ -27,7 +27,7 @@ bool Theme::GetStyle(Style* style, const std::string& capture_) const {
   return false;
 }
 
-
+#if 0
 Theme Theme::Get() {
 #define X(val) RgbToXterm(val)
   Theme theme;
@@ -109,4 +109,100 @@ Theme Theme::Get() {
   theme.entries["diagnostic"]                = { .fg = X(0x000000), .bg = X(0x000000), .attrib = 0  };
   return theme;
 }
+#endif
 
+Theme Theme::Get() {
+  Theme theme;
+
+#define X(val) RgbToXterm(val)
+  theme.entries["type"] = { .fg = X(0xf9e2af), .bg = X(0x000000), .attrib = 0  };
+  theme.entries["constructor"] = { .fg = X(0x74c7ec), .bg = X(0x000000), .attrib = 0  };
+  theme.entries["constant"] = { .fg = X(0xfab387), .bg = X(0x000000), .attrib = 0  };
+  theme.entries["constant.builtin"] = { .fg = X(0xfab387), .bg = X(0x000000), .attrib = 0  };
+  theme.entries["constant.character"] = { .fg = X(0x94e2d5), .bg = X(0x000000), .attrib = 0  };
+  theme.entries["constant.character.escape"] = { .fg = X(0xf5c2e7), .bg = X(0x000000), .attrib = 0  };
+  theme.entries["string"] = { .fg = X(0xa6e3a1), .bg = X(0x000000), .attrib = 0  };
+  theme.entries["string.regexp"] = { .fg = X(0xfab387), .bg = X(0x000000), .attrib = 0  };
+  theme.entries["string.special"] = { .fg = X(0x89b4fa), .bg = X(0x000000), .attrib = 0  };
+  theme.entries["comment"] = { .fg = X(0x7f849c), .bg = X(0x000000), .attrib = VMACS_CELL_ITALIC  };
+  theme.entries["variable"] = { .fg = X(0xcdd6f4), .bg = X(0x000000), .attrib = 0  };
+  theme.entries["variable.parameter"] = { .fg = X(0xeba0ac), .bg = X(0x000000), .attrib = VMACS_CELL_ITALIC  };
+  theme.entries["variable.builtin"] = { .fg = X(0xf38ba8), .bg = X(0x000000), .attrib = 0  };
+  theme.entries["variable.other.member"] = { .fg = X(0x94e2d5), .bg = X(0x000000), .attrib = 0  };
+  theme.entries["label"] = { .fg = X(0x74c7ec), .bg = X(0x000000), .attrib = 0  };
+  theme.entries["punctuation"] = { .fg = X(0x9399b2), .bg = X(0x000000), .attrib = 0  };
+  theme.entries["punctuation.special"] = { .fg = X(0x89dceb), .bg = X(0x000000), .attrib = 0  };
+  theme.entries["keyword"] = { .fg = X(0xcba6f7), .bg = X(0x000000), .attrib = 0  };
+  theme.entries["keyword.storage.modifier.ref"] = { .fg = X(0x94e2d5), .bg = X(0x000000), .attrib = 0  };
+  theme.entries["keyword.control.conditional"] = { .fg = X(0xcba6f7), .bg = X(0x000000), .attrib = VMACS_CELL_ITALIC  };
+  theme.entries["operator"] = { .fg = X(0x89dceb), .bg = X(0x000000), .attrib = 0  };
+  theme.entries["function"] = { .fg = X(0x89b4fa), .bg = X(0x000000), .attrib = 0  };
+  theme.entries["function.macro"] = { .fg = X(0xcba6f7), .bg = X(0x000000), .attrib = 0  };
+  theme.entries["tag"] = { .fg = X(0xcba6f7), .bg = X(0x000000), .attrib = 0  };
+  theme.entries["attribute"] = { .fg = X(0x89b4fa), .bg = X(0x000000), .attrib = 0  };
+  theme.entries["namespace"] = { .fg = X(0x89b4fa), .bg = X(0x000000), .attrib = VMACS_CELL_ITALIC  };
+  theme.entries["special"] = { .fg = X(0x89b4fa), .bg = X(0x000000), .attrib = 0  };
+  theme.entries["markup.heading.marker"] = { .fg = X(0xfab387), .bg = X(0x000000), .attrib = VMACS_CELL_BOLD  };
+  theme.entries["markup.heading.1"] = { .fg = X(0xb4befe), .bg = X(0x000000), .attrib = 0  };
+  theme.entries["markup.heading.2"] = { .fg = X(0xcba6f7), .bg = X(0x000000), .attrib = 0  };
+  theme.entries["markup.heading.3"] = { .fg = X(0xa6e3a1), .bg = X(0x000000), .attrib = 0  };
+  theme.entries["markup.heading.4"] = { .fg = X(0xf9e2af), .bg = X(0x000000), .attrib = 0  };
+  theme.entries["markup.heading.5"] = { .fg = X(0xf5c2e7), .bg = X(0x000000), .attrib = 0  };
+  theme.entries["markup.heading.6"] = { .fg = X(0x94e2d5), .bg = X(0x000000), .attrib = 0  };
+  theme.entries["markup.list"] = { .fg = X(0xcba6f7), .bg = X(0x000000), .attrib = 0  };
+  theme.entries["markup.bold"] = { .fg = X(0x000000), .bg = X(0x000000), .attrib = VMACS_CELL_BOLD  };
+  theme.entries["markup.italic"] = { .fg = X(0x000000), .bg = X(0x000000), .attrib = VMACS_CELL_ITALIC  };
+  theme.entries["markup.strikethrough"] = { .fg = X(0x000000), .bg = X(0x000000), .attrib = 0  };
+  theme.entries["markup.link.url"] = { .fg = X(0xf5e0dc), .bg = X(0x000000), .attrib = VMACS_CELL_UNDERLINE  };
+  theme.entries["markup.link.text"] = { .fg = X(0x89b4fa), .bg = X(0x000000), .attrib = 0  };
+  theme.entries["markup.raw"] = { .fg = X(0xf2cdcd), .bg = X(0x000000), .attrib = 0  };
+  theme.entries["diff.plus"] = { .fg = X(0xa6e3a1), .bg = X(0x000000), .attrib = 0  };
+  theme.entries["diff.minus"] = { .fg = X(0xf38ba8), .bg = X(0x000000), .attrib = 0  };
+  theme.entries["diff.delta"] = { .fg = X(0x89b4fa), .bg = X(0x000000), .attrib = 0  };
+  theme.entries["ui.background"] = { .fg = X(0xcdd6f4), .bg = X(0x1e1e2e), .attrib = 0  };
+  theme.entries["ui.linenr"] = { .fg = X(0x45475a), .bg = X(0x000000), .attrib = 0  };
+  theme.entries["ui.linenr.selected"] = { .fg = X(0xb4befe), .bg = X(0x000000), .attrib = 0  };
+  theme.entries["ui.statusline"] = { .fg = X(0xbac2de), .bg = X(0x181825), .attrib = 0  };
+  theme.entries["ui.statusline.inactive"] = { .fg = X(0x585b70), .bg = X(0x181825), .attrib = 0  };
+  theme.entries["ui.statusline.normal"] = { .fg = X(0x1e1e2e), .bg = X(0xb4befe), .attrib = VMACS_CELL_BOLD  };
+  theme.entries["ui.statusline.insert"] = { .fg = X(0x1e1e2e), .bg = X(0xa6e3a1), .attrib = VMACS_CELL_BOLD  };
+  theme.entries["ui.statusline.select"] = { .fg = X(0x1e1e2e), .bg = X(0xf2cdcd), .attrib = VMACS_CELL_BOLD  };
+  theme.entries["ui.popup"] = { .fg = X(0xcdd6f4), .bg = X(0x313244), .attrib = 0  };
+  theme.entries["ui.window"] = { .fg = X(0x11111b), .bg = X(0x000000), .attrib = 0  };
+  theme.entries["ui.help"] = { .fg = X(0x9399b2), .bg = X(0x313244), .attrib = 0  };
+  theme.entries["ui.bufferline"] = { .fg = X(0xa6adc8), .bg = X(0x181825), .attrib = 0  };
+  theme.entries["ui.bufferline.active"] = { .fg = X(0xcba6f7), .bg = X(0x1e1e2e), .attrib = 0  };
+  theme.entries["ui.bufferline.background"] = { .fg = X(0x000000), .bg = X(0x11111b), .attrib = 0  };
+  theme.entries["ui.text"] = { .fg = X(0xcdd6f4), .bg = X(0x000000), .attrib = 0  };
+  theme.entries["ui.text.focus"] = { .fg = X(0xcdd6f4), .bg = X(0x313244), .attrib = VMACS_CELL_BOLD  };
+  theme.entries["ui.text.inactive"] = { .fg = X(0x7f849c), .bg = X(0x000000), .attrib = 0  };
+  theme.entries["ui.virtual"] = { .fg = X(0x6c7086), .bg = X(0x000000), .attrib = 0  };
+  theme.entries["ui.virtual.ruler"] = { .fg = X(0x000000), .bg = X(0x313244), .attrib = 0  };
+  theme.entries["ui.virtual.indent-guide"] = { .fg = X(0x313244), .bg = X(0x000000), .attrib = 0  };
+  theme.entries["ui.virtual.inlay-hint"] = { .fg = X(0x6c7086), .bg = X(0x1e1e2e), .attrib = 0  };
+  theme.entries["ui.virtual.jump-label"] = { .fg = X(0xf5e0dc), .bg = X(0x000000), .attrib = VMACS_CELL_BOLD  };
+  theme.entries["ui.selection"] = { .fg = X(0x000000), .bg = X(0x45475a), .attrib = 0  };
+  theme.entries["ui.cursor"] = { .fg = X(0x1e1e2e), .bg = X(0xb5a6a8), .attrib = 0  };
+  theme.entries["ui.cursor.primary"] = { .fg = X(0x1e1e2e), .bg = X(0xf5e0dc), .attrib = 0  };
+  theme.entries["ui.cursor.match"] = { .fg = X(0xfab387), .bg = X(0x000000), .attrib = VMACS_CELL_BOLD  };
+  theme.entries["ui.cursor.primary.normal"] = { .fg = X(0x1e1e2e), .bg = X(0xb4befe), .attrib = 0  };
+  theme.entries["ui.cursor.primary.insert"] = { .fg = X(0x1e1e2e), .bg = X(0xa6e3a1), .attrib = 0  };
+  theme.entries["ui.cursor.primary.select"] = { .fg = X(0x1e1e2e), .bg = X(0xf2cdcd), .attrib = 0  };
+  theme.entries["ui.cursor.normal"] = { .fg = X(0x1e1e2e), .bg = X(0x878ec0), .attrib = 0  };
+  theme.entries["ui.cursor.insert"] = { .fg = X(0x1e1e2e), .bg = X(0x7da87e), .attrib = 0  };
+  theme.entries["ui.cursor.select"] = { .fg = X(0x1e1e2e), .bg = X(0xb5a6a8), .attrib = 0  };
+  theme.entries["ui.cursorline.primary"] = { .fg = X(0x000000), .bg = X(0x2a2b3c), .attrib = 0  };
+  theme.entries["ui.highlight"] = { .fg = X(0x000000), .bg = X(0x45475a), .attrib = VMACS_CELL_BOLD  };
+  theme.entries["ui.menu"] = { .fg = X(0x9399b2), .bg = X(0x313244), .attrib = 0  };
+  theme.entries["ui.menu.selected"] = { .fg = X(0xcdd6f4), .bg = X(0x45475a), .attrib = VMACS_CELL_BOLD  };
+  theme.entries["diagnostic.error"] = { .fg = X(0x000000), .bg = X(0x000000), .attrib = 0  };
+  theme.entries["diagnostic.warning"] = { .fg = X(0x000000), .bg = X(0x000000), .attrib = 0  };
+  theme.entries["diagnostic.info"] = { .fg = X(0x000000), .bg = X(0x000000), .attrib = 0  };
+  theme.entries["diagnostic.hint"] = { .fg = X(0x000000), .bg = X(0x000000), .attrib = 0  };
+  theme.entries["error"] = { .fg = X(0xf38ba8), .bg = X(0x000000), .attrib = 0  };
+  theme.entries["warning"] = { .fg = X(0xf9e2af), .bg = X(0x000000), .attrib = 0  };
+  theme.entries["info"] = { .fg = X(0x89dceb), .bg = X(0x000000), .attrib = 0  };
+  theme.entries["hint"] = { .fg = X(0x94e2d5), .bg = X(0x000000), .attrib = 0  };
+
+  return theme;
+}

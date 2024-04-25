@@ -67,11 +67,6 @@ private:
 
   void ResetCursorBlink();
   void EnsureCursorOnView();
-
-  // Returns the diagnostics at the given index if has any, otherwise it'll
-  // return nullptr.
-  const Diagnostic* GetDiagnosticAt(int index) const;
-
 };
 
 

@@ -136,7 +136,10 @@ void tree_sitter_test() {
 // TODO:
 //
 // Now:
-//   tree-sitter.
+//
+//
+// Now cleanups:
+//   Theme: hardcoded -- fix; properly load theme (theme file)
 //
 //
 // Top priority:
@@ -153,13 +156,12 @@ void tree_sitter_test() {
 //      { "c" : "clangd", "c++": "clangd",  "python" : "pyright", etc. }
 //    Theme manager...
 //    Global Configs.
+//    Draw if needed, set framerate as a config.
 //
 // Pending:
 //
 // Alt+shift+arrow not detected by termbox: Add this entry:
 // {"\x1b[1;10B",   TB_KEY_ARROW_DOWN,  TB_MOD_ALT | TB_MOD_SHIFT },
-//
-//   helix them system + tree sitter.
 //
 //   editor send events and ask draw in a structured manner.
 //   proper draw system. (request client for buffer and fill only if it needs to re-draw).

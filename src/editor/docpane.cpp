@@ -158,6 +158,9 @@ void DocPane::Draw(DrawBuffer buff, Coord pos, Size area) {
   uint8_t color_bg            = RgbToXterm(0x272829);
   uint8_t color_tab_indicator = RgbToXterm(0x656966);
 
+  color_sel = Theme::Get().entries["ui.selection"].bg;
+  color_bg = RgbToXterm(0x272829);
+
   // We draw an indicator for the tab character.
   // 0x2102 : '→'
   int tab_indicator = 0x2192;
@@ -172,7 +175,7 @@ void DocPane::Draw(DrawBuffer buff, Coord pos, Size area) {
   for (int y = 0; y < area.height; y++) {
 
     int line_index = view_start.row + y;
-    if (line_index >= line_count) return;
+    if (line_index >= line_count) break;
 
     Slice line = document->buffer->GetLine(line_index);
 
@@ -190,7 +193,11 @@ void DocPane::Draw(DrawBuffer buff, Coord pos, Size area) {
       uint8_t bg = color_bg;
       int attrib = 0;
 
-      const Diagnostic* diagnos =  GetDiagnosticAt(index);
+      // We get the diagnostics and a lock so the returned pointer will be valid
+      // till we're using.
+      const Diagnostic* diagnos = nullptr;
+      std::unique_lock<std::mutex> diagnos_lock = document->GetDiagnosticAt(&diagnos, index);
+
       if (diagnos != nullptr) attrib |= VMACS_CELL_UNDERLINE;
 
       // Check if current cell is in cursor / selection.
@@ -243,11 +250,17 @@ void DocPane::Draw(DrawBuffer buff, Coord pos, Size area) {
           SET_CELL(buff, pos.col + i, pos.row, ch, color, color_bg, 0);
         }
       }
-
       index++;
     }
-
   }
+
+  // Draw a spinning indicator yell it's re-drawn.
+  // ⡿ ⣟ ⣯ ⣷ ⣾ ⣽ ⣻ ⢿
+  static int curr = 0;
+  int icons[] = {0x287f, 0x28df, 0x28ef, 0x28f7, 0x28fe, 0x28fd, 0x28fb, 0x28bf };
+  int icon_count = sizeof icons / sizeof *icons;
+  if (curr >= icon_count) curr = 0;
+  SET_CELL(buff, 0, area.height-1, icons[curr++], color_text, color_bg, 0);
 }
 
 
@@ -272,29 +285,4 @@ void DocPane::EnsureCursorOnView() {
   } else if (view_start.row + text_area.height <= coord.row) {
     view_start.row = coord.row - text_area.height + 1;
   }
-}
-
-
-const Diagnostic* DocPane::GetDiagnosticAt(int index) const {
-
-  // TODO: sort the diagnostics when recieved and do a binary search.
-  for (Diagnostic& diag : document->diagnostics) {
-    Coord coord = document->buffer->IndexToCoord(index);
-
-    // Check if the coordinate comes before this diagnostic.
-    if ((coord.row < diag.start.row) ||
-        (coord.row == diag.start.row && coord.col < diag.start.col)) {
-      continue;
-    }
-
-    // Check if the coordinate comes after this diagnostic.
-    if ((coord.row > diag.end.row) ||
-        (coord.row == diag.end.row && coord.col >= diag.end.col)) {
-      continue;
-    }
-
-    return &diag;
-  }
-
-  return nullptr;
 }

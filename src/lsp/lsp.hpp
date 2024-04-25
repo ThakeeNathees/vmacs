@@ -84,6 +84,15 @@ private:
   // The Interprocess communication proxy.
   std::unique_ptr<IPC> ipc;
 
+  // The langauge server won't always send us all the bytes specified in the
+  // content-length header. only a partial if it's too long and we buffer the
+  // input in this string till we got all.
+  //
+  // Note that we don't need to lock this since it's now shared with any other
+  // threads. Only the std IO thread is using this in a callback funciton.
+  int pending_bytes = 0;
+  std::string stdout_buffer;
+
   // Id of the next request, it'll increment after each request. Note that we
   // set id=0 as the initialize request id.
   std::atomic<uint32_t> next_request_id = INITIALIZE_REQUSET_ID;
@@ -110,6 +119,9 @@ private:
   static void StdoutCallback(void* user_data, const char* buff, size_t length);
   static void StderrCallback(void* user_data, const char* buff, size_t length);
   static void ExitCallback(void* user_data, int exit_code);
+
+  // This is called when the pending stdio buffer is filled and ready to be processed.
+  static void ParseAndHandleResponse(LspClient* self, std::string_view json_string);
 
   void SendServerContent(const Json& content);
   void HandleServerContent(const Json& content);

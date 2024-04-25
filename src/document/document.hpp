@@ -409,6 +409,13 @@ public:
   LanguageId GetLanguageId() const;
   bool IsReadOnly() const;
 
+  // Through parameter "returns" Diagnostics* at the given index if has any,
+  // otherwise it won't change the given pointer.
+  //
+  // Note that it'll lock the internal mutex of the diagnostics vector and
+  // returns the lock guard to the caller, So while the caller is processing the diagnostic
+  std::unique_lock<std::mutex> GetDiagnosticAt(const Diagnostic** diagnostic, int index);
+
   // Setters.
   void SetReadOnly(bool readonly);
   void SetLanguage(std::shared_ptr<const Language> language);
@@ -471,6 +478,10 @@ private:
   Uri uri;
 
   std::shared_ptr<LspClient> lsp_client;
+
+  // Since the diagnostics are updated from the LSP client's IO thread and we'll
+  // be using in our main thread's draw call, it'll not safe without a lock.
+  std::mutex mutex_diagnostics;
   std::vector<Diagnostic> diagnostics;
 
   // Document settings.

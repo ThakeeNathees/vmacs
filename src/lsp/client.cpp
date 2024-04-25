@@ -269,11 +269,41 @@ void LspClient::HandleError(RequestId id, const Json& error) {
 }
 
 
+void LspClient::ParseAndHandleResponse(LspClient* self, std::string_view json_string) {
+  try {
+    Json content = Json::parse(json_string);
+
+    // FIXME: cleanup this mess.
+    // printf(" [lsp-client] %s\n", content.dump(2).c_str());
+    FILE* f = fopen("./build/lsp.log", "a");
+    fprintf(f, "%s\n", content.dump(2).c_str());
+    fclose(f);
+
+    self->HandleServerContent(content);
+
+  } catch (std::exception) {}
+}
+
+
 void LspClient::StdoutCallback(void* user_data, const char* buff, size_t length) {
   LspClient* self = (LspClient*) user_data;
   std::string_view data(buff, length);
 
   do {
+    if (self->pending_bytes > 0) {
+      if (data.length() < self->pending_bytes) { // Still not enough.
+        self->stdout_buffer += data;
+        self->pending_bytes -= data.length();
+        return; // Nothing else to do.
+      }
+
+      self->stdout_buffer += data.substr(0, self->pending_bytes);
+      ParseAndHandleResponse(self, self->stdout_buffer);
+
+      self->pending_bytes = 0;
+      self->stdout_buffer.clear();
+      data = data.substr(self->pending_bytes);
+    }
 
     size_t len_start = data.find("Content-Length:");
     if (len_start == std::string::npos) return;
@@ -282,34 +312,27 @@ void LspClient::StdoutCallback(void* user_data, const char* buff, size_t length)
     size_t len_end = data.find("\r\n", len_start);
     if (len_end == std::string::npos) return;
 
+    int content_len = 0;
     std::string len_str = std::string(data.data() + len_start, len_end - len_start);
-    int content_len = std::stoi(len_str); // TODO: This may throw (we shouldn't anything).
+    try {
+      content_len = std::stoi(len_str);
+    } catch (std::exception) { return; }
 
     size_t content_start = data.find("\r\n\r\n");
-    if (content_start == std::string::npos) return;
+    if (content_start == std::string::npos) return; // Invalid response ??
     content_start += strlen("\r\n\r\n");
 
-    // FIXME: In this case we have to fetch more bytes from the server and process.
-    if (data.length() - content_start < content_len) return;
+    // The output is not enough to parse, push it to our stdout_buffer.
+    size_t available_content = data.length() - content_start;
+    if (available_content < content_len) {
+      self->stdout_buffer = data.substr(content_start);
+      self->pending_bytes = content_len - available_content;
+      return;
+    }
 
     std::string_view content_str = data.substr(content_start, content_len);
 
-    // TODO: This may throw, Handle (we shouldn't trust anything).
-    try {
-      Json content = Json::parse(content_str);
-
-      // FIXME: cleanup this mess.
-      // printf(" [lsp-client] %s\n", content.dump(2).c_str());
-      FILE* f = fopen("./build/lsp.log", "a");
-      fprintf(f, "%s\n", content.dump(2).c_str());
-      fclose(f);
-
-      self->HandleServerContent(content);
-
-    } catch (std::exception) {
-      // TODO: log it.
-    }
-
+    ParseAndHandleResponse(self, content_str);
 
     // Update data for the next iteration.
     data = data.substr(content_start + content_len);

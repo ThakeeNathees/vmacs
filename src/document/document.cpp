@@ -46,6 +46,42 @@ void Document::SetLanguage(std::shared_ptr<const Language> language) {
 }
 
 
+std::unique_lock<std::mutex> Document::GetDiagnosticAt(const Diagnostic** diagnos, int index) {
+
+  // FIXME: If the file has too many errors an error diagnostic will be reported
+  // where the start and end coord will be (0, 0) and (0, 0) Since it's not
+  // actually belongs to any index, we should check if the first diagnostic in
+  // the sorted (TODO) diagnostics list and index == 0 and return the diagnostic.
+
+  {
+    std::unique_lock<std::mutex> lock(mutex_diagnostics);
+    Coord coord = buffer->IndexToCoord(index);
+
+    // TODO: sort the diagnostics when recieved and do a binary search.
+    for (Diagnostic& diag : diagnostics) {
+
+      // Check if the coordinate comes before this diagnostic.
+      if ((coord.row < diag.start.row) ||
+          (coord.row == diag.start.row && coord.col < diag.start.col)) {
+        continue;
+      }
+
+      // Check if the coordinate comes after this diagnostic.
+      if ((coord.row > diag.end.row) ||
+          (coord.row == diag.end.row && coord.col >= diag.end.col)) {
+        continue;
+      }
+
+      *diagnos = &diag;
+      return std::move(lock);
+    }
+  }
+
+  *diagnos = nullptr;
+  return std::unique_lock<std::mutex>();
+}
+
+
 // Fixme: this is not how we set client (mess). it'll be set when we call
 // SetLanguage() above.
 void Document::SetLspClient(std::shared_ptr<LspClient> client) {
@@ -56,6 +92,10 @@ void Document::SetLspClient(std::shared_ptr<LspClient> client) {
 
 
 void Document::PushDiagnostics(uint32_t version, std::vector<Diagnostic>&& diagnostics) {
+
+  // This function is a callback called from from LSP's IO thread. So we need to
+  // lock the mutex of the diagnostics vector.
+  std::lock_guard<std::mutex> lock(mutex_diagnostics);
 
   // TOOD: check if the version of the incomming diagnostics are matching the
   // current version. This could be a very delaied reply from the server and
