@@ -1,0 +1,27 @@
+{
+  "inherits": "autumn",
+  "palette" :
+    {
+      "my_black": "#111111",
+      "my_brown": "#cfba8b",
+      "my_gray0": "#090909",
+      "my_gray1": "#0e0e0e",
+      "my_gray2": "#1a1a1a",
+      "my_gray3": "#404040",
+      "my_gray4": "#626C66",
+      "my_gray5": "#626C66",
+      "my_gray6": "#aaaaaa",
+      "my_gray7": "#c4c4c4",
+      "my_gray8": "#e8e8e8",
+      "my_green": "#99be70",
+      "my_red": "#F05E48",
+      "my_turquoise1": "#86c1b9",
+      "my_turquoise2": "#72a59e",
+      "my_white1": "#F3F2CC",
+      "my_white2": "#F3F2CC",
+      "my_white3": "#F3F2CC",
+      "my_white4": "#7e7d6a",
+      "my_yellow1": "#FAD566",
+      "my_yellow2": "#ffff9f"
+    }
+}

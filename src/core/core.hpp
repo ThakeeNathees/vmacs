@@ -30,6 +30,9 @@
 #include <atomic>
 #include <future>
 
+#include <nlohmann/json.hpp>
+using Json = nlohmann::json;
+
 // Commonly used macros and utility C things.
 #include "common.h"
 
@@ -184,14 +187,25 @@ private:
 // Each capture "keyword", "constant", "string-literal", has it's own style.
 // which we'll use to highlight a buffer.
 struct Style {
-  uint8_t fg;
-  uint8_t bg;
+  Color fg;
+  Color bg;
   uint8_t attrib;
 };
+
 
 class Theme {
 
 public:
+
+  // FIXME: This is temproary.
+  static void Load();
+  static Theme* Get();
+  static std::map<std::string, std::unique_ptr<Theme>> themes;
+
+  // Load the theme from a json object, unlike "Helix" editor (which is where
+  // we've "borrowed" the syntax highlighting and themes) this json doesn't have
+  // inherits, if so that needs to be resolved beforehand by the caller.
+  void LoadFromJson(const Json& json);
 
   // Returns the Style for the given capture.
   // For a key like "keyword.control.conditional" if not exists, we again
@@ -199,13 +213,18 @@ public:
   // and the style parameter will be updated, otherwise, return false.
   bool GetStyle(Style* style, const std::string& capture) const;
 
-  // FIXME: This is public.
-  static Theme Get();
+  // Converts a hex string of color values and returns as the equelevent numeric value.
+  // as 0x00rrggbb value.
+  static bool StringToColor(const char* str, Color* rgb);
+
 
 // private:
   // An entry is a pair of capture name ("keyword", "constant", "string-literal")
   // and the style for that cpature.
   std::map<std::string, Style> entries;
+
+private:
+
 };
 
 
@@ -232,6 +251,10 @@ std::size_t constexpr operator "" _hash(const char* s, size_t) {
 int GetElapsedTime();
 bool EndsWith(StringView str, StringView suffix);
 bool StartsWith(StringView str, StringView suffix);
+
+// TODO: This is a temproary function, used to debug certain things, remove it
+// once finished with this.
+std::string ReadAll(const std::string& path);
 
 uint8_t RgbToXterm(uint32_t rgb);
 uint32_t XtermToRgb(uint8_t xterm);

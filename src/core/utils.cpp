@@ -6,9 +6,13 @@
 // Copyright (c) 2024 Thakee Nathees
 // Licenced under: MIT
 
-
 #include "core.hpp"
 #include "color.xmacro.h"
+
+#include <assert.h>
+#include <iostream>
+#include <fstream>
+#include <sstream>
 
 
 event_t EncodeKeyEvent(Event::Key key) {
@@ -94,6 +98,16 @@ int GetElapsedTime() {
   static hr_time_point program_start = hr_clock::now();
   hr_duration duration = hr_clock::now() - program_start;
   return std::chrono::duration_cast<milliseconds>(duration).count();
+}
+
+
+std::string ReadAll(const std::string& path) {
+  std::ifstream inputFile(path.data());
+  assert(inputFile.is_open() && "Failed to open file.");
+  std::stringstream buffer;
+  buffer << inputFile.rdbuf();
+  inputFile.close();
+  return buffer.str();
 }
 
 

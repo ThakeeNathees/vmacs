@@ -199,15 +199,16 @@ void Syntax::CacheBufferStyle(const Buffer* buffer) {
 
   // FIXME: properly get theme.
   // return if GetTheme() == nullptr;
-  static Theme theme = Theme::Get();
+  // static Theme theme = Theme::Get();
+  Theme* theme = Theme::Get();
 
   size_t buffer_size = buffer->GetSize();
-  Style text = theme.entries["ui.text"];
+  Style text = theme->entries["ui.text"];
   highlights.assign(buffer_size, text);
 
   Style style; // To store the return value.
   for (auto it = slices.begin(); it != slices.end(); ++it) {
-    if (!theme.GetStyle(&style, it->capture)) continue;
+    if (!theme->GetStyle(&style, it->capture)) continue;
     for (int i = it->start; i < it->end; i++) {
       if (i >= buffer_size) return; // Failsafe.
       highlights[i] = style;

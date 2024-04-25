@@ -8,7 +8,11 @@
 
 #pragma once
 
+// Since both raylib and vmacs have struct named Color, we have to do this mapping.
+#define Color ColorRaylib
 #include <raylib.h>
+#undef Color
+
 #include <vmacs.hpp>
 
 class Raylib : public FrontEnd {
@@ -18,10 +22,10 @@ public:
   virtual std::vector<Event> GetEvents() override;
 
   virtual DrawBuffer GetDrawBuffer() override;
-  virtual void Display(uint32_t clear_color) override;
+  virtual void Display(Color clear_color) override;
 
 private:
-  int font_size = 40;
+  int font_size = 30;
   Font font;
 
   DrawBuffer draw_buffer;

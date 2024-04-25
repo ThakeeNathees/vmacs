@@ -1,0 +1,10 @@
+{
+  "inherits": "gruvbox",
+  "ui.cursor.primary": {"modifiers": ["reversed"]},
+  "ui.cursor.match": {"bg": "bg2"},
+  "diagnostic.error": {"underline": {"color": "red0", "style": "curl"}},
+  "palette" :
+    {
+      "bg0": "#1d2021"
+    }
+}

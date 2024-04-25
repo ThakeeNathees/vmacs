@@ -13,11 +13,6 @@
 #include <thread>
 #include <future>
 
-// FIXME: Added for open documet which is temproary at the moment.
-#include <iostream>
-#include <fstream>
-#include <sstream>
-
 
 std::unique_ptr<IEditor> IEditor::New() {
   return std::make_unique<Editor>();
@@ -54,6 +49,9 @@ Editor::Editor() {
   );
   lang_c->query_highlight = query;
   languages["c"] = lang_c;
+
+  // Fixme: This is temproary.
+  Theme::Load();
 }
 
 
@@ -79,7 +77,7 @@ int Editor::MainLoop() {
   }
 
   // What a mess.
-  OpenDocument("/Users/thakeenathees/Desktop/thakee/temp/lsp/main.c");
+  OpenDocument("/Users/thakeenathees/Desktop/thakee/repos/vmacs/src/document/syntax.cpp");
 
   // Async run event loop.
   std::thread event_loop([this]() { EventLoop(); });
@@ -107,7 +105,8 @@ int Editor::MainLoop() {
     // Draw to the front end buffer.
     DrawBuffer buff = frontend->GetDrawBuffer();
 
-    uint8_t color_bg = RgbToXterm(0x272829);
+    // uint8_t color_bg = 0x272829;
+    Color color_bg = Theme::Get()->entries["ui.background"].bg;
 
     // Clean the buffer.
     for (int i    = 0; i < buff.width*buff.height; i++) {
@@ -159,17 +158,6 @@ uint8_t IEditor::RgbToXterm(uint32_t rgb) {
 
 uint32_t IEditor::XtermToRgb(uint8_t xterm) {
   return ::XtermToRgb(xterm);
-}
-
-
-// FIXME: Revmove this mess from here.
-std::string ReadAll(const std::string& path) {
-  std::ifstream inputFile(path.data());
-  assert(inputFile.is_open() && "Failed to open file.");
-  std::stringstream buffer;
-  buffer << inputFile.rdbuf();
-  inputFile.close();
-  return buffer.str();
 }
 
 

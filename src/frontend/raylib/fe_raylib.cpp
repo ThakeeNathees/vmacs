@@ -56,7 +56,7 @@ DrawBuffer Raylib::GetDrawBuffer() {
 }
 
 
-void Raylib::Display(uint32_t clear_color) {
+void Raylib::Display(Color clear_color) {
 
   int width = draw_buffer.width;
   int height = draw_buffer.height;
@@ -80,8 +80,8 @@ void Raylib::Display(uint32_t clear_color) {
         // Convert to rgb color and add alpah channel to the rgb value and
         // create color.
         // TODO: Handle attributes.
-        Color fg = GetColor((XtermToRgb(cell.fg) << 8) | 0xff);
-        Color bg = GetColor((XtermToRgb(cell.bg) << 8) | 0xff);
+        ColorRaylib fg = GetColor((cell.fg << 8) | 0xff);
+        ColorRaylib bg = GetColor((cell.bg << 8) | 0xff);
 
         DrawRectangle( cx, cy, char_width, char_height, bg);
         DrawTextCodepoint(font, cell.ch, {cx, cy}, (float)font_size, fg);

@@ -149,17 +149,18 @@ void DocPane::Draw(DrawBuffer buff, Coord pos, Size area) {
   ASSERT(this->document != nullptr, OOPS);
 
   // FIXME: Move this to themes.
-  uint8_t color_red           = RgbToXterm(0xff0000);
-  uint8_t color_yellow        = RgbToXterm(0xcccc2d);
-  uint8_t color_black         = RgbToXterm(0x000000);
-  uint8_t color_cursor        = RgbToXterm(0x1b4f8f);
-  uint8_t color_text          = RgbToXterm(0xffffff);
-  uint8_t color_sel           = RgbToXterm(0x87898c);
-  uint8_t color_bg            = RgbToXterm(0x272829);
-  uint8_t color_tab_indicator = RgbToXterm(0x656966);
-
-  color_sel = Theme::Get().entries["ui.selection"].bg;
-  color_bg = RgbToXterm(0x272829);
+  Color color_red           = 0xff0000;
+  Color color_yellow        = 0xcccc2d;
+  Color color_black         = 0x000000;
+  Color color_text          = 0xffffff;
+  Color color_sel           = 0x87898c;
+  Color color_bg            = 0x272829;
+  Color color_tab_indicator = 0x656966;
+  // Color color_cursor     = 0x1b4f8f;
+  Color color_cursor_fg = Theme::Get()->entries["ui.cursor.primary"].fg;
+  Color color_cursor_bg = Theme::Get()->entries["ui.cursor.primary"].bg;
+  color_sel = Theme::Get()->entries["ui.selection"].bg;
+  color_bg = Theme::Get()->entries["ui.background"].bg;
 
   // We draw an indicator for the tab character.
   // 0x2102 : '→'
@@ -189,8 +190,8 @@ void DocPane::Draw(DrawBuffer buff, Coord pos, Size area) {
 
       // Current cell configuration.
       int c = document->buffer->At(index);
-      uint8_t fg = color_text;
-      uint8_t bg = color_bg;
+      Color fg = color_text;
+      Color bg = color_bg;
       int attrib = 0;
 
       // We get the diagnostics and a lock so the returned pointer will be valid
@@ -212,7 +213,7 @@ void DocPane::Draw(DrawBuffer buff, Coord pos, Size area) {
         if (in_selection && in_cursor) break;
       }
 
-      if (in_cursor && cursor_blink_show) bg = color_cursor;
+      if (in_cursor && cursor_blink_show) fg = color_cursor_fg,  bg = color_cursor_bg;
       else if (in_selection) bg = color_sel;
 
       // Handle tab character.
@@ -235,6 +236,7 @@ void DocPane::Draw(DrawBuffer buff, Coord pos, Size area) {
         Style style = { .fg = fg, .bg = bg, .attrib = (uint8_t) attrib };
         auto& highlights = document->syntax.GetHighlights();
         if (highlights.size() > index) style = highlights[index];
+        if (in_cursor) style.fg = color_cursor_fg, style.bg = color_cursor_bg;
         // or'ing the bellow attrib for diagnostic underline.
         SET_CELL(buff, pos.col+x, pos.row+y, c, style.fg, bg, style.attrib | attrib);
         x++;
@@ -243,7 +245,7 @@ void DocPane::Draw(DrawBuffer buff, Coord pos, Size area) {
       // FIXME: This is temproary mess.
       // Draw diagnostic text.
       if (diagnos && index == document->cursors.GetPrimaryCursor().GetIndex()) {
-        int color = (diagnos->severity == 1) ? color_red : color_yellow;
+        Color color = (diagnos->severity == 1) ? color_red : color_yellow;
         for (int i = 0; i < diagnos->message.size(); i++) {
           if (i >= area.width) break;
           char ch = diagnos->message[i];

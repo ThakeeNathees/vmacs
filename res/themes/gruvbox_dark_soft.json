@@ -1,0 +1,7 @@
+{
+  "inherits": "gruvbox",
+  "palette" :
+    {
+      "bg0": "#32302f"
+    }
+}

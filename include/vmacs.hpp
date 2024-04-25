@@ -12,10 +12,12 @@
 #include <string>
 #include <functional>
 
-
 // Actions are functions which are "bindable" to keys, and associated with a
 // key/key combination that invoke the action.
 typedef std::function<void()> FuncAction;
+
+
+typedef uint32_t Color;
 
 // Attribute of the cells.
 #define VMACS_CELL_BOLD      0x01
@@ -25,13 +27,14 @@ typedef std::function<void()> FuncAction;
 
 
 // The UI is considered as a grid of cells, each cell has foreground and
-// background colors. The color values are xterm-256 compatible single byte
-// value. if rbg hex values needed use XtermToRgb() function defined bellow.
+// background colors. The color values are rgb values structured as 0xrrggbb
+// if you want the xterm-256 compatible single byte value. RgbToXterm() function
+// defined bellow.
 typedef struct {
-  uint32_t ch; // Unicode codepoint.
-  uint8_t fg;  // Foreground color.
-  uint8_t bg;  // Background color.
-  uint8_t attrib; // Attribute of the cell. Set with VMACS_CELL_* macros.
+  uint32_t ch;     // Unicode codepoint.
+  Color    fg;     // Foreground color.
+  Color    bg;     // Background color.
+  uint8_t  attrib; // Attribute of the cell. Set with VMACS_CELL_* macros.
 } Cell;
 
 

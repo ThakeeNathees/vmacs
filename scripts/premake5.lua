@@ -164,6 +164,9 @@ project (project_name)
 
   filter {}
 
+  -- Termbox option to support true color.
+  defines { "TB_OPT_ATTR_W=32" }
+
   files {
     root_dir_rel .. "/src/**.c",
     root_dir_rel .. "/src/**.h",

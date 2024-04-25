@@ -15,8 +15,10 @@ bool Termbox2::Initialize() {
 		fprintf(stderr, "termbox init failed, code: %d\n", code);
     return false;
 	}
+
+  // DEFINE TB_OPT_ATTR_W=32, to termbox for true color.
 	tb_set_input_mode(TB_INPUT_ALT | TB_INPUT_MOUSE);
-  tb_set_output_mode(TB_OUTPUT_256);
+  tb_set_output_mode(TB_OUTPUT_TRUECOLOR);
   return true;
 }
 
@@ -56,14 +58,12 @@ void Termbox2::Display(uint32_t clear_color) {
   for (int y = 0; y < height; y++) {
     for (int x = 0; x < width; x++) {
       Cell& cell = cells[y*width + x];
-      int fg = cell.fg;
-      int bg = cell.bg;
       int attrib = 0;
       attrib |= (cell.attrib & VMACS_CELL_BOLD)      ? TB_BOLD : 0;
       attrib |= (cell.attrib & VMACS_CELL_UNDERLINE) ? TB_UNDERLINE : 0;
       attrib |= (cell.attrib & VMACS_CELL_ITALIC)    ? TB_ITALIC : 0;
       attrib |= (cell.attrib & VMACS_CELL_REVERSE)   ? TB_REVERSE : 0;
-      tb_set_cell(x, y, cell.ch, fg | attrib, bg);
+      tb_set_cell(x, y, cell.ch, cell.fg | attrib, cell.bg);
     }
   }
 
