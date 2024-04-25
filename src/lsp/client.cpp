@@ -11,14 +11,17 @@
 #include <future>
 
 // FIXME: Remove this (mess), for debugging.
-#define DUMP_TO_TERM
-
-CallbackDiagnostic LspClient::cb_diagnostics = nullptr;
+// #define DUMP_TO_TERM
 
 
 #define GET_STRING_OR(json, key, or)                 \
   (((json).contains(key) && (json)[key].is_string()) \
     ? (json)[key].template get<std::string>()        \
+    : or)
+
+#define GET_BOOL_OR(json, key, or)                    \
+  (((json).contains(key) && (json)[key].is_boolean()) \
+    ? (json)[key].template get<bool>()                \
     : or)
 
 #define GET_INT_OR(json, key, or)                            \
@@ -135,6 +138,21 @@ void LspClient::DidChange(const Uri& uri, uint32_t version, const std::vector<Do
 }
 
 
+void LspClient::Completion(const Uri& uri, Coord position) {
+  RequestId id = SendRequest("textDocument/completion", {
+      { "textDocument", {{ "uri", uri }} },
+      { "position", {{ "line", position.row }, { "character", position.col }} },
+  });
+  ResponseContext ctx;
+  ctx.type = ResponseType::RESP_COMPLETION;
+  ctx.uri = uri;
+  {
+    std::lock_guard<std::mutex> lock(mutex_pending_requests);
+    pending_requests[id] = ctx;
+  }
+}
+
+
 void LspClient::SendServerContent(const Json& content) {
 
   // It's possible for the ipc to be nullptr if we're waiting for the threads
@@ -232,7 +250,7 @@ void LspClient::HandleNotify(const std::string& method, const Json& params) {
       diagnostic.end.col   = diag["range"]["end"]["character"].template get<int>();
       
       diagnostic.severity  = GET_INT_OR(diag, "severity", 3);
-      // diagnostic.code      = GET_STRING_OR(diag, "code", "");
+      diagnostic.code      = GET_STRING_OR(diag, "code", "");
       diagnostic.source    = GET_STRING_OR(diag, "source", "");
 
 
@@ -256,6 +274,54 @@ void LspClient::HandleResponse(RequestId id, const Json& result) {
     is_server_initialized = true;
     cond_server_initialized.notify_all();
     SendNotification("initialized", Json::object());
+  }
+
+  ResponseContext ctx;
+  {
+    std::lock_guard<std::mutex> lock(mutex_pending_requests);
+    auto it = pending_requests.find(id);
+    if (it == pending_requests.end()) return; // TODO: Log ignored response.
+
+    // Copy the values and and remove the pending request from the table.
+    ctx = std::move(it->second);
+    pending_requests.erase(it);
+  }
+
+  switch (ctx.type) {
+    case RESP_UNKNOWN: return;
+    case RESP_COMPLETION:
+     {
+       if (cb_completion == nullptr) return;
+       if (result.is_null()) return;
+
+       bool is_incomplete = false;
+       std::vector<CompletionItem> completion_list;
+
+       // Result could be either CompletionItem[] or CompletionList.
+       if (result.is_array()) {
+         for (const Json& item : result) {
+           CompletionItem ci;
+           if (!JsonToCompletionItem(&ci, item)) continue;
+           completion_list.push_back(std::move(ci));
+         }
+       } else if (result.is_object()) {
+         is_incomplete = GET_BOOL_OR(result, "isIncomplete", false);
+
+         if (!result.contains("items")) return; // Error ??
+         if (!result["items"].is_array()) return;
+         for (const Json& item : result["items"]) {
+           CompletionItem ci;
+           if (!JsonToCompletionItem(&ci, item)) continue;
+           completion_list.push_back(std::move(ci));
+         }
+
+       } else return; // Unknown response ??
+
+       cb_completion(ctx.uri, is_incomplete, std::move(completion_list));
+       return; // we're done here.
+
+     } break; // case RESP_COMPLETION
+
   }
 
 }
@@ -287,6 +353,42 @@ void LspClient::ParseAndHandleResponse(LspClient* self, std::string_view json_st
     self->HandleServerContent(content);
 
   } catch (std::exception) {}
+}
+
+
+bool LspClient::JsonToCompletionItem(CompletionItem* item, const Json& json) {
+  ASSERT(item != nullptr, OOPS);
+
+  if (!json.contains("label")) return false;
+  item->label = json["label"].template get<std::string>();
+  item->insert_text = GET_STRING_OR(json, "insertText", "");
+
+  item->kind = (CompletionItemKind) GET_INT_OR(json, "kind", 1);
+  item->documentation = GET_STRING_OR(json, "documentation", "");
+  item->depricated = GET_BOOL_OR(json, "depricated", false);
+  item->documentation = GET_STRING_OR(json, "sortText", "");
+
+  auto _ParseTextEdit = [](const Json& json) -> TextEdit {
+    TextEdit text_edit;
+
+    Coord start, end;
+    if (!json.contains("range")) return text_edit;
+    const Json& range = json["range"];
+
+    // TODO: Handle all the possible errors it might throw (create a common function as it's reusable).
+    start.row = range["range"]["start"]["line"].template get<int>();
+    start.col = range["range"]["start"]["character"].template get<int>();
+    end.row   = range["range"]["end"]["line"].template get<int>();
+    end.col   = range["range"]["end"]["character"].template get<int>();
+
+    text_edit.start = start;
+    text_edit.end   = end;
+    text_edit.text = GET_STRING_OR(json, "newText", "");
+
+    return text_edit;
+  };
+
+  return true;
 }
 
 

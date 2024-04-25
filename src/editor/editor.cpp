@@ -14,8 +14,12 @@
 #include <future>
 
 
-std::unique_ptr<IEditor> IEditor::New() {
-  return std::make_unique<Editor>();
+// Static singleton definition goes here.
+std::shared_ptr<Editor> Editor::singleton = nullptr;
+
+
+std::shared_ptr<IEditor> IEditor::Singleton() {
+  return std::make_shared<Editor>();
 }
 
 // FIXME: move this to somewhere else.
@@ -24,10 +28,6 @@ extern "C" const TSLanguage* tree_sitter_javascript(void);
 
 Editor::Editor() {
 
-  // Register LSP content listeners.
-  LspClient::cb_diagnostics = [this](const Uri& uri, uint32_t version, std::vector<Diagnostic>&& diagnostics) {
-    this->OnLspDiagnostics(uri, version, std::move(diagnostics));
-  };
 
   // FIXME: Implement a proper language loading system with support to load from
   // dynamic linked library.
@@ -56,7 +56,6 @@ Editor::Editor() {
 
 
 Editor::~Editor() {
-  LspClient::cb_diagnostics = nullptr;
 }
 
 
@@ -180,6 +179,12 @@ std::shared_ptr<Document> Editor::OpenDocument(const std::string& path) {
 
   // FIXME: the document itself request for the client from the editor.
   auto client = std::make_shared<LspClient>(config);
+  client->cb_diagnostics = [this](const Uri& uri, uint32_t version, std::vector<Diagnostic>&& diagnostics) {
+    this->OnLspDiagnostics(uri, version, std::move(diagnostics));
+  };
+  client->cb_completion = [this](const Uri& uri, bool is_incomplete, std::vector<CompletionItem>&& items) {
+    this->OnLspCompletion(uri, is_incomplete, std::move(items));
+  };
   lsp_clients["clangd"] = client;
   client->StartServer(std::nullopt);
   document->SetLspClient(client);
@@ -193,3 +198,11 @@ void Editor::OnLspDiagnostics(const Uri& uri, uint32_t version, std::vector<Diag
   if (it == documents.end()) return;
   it->second->PushDiagnostics(version, std::move(diagnostics));
 }
+
+
+void Editor::OnLspCompletion(const Uri& uri, bool is_incomplete, std::vector<CompletionItem>&& items) {
+  auto it = documents.find(uri);
+  if (it == documents.end()) return;
+  it->second->PushCompletions(is_incomplete, std::move(items));
+}
+

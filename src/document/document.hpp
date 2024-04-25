@@ -416,6 +416,9 @@ public:
   // returns the lock guard to the caller, So while the caller is processing the diagnostic
   std::unique_lock<std::mutex> GetDiagnosticAt(const Diagnostic** diagnostic, int index);
 
+  // Lock the completion items and "returns" the pointer to the completion items.
+  std::unique_lock<std::mutex> GetCompletionItems(const std::vector<CompletionItem>** items);
+
   // Setters.
   void SetReadOnly(bool readonly);
   void SetLanguage(std::shared_ptr<const Language> language);
@@ -426,10 +429,16 @@ public:
   void SetLspClient(std::shared_ptr<LspClient> client);
   // --------------------------
 
+  // Remove all the completion item, this is when we <esc> on suggestion or, just
+  // moved away from the current position.
+  void ClearCompletionItems();
+
   // If any language server send notification the editor will recieve it first
   // and send to the corresponded document.
   void PushDiagnostics(uint32_t version, std::vector<Diagnostic>&& diagnostics);
+  void PushCompletions(bool is_incomplete, std::vector<CompletionItem>&& items);
 
+  // Listener super class implementation.
   void OnHistoryChanged(const std::vector<DocumentChange>& changes) override;
   void OnBufferChanged() override;
 
@@ -458,6 +467,9 @@ public:
   void Undo();
   void Redo();
 
+  // Lsp actions.
+  void TriggerCompletion();
+
 private:
 
   MultiCursor cursors;
@@ -483,6 +495,10 @@ private:
   // be using in our main thread's draw call, it'll not safe without a lock.
   std::mutex mutex_diagnostics;
   std::vector<Diagnostic> diagnostics;
+
+  // Updated from the LSP IO thread and used by the main loop.
+  std::mutex mutex_completions;
+  std::vector<CompletionItem> completion_items;
 
   // Document settings.
   bool readonly = false;

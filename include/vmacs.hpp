@@ -260,7 +260,7 @@ public:
 class IEditor {
 
 public:
-  static std::unique_ptr<IEditor> New();
+  static std::shared_ptr<IEditor> Singleton();
 
   virtual void SetFrontEnd(std::unique_ptr<FrontEnd> frontend) = 0;
 

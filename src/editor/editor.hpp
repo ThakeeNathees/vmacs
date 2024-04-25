@@ -13,20 +13,6 @@
 #include "document/document.hpp"
 
 
-// TODO: Move this to somewhere else.
-#define BUFF_CELL(buff, x, y)\
-  (buff).cells[ (buff).width * ((y)) + (x)  ]
-
-#define SET_CELL(buff, x, y, c, fg_, bg_, attrib_) \
-  do {                                             \
-    Cell& cell  = BUFF_CELL((buff), (x), (y));     \
-    cell.ch     = (c);                             \
-    cell.fg     = (fg_);                           \
-    cell.bg     = (bg_);                           \
-    cell.attrib = (attrib_);                       \
-  } while (false)
-
-
 // BufferPane is the Pane that handles events and display the undeling buffer
 // it's more of a text editor with number line and scroll bar etc.
 class DocPane {
@@ -77,13 +63,12 @@ public:
   ~Editor();
 
   void SetFrontEnd(std::unique_ptr<FrontEnd> frontend) override;
-
   int MainLoop() override;
 
-  // Lsp listeners.
-  void OnLspDiagnostics(const Uri&, uint32_t version, std::vector<Diagnostic>&&);
-
 private:
+
+  static std::shared_ptr<Editor> singleton;
+
   DocPane docpane;
   std::unique_ptr<FrontEnd> frontend;
 
@@ -106,6 +91,9 @@ private:
   std::map<LanguageId, std::shared_ptr<const Language>> languages;
 
 private:
+  // Lsp listeners.
+  void OnLspDiagnostics(const Uri&, uint32_t version, std::vector<Diagnostic>&&);
+  void OnLspCompletion(const Uri&, bool is_incomplete, std::vector<CompletionItem>&&);
 
   // TODO: These are subjected to change.
   std::shared_ptr<Document> OpenDocument(const std::string& path);

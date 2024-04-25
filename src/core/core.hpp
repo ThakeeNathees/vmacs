@@ -43,6 +43,19 @@ using Json = nlohmann::json;
   T operator= (const T&) = delete
 
 
+#define BUFF_CELL(buff, x, y)\
+  (buff).cells[ (buff).width * ((y)) + (x)  ]
+
+#define SET_CELL(buff, x, y, c, fg_, bg_, attrib_) \
+  do {                                             \
+    Cell& cell  = BUFF_CELL((buff), (x), (y));     \
+    cell.ch     = (c);                             \
+    cell.fg     = (fg_);                           \
+    cell.bg     = (bg_);                           \
+    cell.attrib = (attrib_);                       \
+  } while (false)
+
+
 // The key event is serialized into a single integer to be used in map keys and
 // compact form where the ctrl/alt/shift are set as bits in the integer.
 typedef uint32_t event_t;
@@ -94,6 +107,16 @@ typedef struct {
   int width;
   int height;
 } Size;
+
+
+// Style is a foreground, background color and attribute (bold, italic, etc).
+// Each capture "keyword", "constant", "string-literal", has it's own style.
+// which we'll use to highlight a buffer.
+struct Style {
+  Color fg;
+  Color bg;
+  uint8_t attrib;
+};
 
 
 // The tree acts like a Trie for Events to handle sequence events. contains a
@@ -183,16 +206,6 @@ private:
 };
 
 
-// Style is a foreground, background color and attribute (bold, italic, etc).
-// Each capture "keyword", "constant", "string-literal", has it's own style.
-// which we'll use to highlight a buffer.
-struct Style {
-  Color fg;
-  Color bg;
-  uint8_t attrib;
-};
-
-
 class Theme {
 
 public:
@@ -262,6 +275,26 @@ uint32_t XtermToRgb(uint8_t xterm);
 event_t EncodeKeyEvent(Event::Key key);
 Event::Key DecodeKeyEvent(event_t key);
 
+// UTF8 helper functions (Borrowed from termbox, see thridparty/termbox/LICENSE).
+int Utf8CharLength(char c);
+int Utf8CharToUnicode(uint32_t *out, const char *c);
+int Utf8UnicodeToChar(char *out, uint32_t c);
+int Utf8Strlen(const char* str);
+
+// Draw a NULL terminated text (utf8) to the specified position and width.
+void DrawTextLine(
+    DrawBuffer buff,
+    const char* text,
+    int x,
+    int y,
+    int width,       // If the text goes beyond the width it'll terminate.
+    Color fg,
+    Color bg,
+    uint8_t attrib,
+    bool fill_area); // If true all the width is filled with the bg othereise
+                     // only the text is drawn with the given bg.
+
+
 // On a successfull parse, it'll return true and push all the keys are parsed
 // from that string.
 //
@@ -271,4 +304,5 @@ Event::Key DecodeKeyEvent(event_t key);
 // - Note that an empty string is valid here and result empty events.
 //
 bool ParseKeyBindingString(std::vector<event_t>& events, const char* binding);
+
 

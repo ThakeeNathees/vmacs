@@ -127,25 +127,17 @@ void MultiCursor::AddCursor(const Cursor& cursor) {
 
 
 void MultiCursor::AddCursorDown() {
-
-  // When we return this method, we want the blinker to reset.
-  #define return_defer               \
-    do {                             \
-      /*ResetBlinkTimer();*/ return; \
-    } while (false)
-
   if (reversed) {
     if (cursors.size() == 1) reversed = false;
     else { // Just remove the first cursor.
       cursors.erase(cursors.begin(), cursors.begin() + 1);
-      return_defer;
+      return;
     }
   }
 
   // Coordinate of the last cursor.
   Coord coord = cursors[cursors.size() - 1].GetCoord();
-  if (coord.row == buffer->GetLineCount() - 1) return_defer;
-
+  if (coord.row == buffer->GetLineCount() - 1) return;
 
   int intended_col = cursors[0].GetColumn();
   const Slice& next = buffer->GetLine(coord.row + 1);
@@ -156,29 +148,22 @@ void MultiCursor::AddCursorDown() {
   new_cursor.UpdateColumn();
   AddCursor(new_cursor);
 
-  return_defer;
-  #undef return_defer
+  return;
 }
 
 
 void MultiCursor::AddCursorUp() {
-  // When we return this method, we want the blinker to reset.
-  #define return_defer               \
-    do {                             \
-      /*ResetBlinkTimer();*/ return; \
-    } while (false)
-
   if (!reversed) {
     if (cursors.size() == 1) reversed = true;
     else { // Just remove the last cursor.
       cursors.erase(cursors.end() - 1, cursors.end());
-      return_defer;
+      return;
     }
   }
 
   // Coordinate of the first cursor.
   Coord coord = cursors[0].GetCoord();
-  if (coord.row == 0) return_defer;
+  if (coord.row == 0) return;
 
   int intended_col = cursors[cursors.size() - 1].GetColumn();
   const Slice& prev = buffer->GetLine(coord.row - 1);
@@ -189,8 +174,7 @@ void MultiCursor::AddCursorUp() {
   new_cursor.UpdateColumn();
   AddCursor(new_cursor);
 
-  return_defer;
-  #undef return_defer
+  return;
 }
 
 
@@ -200,7 +184,6 @@ void MultiCursor::ClearMultiCursors() {
   } else {
     cursors.erase(cursors.begin() + 1, cursors.end());
   }
-  // TODO: ResetBlinkTimer();
 }
 
 
@@ -208,13 +191,10 @@ void MultiCursor::ClearSelections() {
   for (Cursor& cursor : cursors) {
     cursor.ClearSelection();
   }
-  // TODO: ResetBlinkTimer();
 }
 
 
 void MultiCursor::Changed() {
-  // TODO: ResetBlinkTimer();
-
   // Clamp the cursor indexes if it goes out of range. This is possible if we
   // the buffer changed without our influence.
   for (Cursor& cursor : cursors) {

@@ -82,6 +82,14 @@ std::unique_lock<std::mutex> Document::GetDiagnosticAt(const Diagnostic** diagno
 }
 
 
+std::unique_lock<std::mutex> Document::GetCompletionItems(const std::vector<CompletionItem>** items) {
+  ASSERT(items != nullptr, OOPS);
+  std::unique_lock<std::mutex> lock(mutex_completions);
+  *items = &completion_items;
+  return std::move(lock);
+}
+
+
 // Fixme: this is not how we set client (mess). it'll be set when we call
 // SetLanguage() above.
 void Document::SetLspClient(std::shared_ptr<LspClient> client) {
@@ -91,20 +99,31 @@ void Document::SetLspClient(std::shared_ptr<LspClient> client) {
 }
 
 
+void Document::ClearCompletionItems() {
+  {
+    std::lock_guard<std::mutex> loc(mutex_completions);
+    completion_items.clear();
+  }
+}
+
+
 void Document::PushDiagnostics(uint32_t version, std::vector<Diagnostic>&& diagnostics) {
+  // TODO: Ignore if the version isn't our current version.
+  {
+    // This function is a callback called from from LSP's IO thread. So we need to
+    // lock the mutex of the diagnostics vector. This will clear our current
+    // diagnostics and update with the new values.
+    std::lock_guard<std::mutex> lock(mutex_diagnostics);
+    this->diagnostics = diagnostics;
+  }
+}
 
-  // This function is a callback called from from LSP's IO thread. So we need to
-  // lock the mutex of the diagnostics vector.
-  std::lock_guard<std::mutex> lock(mutex_diagnostics);
 
-  // TOOD: check if the version of the incomming diagnostics are matching the
-  // current version. This could be a very delaied reply from the server and
-  // we've gone so far.
-  this->diagnostics.clear();
-
-  for (Diagnostic& diag : diagnostics) {
-    // TODO: Ignore if the version isn't our current version.
-    this->diagnostics.push_back(std::move(diag));
+void Document::PushCompletions(bool is_incomplete, std::vector<CompletionItem>&& items) {
+  {
+    // This will clear our current diagnostics and update with the new values.
+    std::lock_guard<std::mutex> lock(mutex_completions);
+    this->completion_items = items;
   }
 }
 
@@ -132,23 +151,35 @@ void Document::OnBufferChanged() {
 
 void Document::InsertText(const std::string& text) {
   cursors = history.CommitInsertText(cursors, text);
+
+  // FIXME: Cleanup this mess. This is temproary.
+  // Clear completion if white space is entered.
+  if (text.size() == 1) {
+    char c = text[0];
+    if (BETWEEN('a', c, 'z') || BETWEEN('A', c, 'Z') || BETWEEN('0', c, '0') || c == '_') {
+      TriggerCompletion();
+    } else ClearCompletionItems();
+  }
 }
 
 
 void Document::Backspace() {
   cursors = history.CommitRemoveText(cursors, -1);
+  ClearCompletionItems();
 }
 
 
 void Document::Undo() {
   if (!history.HasUndo()) return;
   cursors = history.Undo();
+  ClearCompletionItems();
 }
 
 
 void Document::Redo() {
   if (!history.HasRedo()) return;
   cursors = history.Redo();
+  ClearCompletionItems();
 }
 
 
@@ -166,6 +197,7 @@ void Document::CursorRight() {
     cursor.UpdateColumn();
   }
   cursors.Changed();
+  ClearCompletionItems();
 }
 
 
@@ -183,6 +215,7 @@ void Document::CursorLeft() {
     cursor.UpdateColumn();
   }
   cursors.Changed();
+  ClearCompletionItems();
 }
 
 
@@ -201,6 +234,7 @@ void Document::CursorUp() {
 
   }
   cursors.Changed();
+  ClearCompletionItems();
 }
 
 
@@ -220,6 +254,7 @@ void Document::CursorDown() {
 
   }
   cursors.Changed();
+  ClearCompletionItems();
 }
 
 
@@ -244,6 +279,7 @@ void Document::CursorHome() {
     cursor.UpdateColumn();
   }
   cursors.Changed();
+  ClearCompletionItems();
 }
 
 
@@ -256,6 +292,7 @@ void Document::CursorEnd() {
     cursor.UpdateColumn();
   }
   cursors.Changed();
+  ClearCompletionItems();
 }
 
 
@@ -274,6 +311,7 @@ void Document::SelectRight() {
     cursor.UpdateColumn();
   }
   cursors.Changed();
+  ClearCompletionItems();
 }
 
 
@@ -292,6 +330,7 @@ void Document::SelectLeft() {
     cursor.UpdateColumn();
   }
   cursors.Changed();
+  ClearCompletionItems();
 }
 
 
@@ -322,6 +361,7 @@ void Document::SelectUp() {
   }
 
   cursors.Changed();
+  ClearCompletionItems();
 }
 
 
@@ -355,6 +395,7 @@ void Document::SelectDown() {
   }
 
   cursors.Changed();
+  ClearCompletionItems();
 }
 
 
@@ -387,6 +428,7 @@ void Document::SelectHome() {
     }
   }
   cursors.Changed();
+  ClearCompletionItems();
 }
 
 
@@ -409,15 +451,26 @@ void Document::SelectEnd() {
       cursor.ClearSelection();
     }
   }
+  cursors.Changed();
+  ClearCompletionItems();
 }
 
 
 void Document::AddCursorDown() {
   cursors.AddCursorDown();
+  ClearCompletionItems();
 }
 
 
 void Document::AddCursorUp() {
   cursors.AddCursorUp();
+  ClearCompletionItems();
 }
 
+
+void Document::TriggerCompletion() {
+  if (lsp_client) {
+    lsp_client->Completion(uri, cursors.GetPrimaryCursor().GetCoord());
+  }
+  // TODO: if LSP client is not available, indiate the user to install or something.
+}

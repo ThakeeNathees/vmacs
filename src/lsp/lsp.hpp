@@ -24,6 +24,15 @@ using Json = nlohmann::json;
 // Unique Id for each request we make to the language server.
 typedef uint32_t RequestId;
 
+// Defines the document change for the "textDocument/didChange" request.
+struct DocumentChange {
+  Coord start;
+  Coord end;
+  std::string text;
+};
+
+
+// Notification from the server after document open and change to push diagnostics.
 struct Diagnostic {
   std::string code;    // unique code of the error/warning etc.
   std::string message; // A human readable message for the code.
@@ -34,10 +43,75 @@ struct Diagnostic {
 };
 
 
-struct DocumentChange {
-  Coord start;
-  Coord end;
+enum class CompletionItemKind {
+  Text          = 1,
+  Method        = 2,
+  Function      = 3,
+  Constructor   = 4,
+  Field         = 5,
+  Variable      = 6,
+  Class         = 7,
+  Interface     = 8,
+  Module        = 9,
+  Property      = 10,
+  Unit          = 11,
+  Value         = 12,
+  Enum          = 13,
+  Keyword       = 14,
+  Snippet       = 15,
+  Color         = 16,
+  File          = 17,
+  Reference     = 18,
+  Folder        = 19,
+  EnumMember    = 20,
+  Constant      = 21,
+  Struct        = 22,
+  Event         = 23,
+  Operator      = 24,
+  TypeParameter = 25,
+};
+
+
+// The range and text needs to be inserted for the completion. Select the region
+// and insert the new text.
+struct TextEdit {
+  Coord start = {0, 0};
+  Coord end   = {0, 0};
   std::string text;
+};
+
+
+// Response type of "textDocument/completion"
+// https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#completionList
+struct CompletionItem {
+
+  // What should be displaied in the completion list and the default text to
+  // insert if textEdit now availabe. TODO: labelDetails.
+  std::string label;
+
+  // The actual characters that needs to be inserted. If not present, use label.
+  // Note that I'm choosing the text need to be inserted in the following order:
+  // text_edit -> insert_text -> label.
+  std::string insert_text;
+
+  // This is optional, check if all the values are empty or not before using.
+  TextEdit text_edit;
+
+  // [Optional] Additional edits needs to be inserted along with the current
+  // completion item. (Ex: an import statement at the top).
+  std::vector<TextEdit> additional_text_edit;
+
+  // CompletionItemKind enum value.
+  CompletionItemKind kind = CompletionItemKind::Text;
+
+  // TODO: this could be plain text or markup (read the docs).
+  std::string documentation;
+
+  // Weather it's depricated or not.
+  bool depricated = false;
+
+  // Optional string that should be used when sorting.
+  std::string sort_text;
 };
 
 
@@ -48,6 +122,7 @@ struct DocumentChange {
 
 typedef std::string Uri;
 typedef std::function<void(const Uri&, uint32_t version, std::vector<Diagnostic>&&)> CallbackDiagnostic;
+typedef std::function<void(const Uri&, bool is_incomplete, std::vector<CompletionItem>&&)> CallbackCompletion;
 
 
 struct LspConfig {
@@ -72,11 +147,13 @@ public:
   // Abstracted request/notification methods.
   void DidOpen(const Uri& uri, const std::string& text, const std::string& langauge);
   void DidChange(const Uri& uri, uint32_t version, const std::vector<DocumentChange>& changes);
+  void Completion(const Uri& uri, Coord position);
   // TODO: did close.
 
-  // Callbacks for content recieved from the server. These are global static
-  // and should be set by the one that's listening for any server inputs.
-  static CallbackDiagnostic cb_diagnostics;
+  // Callbacks for content recieved from the server. (FIXME: this is a public variable
+  // Maybe this is okey, not everything needs to have getters and setters).
+  CallbackDiagnostic cb_diagnostics = nullptr;
+  CallbackCompletion cb_completion  = nullptr;
 
 private:
   LspConfig config;
@@ -114,7 +191,21 @@ private:
   std::vector<std::thread> threads;
   std::mutex mutex_threads_pool;
 
+  enum ResponseType {
+    RESP_UNKNOWN    = 0,
+    RESP_COMPLETION = 1,
+  };
 
+  struct ResponseContext {
+    ResponseType type;
+    Uri uri; // Which uri that was requested this response.
+  };
+
+  // A table of all the pending requests that needs to be resolved when the
+  // response is arrived.
+  std::map<RequestId, ResponseContext> pending_requests;
+  std::mutex mutex_pending_requests;
+  
 private:
   static void StdoutCallback(void* user_data, const char* buff, size_t length);
   static void StderrCallback(void* user_data, const char* buff, size_t length);
@@ -122,6 +213,9 @@ private:
 
   // This is called when the pending stdio buffer is filled and ready to be processed.
   static void ParseAndHandleResponse(LspClient* self, std::string_view json_string);
+
+  // Parse and put the result on the item pointer return true on success.
+  static bool JsonToCompletionItem(CompletionItem* item, const Json& json);
 
   void SendServerContent(const Json& content);
   void HandleServerContent(const Json& content);

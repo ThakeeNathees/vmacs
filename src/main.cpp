@@ -270,21 +270,33 @@ void tree_sitter_test() {
 
 
 // TODO:
+// The goal should be all pack together in as a single binary but also supports
+// loading resources from file (mainly theme and treesitter language).
 //
 // Now:
 //
 //
-// Now cleanups:
+// Big things:
+//   file tree.
+//   mouse support.
+//   load configs.
+//   status line
+//   prompt line + autocompletion (if them auto update).
+//   number line + diagnos gutter.
+//   scrollbar
+//   macro.
+//   picer (file, rgrep, diagnos, buffer, symbols(treesitter) )
+//   open/close files.
+//   splits and tabs.
+//   copy paste clipboard.
+//   nerdfont support (maybe not)
+//   terminal (maybe)
+//
+//
+// Cleanups:
 //   color values for themes and parsing theme json are unstable (can throw if invalid)
 //   and not structured.
 //
-//
-// Top priority:
-//
-//
-// Bugs:
-//  [lsp] if the server send partial result, we ignore -> wait for more...
-//  startup time is a bit high, maybe because of raylib ??? try disabling.
 //
 //  Cleanup things:
 //    make docpane takes document as a parameter when constucted.
@@ -295,12 +307,19 @@ void tree_sitter_test() {
 //    Global Configs.
 //    Draw if needed, set framerate as a config.
 //
+//
+// Unfinished, working things:
+//   autocompletion + (show documnt, symbol helper for parameter, icon, etc.)
+//   Theme loading from file and swith theme, theme listening for change etc.
+//   proper keybinding and loading that from config.
+//
 // Pending:
 //
 // Alt+shift+arrow not detected by termbox: Add this entry:
 // {"\x1b[1;10B",   TB_KEY_ARROW_DOWN,  TB_MOD_ALT | TB_MOD_SHIFT },
 //
 //   editor send events and ask draw in a structured manner.
+//   M-c rename to A-c (M doesn't make sence, even in Eamcs)
 //   proper draw system. (request client for buffer and fill only if it needs to re-draw).
 //   line numbers.
 //   global configs (tabwidth, ).
@@ -310,11 +329,12 @@ void tree_sitter_test() {
 //   default bindnigs and tmeme settings.
 //   treesitter and syntax highlighting.
 //   status bar; prompt bar
-//   global atomic bool to say all the while (true) loop thread to end.
+//   multi cursor select next match what under cursor (like micro)
 //
 //   Can't bind to 12j, d10|, ... with numbers.
 //
 // Code quality:
+//   remove all the trailing white spaces all around the source.
 //   fprintf in the lsp client.
 //   write tests (if I have time)
 //   ipc timeout value hardcoded fix.
@@ -326,10 +346,7 @@ void tree_sitter_test() {
 //   restructure the source files.
 //   use String (typedef) for all std::string.
 //
-// Future:
-//   picker (fzf, rg, etc...)
-//   lsp
-//   utf8 support and nerd font icons.
+//
 
 
 
@@ -356,8 +373,8 @@ int main(int argc, char** argv) {
   // tree_sitter_test();
   // return 0;
 
-  lsp_test();
-  return 0;
+  // lsp_test();
+  // return 0;
 
   std::unique_ptr<FrontEnd> fe;
 
@@ -365,9 +382,8 @@ int main(int argc, char** argv) {
   if (argc == 2) fe = std::make_unique<Termbox2>();
   else           fe = std::make_unique<Raylib>();
 
-  std::unique_ptr<IEditor> editor = IEditor::New();
+  std::shared_ptr<IEditor> editor = IEditor::Singleton();
   editor->SetFrontEnd(std::move(fe));
-
 
   editor->MainLoop();
   return 0;

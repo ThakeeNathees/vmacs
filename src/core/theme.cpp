@@ -17,9 +17,8 @@ namespace fs = std::filesystem;
 std::map<std::string, std::unique_ptr<Theme>> Theme::themes;
 
 
-
 Theme* Theme::Get() {
-  return themes["sonokai"].get();
+  return themes["catppuccin_frappe"].get();
 }
 
 

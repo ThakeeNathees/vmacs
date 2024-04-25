@@ -36,6 +36,9 @@ DocPane::DocPane() {
   actions["undo"]           = [&] { if (this->document == nullptr) return; this->document->Undo();           EnsureCursorOnView(); ResetCursorBlink(); };
   actions["redo"]           = [&] { if (this->document == nullptr) return; this->document->Redo();           EnsureCursorOnView(); ResetCursorBlink(); };
 
+  actions["trigger_completion"] = [&] { if (this->document == nullptr) return; this->document->TriggerCompletion(); EnsureCursorOnView(); ResetCursorBlink(); };
+
+
   auto get_binding = [this] (const char* name) {
     auto it = actions.find(name);
     if (it == actions.end()) return (FuncAction) [] {};
@@ -71,6 +74,8 @@ DocPane::DocPane() {
   REGISTER_BINDING("*", "<backspace>", "backspace");
   REGISTER_BINDING("*", "<C-z>",       "undo");
   REGISTER_BINDING("*", "<C-y>",       "redo");
+
+  REGISTER_BINDING("*", "<C-x><C-k>",  "trigger_completion");
 
   // Temproary event.
   REGISTER_BINDING("*", "<C-x>i", "insert_newline");
@@ -162,9 +167,17 @@ void DocPane::Draw(DrawBuffer buff, Coord pos, Size area) {
   color_sel = Theme::Get()->entries["ui.selection"].bg;
   color_bg = Theme::Get()->entries["ui.background"].bg;
 
+  Color popup_fg = Theme::Get()->entries["ui.popup"].fg;
+  Color popup_bg = Theme::Get()->entries["ui.popup"].bg;
+
+  // FIXME: Move this somewhere general.
   // We draw an indicator for the tab character.
   // 0x2102 : '→'
   int tab_indicator = 0x2192;
+
+  const std::vector<CompletionItem>* completion_items = nullptr;
+  std::unique_lock<std::mutex> lock_completions = document->GetCompletionItems(&completion_items);
+  ASSERT(completion_items != nullptr, OOPS);
 
   // Update our text area so we'll know about the viewing area when we're not
   // drawing, needed to ensure the cursors are on the view area, etc.
@@ -246,20 +259,36 @@ void DocPane::Draw(DrawBuffer buff, Coord pos, Size area) {
       // Draw diagnostic text.
       if (diagnos && index == document->cursors.GetPrimaryCursor().GetIndex()) {
         Color color = (diagnos->severity == 1) ? color_red : color_yellow;
-        for (int i = 0; i < diagnos->message.size(); i++) {
-          if (i >= area.width) break;
-          char ch = diagnos->message[i];
-          SET_CELL(buff, pos.col + i, pos.row, ch, color, color_bg, 0);
-        }
+
+        // Draw the message.
+        int width = MIN(diagnos->message.size(), buff.width);
+        int x = buff.width - width;
+        DrawTextLine(buff, diagnos->message.c_str(), x, 0, width, color, color_bg, 0, false);
+
+        // Draw the code + source.
+        std::string code_source = diagnos->source + ": " + diagnos->code;
+        width = MIN(code_source.size(), buff.width);
+        x = buff.width - width;
+        DrawTextLine(buff, code_source.c_str(), x, 1, width, color, color_bg, 0, false);
       }
+
       index++;
-    }
+    } // End of drawing a character.
+
+  } // End of drawing a line.
+
+
+  // FIXME: yet another temp code.
+  Coord co = document->cursors.GetPrimaryCursor().GetCoord();
+  co.row += 1;
+  for (auto& item : *completion_items) {
+    DrawTextLine(buff, item.label.c_str(), co.col, co.row++, 20, popup_fg, popup_bg, 0, true);
   }
 
   // Draw a spinning indicator yell it's re-drawn.
   // ⡿ ⣟ ⣯ ⣷ ⣾ ⣽ ⣻ ⢿
   static int curr = 0;
-  int icons[] = {0x287f, 0x28df, 0x28ef, 0x28f7, 0x28fe, 0x28fd, 0x28fb, 0x28bf };
+  int icons[] = { 0x287f, 0x28df, 0x28ef, 0x28f7, 0x28fe, 0x28fd, 0x28fb, 0x28bf };
   int icon_count = sizeof icons / sizeof *icons;
   if (curr >= icon_count) curr = 0;
   SET_CELL(buff, 0, area.height-1, icons[curr++], color_text, color_bg, 0);

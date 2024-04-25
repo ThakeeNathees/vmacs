@@ -111,6 +111,137 @@ std::string ReadAll(const std::string& path) {
 }
 
 
+void DrawTextLine(
+    DrawBuffer buff,
+    const char* text,
+    int x,
+    int y,
+    int width,
+    Color fg,
+    Color bg,
+    uint8_t attrib,
+    bool fill_area) {
+
+  if (text == NULL || *text == '\0') return;
+  if (x < 0 || y < 0) return;
+  if (x >= buff.width || y >= buff.height) return;
+  if (x + width > buff.width) width = buff.width - x;
+  if (width <= 0) return;
+
+  // Current x position we're drawing.
+  int curr = x;
+
+  // FIXME: Move this somewhere general.
+  // We draw an indicator that the text is trimmed with three dot unicode.
+  // 0x2026 : '…' 
+  int trim_indicator = 0x2026;
+
+  int length = Utf8Strlen(text);
+  int text_len = MIN(length, width);
+
+  bool trimming = (length > width);
+  if (trimming) text_len -= 1;
+
+  int xcurr = x;
+  const char* c = text;
+  for (; xcurr < x + text_len; xcurr++) {
+    uint32_t ch;
+    c += Utf8CharToUnicode(&ch, c);
+    if (ch == '\n' || ch == '\t') ch = ' ';
+    SET_CELL(buff, xcurr, y, ch, fg, bg, attrib);
+  }
+  if (trimming) SET_CELL(buff, xcurr++, y, trim_indicator, fg, bg, attrib);
+  if (fill_area) {
+    while (xcurr < (x + width)) {
+      SET_CELL(buff, xcurr++, y, ' ', fg, bg, attrib);
+    }
+  }
+}
+
+// ----------------------------------------------------------------------------
+// Utf8 helper functions.
+// ----------------------------------------------------------------------------
+
+static const unsigned char utf8_length[256] = {
+  1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+  1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+  1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+  1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+  1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+  1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+  2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,
+  3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,4,4,4,4,4,4,4,4,5,5,5,5,6,6,1,1
+};
+
+static const unsigned char utf8_mask[6] = { 0x7F, 0x1F, 0x0F, 0x07, 0x03, 0x01 };
+
+int Utf8CharLength(char c) {
+	return utf8_length[(unsigned char)c];
+}
+
+int Utf8CharToUnicode(uint32_t *out, const char *c) {
+	if (*c == 0) return -1;
+
+	int i;
+	unsigned char len = Utf8CharLength(*c);
+	unsigned char mask = utf8_mask[len-1];
+	uint32_t result = c[0] & mask;
+	for (i = 1; i < len; ++i) {
+		result <<= 6;
+		result |= c[i] & 0x3f;
+	}
+
+	*out = result;
+	return (int)len;
+}
+
+int Utf8UnicodeToChar(char *out, uint32_t c) {
+	int len = 0;
+	int first;
+	int i;
+
+	if (c < 0x80) {
+		first = 0;
+		len = 1;
+	} else if (c < 0x800) {
+		first = 0xc0;
+		len = 2;
+	} else if (c < 0x10000) {
+		first = 0xe0;
+		len = 3;
+	} else if (c < 0x200000) {
+		first = 0xf0;
+		len = 4;
+	} else if (c < 0x4000000) {
+		first = 0xf8;
+		len = 5;
+	} else {
+		first = 0xfc;
+		len = 6;
+	}
+
+	for (i = len - 1; i > 0; --i) {
+		out[i] = (c & 0x3f) | 0x80;
+		c >>= 6;
+	}
+	out[0] = c | first;
+
+	return len;
+}
+
+int Utf8Strlen(const char* str) {
+  int length = 0;
+  while (*str) {
+    str += Utf8CharLength(*str);
+    length++;
+  }
+  return length;
+}
+
+// ----------------------------------------------------------------------------
+// Key combination parsing.
+// ----------------------------------------------------------------------------
+
 // Copied from: https://stackoverflow.com/a/42844629/10846399
 bool EndsWith(StringView str, StringView suffix) {
     return str.size() >= suffix.size() && str.compare(str.size()-suffix.size(), suffix.size(), suffix) == 0;
