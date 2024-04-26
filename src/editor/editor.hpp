@@ -50,9 +50,10 @@ private:
   bool cursor_blink_show  = true;
 
 private:
-
   void ResetCursorBlink();
   void EnsureCursorOnView();
+
+  void DrawAutoCompletions(DrawBuffer buff);
 };
 
 

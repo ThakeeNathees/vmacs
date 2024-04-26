@@ -141,6 +141,8 @@ public:
   // server to respond with initialized. And send client initialized.
   void StartServer(std::optional<Uri> root_uri);
 
+  bool IsTriggeringCharacter(char c) const;
+
   RequestId SendRequest(const std::string& method, const Json& params);
   void SendNotification(const std::string& method, const Json& params);
 
@@ -191,6 +193,8 @@ private:
   std::vector<std::thread> threads;
   std::mutex mutex_threads_pool;
 
+  std::vector<char> triggering_characters;
+
   enum ResponseType {
     RESP_UNKNOWN    = 0,
     RESP_COMPLETION = 1,
@@ -225,4 +229,7 @@ private:
   void HandleResponse(RequestId id, const Json& result);
   void HandleRequest(RequestId id, const std::string& method, const Json& params);
   void HandleError(RequestId id, const Json& error);
+
+  // Register server capabilities and configs.
+  void HandleServerInitilized(const Json& result);
 };

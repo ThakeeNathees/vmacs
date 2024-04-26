@@ -137,6 +137,8 @@ bool ShellExec(exec_options_t opt, pid_t* pid) {
       cb_stdout_f cb = cbs[i];
       bool is_stdout = (i == 0);
 
+      if (cb == NULL) continue;
+
       // FIXME: Need to support for milli/micro second timeout since this is
       // only bound to seconds and we cannot do fraction here.
       //
@@ -178,7 +180,7 @@ bool ShellExec(exec_options_t opt, pid_t* pid) {
 
       } else if (read_count > 0) {
         buff[read_count] = '\0';
-        if (cb) cb(opt.user_data, buff, read_count);
+        cb(opt.user_data, buff, read_count);
       }
 
       // If nothing in the stdout of the child and we're not writing anymore,

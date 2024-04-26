@@ -29,9 +29,9 @@ DocPane::DocPane() {
   actions["add_cursor_down"] = [&] { if (this->document == nullptr) return; this->document->AddCursorDown(); EnsureCursorOnView(); ResetCursorBlink(); };
   actions["add_cursor_up"]   = [&] { if (this->document == nullptr) return; this->document->AddCursorUp();   EnsureCursorOnView(); ResetCursorBlink(); };
 
-  actions["insert_space"]   = [&] { if (this->document == nullptr) return; this->document->InsertText(" ");  EnsureCursorOnView(); ResetCursorBlink(); };
-  actions["insert_newline"] = [&] { if (this->document == nullptr) return; this->document->InsertText("\n"); EnsureCursorOnView(); ResetCursorBlink(); };
-  actions["insert_tab"]     = [&] { if (this->document == nullptr) return; this->document->InsertText("\t"); EnsureCursorOnView(); ResetCursorBlink(); };
+  actions["insert_space"]   = [&] { if (this->document == nullptr) return; this->document->EnterCharacter(' ');  EnsureCursorOnView(); ResetCursorBlink(); };
+  actions["insert_newline"] = [&] { if (this->document == nullptr) return; this->document->EnterCharacter('\n'); EnsureCursorOnView(); ResetCursorBlink(); };
+  actions["insert_tab"]     = [&] { if (this->document == nullptr) return; this->document->EnterCharacter('\t'); EnsureCursorOnView(); ResetCursorBlink(); };
   actions["backspace"]      = [&] { if (this->document == nullptr) return; this->document->Backspace();      EnsureCursorOnView(); ResetCursorBlink(); };
   actions["undo"]           = [&] { if (this->document == nullptr) return; this->document->Undo();           EnsureCursorOnView(); ResetCursorBlink(); };
   actions["redo"]           = [&] { if (this->document == nullptr) return; this->document->Redo();           EnsureCursorOnView(); ResetCursorBlink(); };
@@ -126,7 +126,7 @@ void DocPane::HandleEvent(const Event& event) {
       } else if (event.key.unicode != 0) {
         char c = (char) event.key.unicode;
 
-        document->InsertText(std::string(1, c));
+        document->EnterCharacter(c);
         EnsureCursorOnView();
 
         keytree.ResetCursor();
@@ -153,6 +153,10 @@ void DocPane::Draw(DrawBuffer buff, Coord pos, Size area) {
 
   ASSERT(this->document != nullptr, OOPS);
 
+  // Update our text area so we'll know about the viewing area when we're not
+  // drawing, needed to ensure the cursors are on the view area, etc.
+  text_area = area;
+
   // FIXME: Move this to themes.
   Color color_red           = 0xff0000;
   Color color_yellow        = 0xcccc2d;
@@ -167,21 +171,10 @@ void DocPane::Draw(DrawBuffer buff, Coord pos, Size area) {
   color_sel = Theme::Get()->entries["ui.selection"].bg;
   color_bg = Theme::Get()->entries["ui.background"].bg;
 
-  Color popup_fg = Theme::Get()->entries["ui.popup"].fg;
-  Color popup_bg = Theme::Get()->entries["ui.popup"].bg;
-
   // FIXME: Move this somewhere general.
   // We draw an indicator for the tab character.
   // 0x2102 : '→'
   int tab_indicator = 0x2192;
-
-  const std::vector<CompletionItem>* completion_items = nullptr;
-  std::unique_lock<std::mutex> lock_completions = document->GetCompletionItems(&completion_items);
-  ASSERT(completion_items != nullptr, OOPS);
-
-  // Update our text area so we'll know about the viewing area when we're not
-  // drawing, needed to ensure the cursors are on the view area, etc.
-  text_area = area;
 
   int line_count   = document->buffer->GetLineCount();
 
@@ -277,13 +270,7 @@ void DocPane::Draw(DrawBuffer buff, Coord pos, Size area) {
 
   } // End of drawing a line.
 
-
-  // FIXME: yet another temp code.
-  Coord co = document->cursors.GetPrimaryCursor().GetCoord();
-  co.row += 1;
-  for (auto& item : *completion_items) {
-    DrawTextLine(buff, item.label.c_str(), co.col, co.row++, 20, popup_fg, popup_bg, 0, true);
-  }
+  DrawAutoCompletions(buff);
 
   // Draw a spinning indicator yell it's re-drawn.
   // ⡿ ⣟ ⣯ ⣷ ⣾ ⣽ ⣻ ⢿
@@ -292,6 +279,80 @@ void DocPane::Draw(DrawBuffer buff, Coord pos, Size area) {
   int icon_count = sizeof icons / sizeof *icons;
   if (curr >= icon_count) curr = 0;
   SET_CELL(buff, 0, area.height-1, icons[curr++], color_text, color_bg, 0);
+}
+
+
+void DocPane::DrawAutoCompletions(DrawBuffer buff) {
+  std::vector<CompletionItem>* completion_items = nullptr;
+  std::unique_lock<std::mutex> lock_completions = document->GetCompletionItems(&completion_items);
+  ASSERT(completion_items != nullptr, OOPS);
+  if (completion_items->size() == 0) return;
+
+  // FIXME: Move this.
+  Color popup_fg = Theme::Get()->entries["ui.popup"].fg;
+  Color popup_bg = Theme::Get()->entries["ui.popup"].bg;
+
+
+  // TODO: Currently we trigger completion every time a triggering character is
+  // pressed, so no need to filter the match ourself. like this:
+  //
+  //   word_under_cursor = document.GetWordUnderCursor();
+  //   for (completion_item : completion_items) {
+  //     if (!FuzzyMatch(word_under_cursor, completion_item.text)) {
+  //       completion_items.remove(completion_item);
+  //     }
+  //   }
+  //
+
+  // Cursor coordinate.
+  Coord cursor_coord = document->cursors.GetPrimaryCursor().GetCoord();
+  int cursor_index = document->cursors.GetPrimaryCursor().GetIndex();
+
+  int count_items = completion_items->size();
+  int count_lines_above_cursor = cursor_coord.row - view_start.row;
+  int count_lines_bellow_cursor = view_start.row + text_area.height - cursor_coord.row - 1;
+
+  ASSERT(count_lines_above_cursor >= 0, OOPS);
+  ASSERT(count_lines_bellow_cursor >= 0, OOPS);
+
+  // Determine where we'll be drawgin the popup.
+  bool drawing_bellow_cursor = true;
+  if (count_items > count_lines_bellow_cursor) {
+    drawing_bellow_cursor = (count_lines_bellow_cursor >= count_lines_above_cursor);
+  }
+
+  // Determine how many out of those completion items we're displaying.
+  int count_dispaynig_items = 0;
+  if (drawing_bellow_cursor) {
+    count_dispaynig_items = MIN(count_items, count_lines_bellow_cursor);
+  } else {
+    count_dispaynig_items = MIN(count_items, count_lines_above_cursor);
+  }
+
+  // Compute the maximum width for the labels, (not considering the width of the window).
+  int max_len = 0;
+  for (int i = 0; i < count_dispaynig_items; i++) {
+    int item_len = Utf8Strlen((*completion_items)[i].label.c_str());
+    max_len = MAX(max_len, item_len);
+  }
+
+  int word_index = document->GetWordBeforeIndex(cursor_index);
+  Coord coord = document->buffer->IndexToCoord(word_index);
+
+  coord.row += (drawing_bellow_cursor) ? 1 : -1;
+  for (auto& item : *completion_items) {
+    DrawTextLine(
+        buff,
+        item.label.c_str(),
+        coord.col,
+        coord.row,
+        max_len,
+        popup_fg,
+        popup_bg,
+        0,
+        true);
+    coord.row += (drawing_bellow_cursor) ? 1 : -1;
+  }
 }
 
 

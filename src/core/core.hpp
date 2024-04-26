@@ -262,6 +262,9 @@ std::size_t constexpr operator "" _hash(const char* s, size_t) {
 
 // Returns the Elapsed time since the program starts in milliseconds.
 int GetElapsedTime();
+
+bool IsCharName(int c); // Returns the given codepoint [a-zA-Z0-9_].
+bool IsCharWhitespace(int c);
 bool EndsWith(StringView str, StringView suffix);
 bool StartsWith(StringView str, StringView suffix);
 

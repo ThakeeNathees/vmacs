@@ -334,6 +334,7 @@ void tree_sitter_test() {
 //   Can't bind to 12j, d10|, ... with numbers.
 //
 // Code quality:
+//   change all DrawBuffer parameter as reference than value.
 //   remove all the trailing white spaces all around the source.
 //   fprintf in the lsp client.
 //   write tests (if I have time)

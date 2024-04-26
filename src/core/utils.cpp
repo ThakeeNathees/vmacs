@@ -238,6 +238,21 @@ int Utf8Strlen(const char* str) {
   return length;
 }
 
+
+bool IsCharName(int c) {
+  if (BETWEEN('a', c, 'z')) return true;
+  if (BETWEEN('A', c, 'Z')) return true;
+  if (BETWEEN('0', c, '9')) return true;
+  if (c == '_') return true;
+  return false;
+}
+
+
+bool IsCharWhitespace(int c) {
+  return (c == ' ' || c == '\t' || c == '\n');
+}
+
+
 // ----------------------------------------------------------------------------
 // Key combination parsing.
 // ----------------------------------------------------------------------------

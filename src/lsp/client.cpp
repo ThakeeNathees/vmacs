@@ -30,6 +30,23 @@
     : or)
 
 
+// Recursively search if a json value exists. Consider the folloging example:
+//
+//   json["capabilities"]["completionProvider"]["triggerCharacters"]
+//
+// The call should be made like this:
+//
+//   const char* path[] = {"capabilities", "completionProvider", "triggerCharacters", NULL };
+//   const Json* trig;
+//   bool contains = GetJson(&trig, json, path);
+//
+static bool GetJson(const Json** ret, const Json& json, const char** args) {
+  if (*args == NULL) { *ret = &json; return true; }
+  if (!json.contains(*args)) { return false;}
+  return GetJson(ret, json[*args], args+1);
+}
+
+
 LspClient::LspClient(LspConfig config) : config(config) {
 
   IPC::IpcOptions opt;
@@ -80,6 +97,15 @@ void LspClient::StartServer(std::optional<Uri> root_uri) {
   ipc->StartListening();
   // TODO: configure params.
   SendRequest("initialize", Json::object());
+}
+
+
+bool LspClient::IsTriggeringCharacter(char c) const {
+  if (BETWEEN('a', c, 'z') || BETWEEN('A', c, 'Z') || c == '_') return true;
+  for (char tc : triggering_characters) {
+    if (tc == c) return true;
+  }
+  return false;
 }
 
 
@@ -150,6 +176,26 @@ void LspClient::Completion(const Uri& uri, Coord position) {
     std::lock_guard<std::mutex> lock(mutex_pending_requests);
     pending_requests[id] = ctx;
   }
+}
+
+
+void LspClient::HandleServerInitilized(const Json& result) {
+
+  { // Store the triggering characters.
+    const Json* trig;
+    static const char* trig_chars_path[] = {"capabilities", "completionProvider", "triggerCharacters", NULL};
+    if(GetJson( &trig, result, trig_chars_path)) {
+      if (trig->is_array()) {
+        for (auto& c : *trig) {
+          if (!c.is_string()) continue;
+          std::string ch = c.template get<std::string>();
+          if (ch.empty()) continue;
+          triggering_characters.push_back(ch[0]);
+        }
+      }
+    }
+  }
+
 }
 
 
@@ -273,6 +319,7 @@ void LspClient::HandleResponse(RequestId id, const Json& result) {
   if (id == INITIALIZE_REQUSET_ID) {
     is_server_initialized = true;
     cond_server_initialized.notify_all();
+    HandleServerInitilized(result);
     SendNotification("initialized", Json::object());
   }
 

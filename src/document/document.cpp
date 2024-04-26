@@ -46,6 +46,21 @@ void Document::SetLanguage(std::shared_ptr<const Language> language) {
 }
 
 
+int Document::GetWordBeforeIndex(int index) const {
+  // First we skip all the white space characters (vim doesn't skip new line.
+  // something to consider).
+  while (index > 0 && IsCharWhitespace(buffer->At(index))) index--;
+
+  if (IsCharName(buffer->At(index))) {
+    while (index > 1 && IsCharName(buffer->At(index-1))) index--;
+    return index;
+  }
+
+  while (index > 1 && !IsCharName(buffer->At(index-1))) index--;
+  return index;
+}
+
+
 std::unique_lock<std::mutex> Document::GetDiagnosticAt(const Diagnostic** diagnos, int index) {
 
   // FIXME: If the file has too many errors an error diagnostic will be reported
@@ -82,7 +97,7 @@ std::unique_lock<std::mutex> Document::GetDiagnosticAt(const Diagnostic** diagno
 }
 
 
-std::unique_lock<std::mutex> Document::GetCompletionItems(const std::vector<CompletionItem>** items) {
+std::unique_lock<std::mutex> Document::GetCompletionItems(std::vector<CompletionItem>** items) {
   ASSERT(items != nullptr, OOPS);
   std::unique_lock<std::mutex> lock(mutex_completions);
   *items = &completion_items;
@@ -124,6 +139,7 @@ void Document::PushCompletions(bool is_incomplete, std::vector<CompletionItem>&&
     // This will clear our current diagnostics and update with the new values.
     std::lock_guard<std::mutex> lock(mutex_completions);
     this->completion_items = items;
+    this->is_incomplete = is_incomplete;
   }
 }
 
@@ -148,18 +164,34 @@ void Document::OnBufferChanged() {
 // Actions.
 // -----------------------------------------------------------------------------
 
+void Document::EnterCharacter(char c) {
+  InsertText(std::string(1, c));
+
+  if (!lsp_client) return;
+  bool is_ch_trigger = lsp_client->IsTriggeringCharacter(c);
+  if (!is_ch_trigger) {
+    std::lock_guard<std::mutex> lock(mutex_completions);
+    completion_items.clear();
+    return;
+  }
+
+  // This is the proper way instead of requesting the server every time, but in that
+  // case we have to do fuzzy match filter the existing list and we need to figure
+  // out where to insert the text (range and new text alrady in the completion item).
+  // 
+  // { // Check if already in completion.
+  //   std::lock_guard<std::mutex> lock(mutex_completions);
+  //   if (!completion_items.empty() && !is_incomplete) {
+  //     return;
+  //   }
+  // }
+
+  TriggerCompletion();
+}
+
 
 void Document::InsertText(const std::string& text) {
   cursors = history.CommitInsertText(cursors, text);
-
-  // FIXME: Cleanup this mess. This is temproary.
-  // Clear completion if white space is entered.
-  if (text.size() == 1) {
-    char c = text[0];
-    if (BETWEEN('a', c, 'z') || BETWEEN('A', c, 'Z') || BETWEEN('0', c, '0') || c == '_') {
-      TriggerCompletion();
-    } else ClearCompletionItems();
-  }
 }
 
 

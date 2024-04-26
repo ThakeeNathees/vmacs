@@ -417,7 +417,13 @@ public:
   std::unique_lock<std::mutex> GetDiagnosticAt(const Diagnostic** diagnostic, int index);
 
   // Lock the completion items and "returns" the pointer to the completion items.
-  std::unique_lock<std::mutex> GetCompletionItems(const std::vector<CompletionItem>** items);
+  // The caller can modify the list if they wanted (remove entry if no fuzzy match).
+  std::unique_lock<std::mutex> GetCompletionItems(std::vector<CompletionItem>** items);
+
+  // This will return the start index of the word (instead of a copy of the word) at
+  // the given index which can be at the middle of the word. It's work like
+  // Vim's 'b' motion.
+  int GetWordBeforeIndex(int index) const;
 
   // Setters.
   void SetReadOnly(bool readonly);
@@ -462,6 +468,10 @@ public:
   void AddCursorUp();
 
   // Buffer actions.
+  // EnterCharacter will insert a character by user typing this from the keyboard
+  // and that'll trigger an auto completion to the lsp if possible. However the
+  // InsertText will just insert a text without triggering lsp (ex: paste event).
+  void EnterCharacter(char c);
   void InsertText(const std::string& text);
   void Backspace();
   void Undo();
@@ -499,6 +509,7 @@ private:
   // Updated from the LSP IO thread and used by the main loop.
   std::mutex mutex_completions;
   std::vector<CompletionItem> completion_items;
+  bool is_incomplete = true; // Weather the list is incomplete or not.
 
   // Document settings.
   bool readonly = false;
