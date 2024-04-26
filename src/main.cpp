@@ -273,7 +273,10 @@ void tree_sitter_test() {
 // The goal should be all pack together in as a single binary but also supports
 // loading resources from file (mainly theme and treesitter language).
 //
+// THE DRAW FUNCTIONS ARE JUST UGLY AND TEMPROARY ---- FIXXXXXX.
+//
 // Now:
+//   cycle completion items.
 //
 //
 // Big things:
@@ -291,6 +294,18 @@ void tree_sitter_test() {
 //   copy paste clipboard.
 //   nerdfont support (maybe not)
 //   terminal (maybe)
+//
+//
+// LSP:
+//   goto definition.
+//   rename.
+//   get all references.
+//   hover (maybe)
+//   the signature help contains multiple signatures only send the active signature to the caller not an array.
+//
+// BUG:
+//   draw auto completion popup only in the current focused pane.
+//   auto completion -> scroll if we cycle and add a scroll bar.
 //
 //
 // Cleanups:
@@ -318,6 +333,10 @@ void tree_sitter_test() {
 //
 // Alt+shift+arrow not detected by termbox: Add this entry:
 // {"\x1b[1;10B",   TB_KEY_ARROW_DOWN,  TB_MOD_ALT | TB_MOD_SHIFT },
+//
+//   keybinding with logical like micro: (&, |, ',') (comman run sequence).
+//     <tab> : "cycle_completion_list | insert_tab"
+//     <S-tab> : "cycle_completion_list_reversed | insert_tab"
 //
 //   editor send events and ask draw in a structured manner.
 //   M-c rename to A-c (M doesn't make sence, even in Eamcs)

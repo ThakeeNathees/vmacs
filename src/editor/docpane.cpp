@@ -37,6 +37,9 @@ DocPane::DocPane() {
   actions["redo"]           = [&] { if (this->document == nullptr) return; this->document->Redo();           EnsureCursorOnView(); ResetCursorBlink(); };
 
   actions["trigger_completion"] = [&] { if (this->document == nullptr) return; this->document->TriggerCompletion(); EnsureCursorOnView(); ResetCursorBlink(); };
+  actions["cycle_completion_list"] = [&] { if (this->document == nullptr) return; this->document->CycleCompletionList(); EnsureCursorOnView(); ResetCursorBlink(); };
+  actions["cycle_completion_list_reversed"] = [&] { if (this->document == nullptr) return; this->document->CycleCompletionListReversed(); EnsureCursorOnView(); ResetCursorBlink(); };
+  actions["select_completion_item"] = [&] { if (this->document == nullptr) return; this->document->SelectCompletionItem(); EnsureCursorOnView(); ResetCursorBlink(); };
 
 
   auto get_binding = [this] (const char* name) {
@@ -76,6 +79,9 @@ DocPane::DocPane() {
   REGISTER_BINDING("*", "<C-y>",       "redo");
 
   REGISTER_BINDING("*", "<C-x><C-k>",  "trigger_completion");
+  REGISTER_BINDING("*", "<C-n>",  "cycle_completion_list");
+  REGISTER_BINDING("*", "<C-p>",  "cycle_completion_list_reversed");
+  REGISTER_BINDING("*", "<C-k>",  "select_completion_item");
 
   // Temproary event.
   REGISTER_BINDING("*", "<C-x>i", "insert_newline");
@@ -397,15 +403,18 @@ void DocPane::DrawAutoCompletions(DrawBuffer buff) {
     auto& item = (*completion_items)[i];
     int icon_index = CLAMP(0, (int)item.kind-1, completion_kind_count);
 
+    // Highlight selected item.
+    Color bg = (i == document->completion_selected) ? 0xff0000 : popup_bg;
+
     // FIXME: Draw a scroll bar.
     SET_CELL(
         buff, coord.col, coord.row,
         completion_kind_nerd_icon[icon_index],
-        popup_fg, popup_bg, 0);
+        popup_fg, bg, 0);
     SET_CELL(
         buff, coord.col + 1, coord.row,
         ' ',
-        popup_fg, popup_bg, 0);
+        popup_fg, bg, 0);
     DrawTextLine(
         buff,
         item.label.c_str(),
@@ -413,7 +422,7 @@ void DocPane::DrawAutoCompletions(DrawBuffer buff) {
         coord.row,
         max_len,
         popup_fg,
-        popup_bg,
+        bg,
         0,
         true);
     coord.row += (drawing_bellow_cursor) ? 1 : -1;

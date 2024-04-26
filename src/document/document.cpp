@@ -126,6 +126,7 @@ void Document::ClearCompletionItems() {
   {
     std::lock_guard<std::mutex> loc(mutex_completions);
     completion_items.clear();
+    completion_selected = -1;
   }
 
   {
@@ -546,3 +547,55 @@ void Document::TriggerSignatureHelp() {
     lsp_client->SignatureHelp(uri, cursors.GetPrimaryCursor().GetCoord());
   }
 }
+
+
+void Document::CycleCompletionList() {
+  {
+    std::lock_guard<std::mutex> lock(mutex_completions);
+    if (completion_items.size() == 0) completion_selected = -1;
+    else {
+      completion_selected = (completion_selected + 1) % completion_items.size();
+    }
+  }
+}
+
+
+void Document::CycleCompletionListReversed() {
+  {
+    std::lock_guard<std::mutex> lock(mutex_completions);
+    if (completion_items.size() == 0) completion_selected = -1;
+    else {
+      completion_selected--;
+      if (completion_selected < 0) {
+        completion_selected = completion_items.size() - 1;
+      }
+    }
+  }
+}
+
+
+void Document::SelectCompletionItem() {
+  {
+    std::lock_guard<std::mutex> lock(mutex_completions);
+    if (completion_items.size() == 0 || !BETWEEN(0, completion_selected, completion_items.size()-1)) return;
+    const CompletionItem& item = completion_items[completion_selected];
+
+    // TODO: text_edit and insert_text need to be handled properly.
+
+    if (!buffer->IsCoordValid(item.text_edit.start)) return;
+    if (!buffer->IsCoordValid(item.text_edit.end)) return;
+    int start = buffer->CoordToIndex(item.text_edit.start);
+    int end = buffer->CoordToIndex(item.text_edit.end);
+
+    cursors.ClearMultiCursors();
+    Cursor& cursor = cursors.GetPrimaryCursor();
+    cursor.SetSelectionStart(start);
+    cursor.SetIndex(end);
+    InsertText(item.text_edit.text);
+  }
+
+  // This should be called outside of teh above scope otherwise will result in
+  // a dead lock.
+  ClearCompletionItems();
+}
+

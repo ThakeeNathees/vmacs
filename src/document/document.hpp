@@ -84,6 +84,8 @@ public:
   int CoordToIndex(Coord coord) const;
   int ColumnToIndex(int column, int line_num);
 
+  bool IsCoordValid(Coord coord) const;
+
   // Methods that modify the buffer.
   void InsertText(int index, const String& text);
   void RemoveText(int index, int count);
@@ -167,7 +169,7 @@ public:
 
   // Primary cursor is the only cursor we'll be focused on the view and new
   // cursors will be added from which.
-  const Cursor& GetPrimaryCursor() const;
+  Cursor& GetPrimaryCursor();
 
   void AddCursor(const Cursor& cursor);
   void AddCursorDown();
@@ -482,6 +484,9 @@ public:
   // Lsp actions.
   void TriggerCompletion();
   void TriggerSignatureHelp();
+  void CycleCompletionList();
+  void CycleCompletionListReversed();
+  void SelectCompletionItem();
 
 private:
 
@@ -513,6 +518,9 @@ private:
   std::mutex mutex_completions;
   std::vector<CompletionItem> completion_items;
   bool is_incomplete = true; // Weather the list is incomplete or not.
+
+  // The index of the selected item in the completion items list.
+  int completion_selected = -1;
 
   // Signature help is set by the LSP IO thread and read by the main loop.
   std::mutex mutex_signature_help;

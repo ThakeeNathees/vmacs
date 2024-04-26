@@ -108,7 +108,7 @@ std::vector<Cursor>& MultiCursor::Get() {
 }
 
 
-const Cursor& MultiCursor::GetPrimaryCursor() const {
+Cursor& MultiCursor::GetPrimaryCursor() {
   ASSERT(cursors.size() >= 1, OOPS);
   if (reversed) return cursors[0];
   return cursors[cursors.size() - 1];

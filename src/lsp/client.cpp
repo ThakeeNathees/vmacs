@@ -516,10 +516,10 @@ bool LspClient::JsonToCompletionItem(CompletionItem* item, const Json& json) {
     const Json& range = json["range"];
 
     // TODO: Handle all the possible errors it might throw (create a common function as it's reusable).
-    start.row = range["range"]["start"]["line"].template get<int>();
-    start.col = range["range"]["start"]["character"].template get<int>();
-    end.row   = range["range"]["end"]["line"].template get<int>();
-    end.col   = range["range"]["end"]["character"].template get<int>();
+    start.row = range["start"]["line"].template get<int>();
+    start.col = range["start"]["character"].template get<int>();
+    end.row   = range["end"]["line"].template get<int>();
+    end.col   = range["end"]["character"].template get<int>();
 
     text_edit.start = start;
     text_edit.end   = end;
@@ -527,6 +527,10 @@ bool LspClient::JsonToCompletionItem(CompletionItem* item, const Json& json) {
 
     return text_edit;
   };
+
+  if (json.contains("textEdit")) {
+    item->text_edit =  _ParseTextEdit(json["textEdit"]);
+  }
 
   return true;
 }
