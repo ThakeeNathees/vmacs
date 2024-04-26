@@ -95,6 +95,7 @@ private:
   // Lsp listeners.
   void OnLspDiagnostics(const Uri&, uint32_t version, std::vector<Diagnostic>&&);
   void OnLspCompletion(const Uri&, bool is_incomplete, std::vector<CompletionItem>&&);
+  void OnLspSignatureHelp(const Uri&, SignatureItems&&);
 
   // TODO: These are subjected to change.
   std::shared_ptr<Document> OpenDocument(const std::string& path);

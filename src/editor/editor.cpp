@@ -185,6 +185,9 @@ std::shared_ptr<Document> Editor::OpenDocument(const std::string& path) {
   client->cb_completion = [this](const Uri& uri, bool is_incomplete, std::vector<CompletionItem>&& items) {
     this->OnLspCompletion(uri, is_incomplete, std::move(items));
   };
+  client->cb_signature_help = [this](const Uri& uri, SignatureItems&& items) {
+    this->OnLspSignatureHelp(uri, std::move(items));
+  };
   lsp_clients["clangd"] = client;
   client->StartServer(std::nullopt);
   document->SetLspClient(client);
@@ -206,3 +209,9 @@ void Editor::OnLspCompletion(const Uri& uri, bool is_incomplete, std::vector<Com
   it->second->PushCompletions(is_incomplete, std::move(items));
 }
 
+
+void Editor::OnLspSignatureHelp(const Uri& uri, SignatureItems&& items) {
+  auto it = documents.find(uri);
+  if (it == documents.end()) return;
+  it->second->PushSignatureHelp(std::move(items));
+}

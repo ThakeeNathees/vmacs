@@ -46,6 +46,7 @@ using Json = nlohmann::json;
 #define BUFF_CELL(buff, x, y)\
   (buff).cells[ (buff).width * ((y)) + (x)  ]
 
+// FIXME: make this as a function and make sure x, y are in the bounds.
 #define SET_CELL(buff, x, y, c, fg_, bg_, attrib_) \
   do {                                             \
     Cell& cell  = BUFF_CELL((buff), (x), (y));     \

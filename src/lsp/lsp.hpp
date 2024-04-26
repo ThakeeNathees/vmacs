@@ -24,6 +24,10 @@ using Json = nlohmann::json;
 // Unique Id for each request we make to the language server.
 typedef uint32_t RequestId;
 
+
+// TODO: Make the bellow structs json parsable (implement std::optional to be
+// work with nlohmann json)and cleanup all the manual parsing.
+
 // Defines the document change for the "textDocument/didChange" request.
 struct DocumentChange {
   Coord start;
@@ -44,31 +48,32 @@ struct Diagnostic {
 
 
 enum class CompletionItemKind {
-  Text          = 1,
-  Method        = 2,
-  Function      = 3,
-  Constructor   = 4,
-  Field         = 5,
-  Variable      = 6,
-  Class         = 7,
-  Interface     = 8,
-  Module        = 9,
-  Property      = 10,
-  Unit          = 11,
-  Value         = 12,
-  Enum          = 13,
-  Keyword       = 14,
-  Snippet       = 15,
-  Color         = 16,
-  File          = 17,
-  Reference     = 18,
-  Folder        = 19,
-  EnumMember    = 20,
-  Constant      = 21,
-  Struct        = 22,
-  Event         = 23,
-  Operator      = 24,
-  TypeParameter = 25,
+  // Name            Nerd Font Icon
+  Text          = 1,  //    0xea93
+  Method        = 2,  //    0xea8c
+  Function      = 3,  // 󰊕   0xf0295
+  Constructor   = 4,  //    0xea8c
+  Field         = 5,  //    0xeb5f
+  Variable      = 6,  //    0xea88
+  Class         = 7,  //    0xeb5b
+  Interface     = 8,  //    0xeb61
+  Module        = 9,  //    0xea8b
+  Property      = 10, //    0xeb65
+  Unit          = 11, //    0xea96
+  Value         = 12, //    0xea95
+  Enum          = 13, //    0xea95
+  Keyword       = 14, //    0xeb62
+  Snippet       = 15, //    0xeb66
+  Color         = 16, //    0xeb5c
+  File          = 17, //    0xea7b
+  Reference     = 18, //    0xea94
+  Folder        = 19, //    0xea83
+  EnumMember    = 20, //    0xea95
+  Constant      = 21, //    0xeb5d
+  Struct        = 22, //    0xea91
+  Event         = 23, //    0xea86
+  Operator      = 24, //    0xeb64
+  TypeParameter = 25, //    0xea92
 };
 
 
@@ -115,6 +120,31 @@ struct CompletionItem {
 };
 
 
+struct ParameterInformation {
+  // Range is start_index, end_index (inclusive). This will be a substring of
+  // the label of signature. If not present the values < 0.
+  Slice label   = {-1, -1};
+  std::string documentation;  // String or Markup, (we ignore markup for now).
+};
+
+
+// This contains a list of the parameter and the active parameter (to highlight).
+struct SignatureInformation {
+  std::string label;
+  std::string documentation; // Stirng or Markup, (we ignore markup for now).
+  std::vector<ParameterInformation> parameters;
+};
+
+
+struct SignatureItems {
+  // Imange a function with operator overloaded, it'll have multiple signatures
+  // for each overloaded function, here we have the entire list for all function.
+  std::vector<SignatureInformation> signatures;
+  int active_signature = -1; // If not in range ommit.
+  int active_parameter = -1; // If not in range ommit.
+};
+
+
 /******************************************************************************
  * Language Server Client.
  *****************************************************************************/
@@ -123,6 +153,7 @@ struct CompletionItem {
 typedef std::string Uri;
 typedef std::function<void(const Uri&, uint32_t version, std::vector<Diagnostic>&&)> CallbackDiagnostic;
 typedef std::function<void(const Uri&, bool is_incomplete, std::vector<CompletionItem>&&)> CallbackCompletion;
+typedef std::function<void(const Uri&, SignatureItems&&)> CallbackSignatureHelp;
 
 
 struct LspConfig {
@@ -141,7 +172,8 @@ public:
   // server to respond with initialized. And send client initialized.
   void StartServer(std::optional<Uri> root_uri);
 
-  bool IsTriggeringCharacter(char c) const;
+  bool IsTriggeringCharacterCompletion(char c) const;
+  bool IsTriggeringCharacterSignature(char c) const;
 
   RequestId SendRequest(const std::string& method, const Json& params);
   void SendNotification(const std::string& method, const Json& params);
@@ -150,12 +182,14 @@ public:
   void DidOpen(const Uri& uri, const std::string& text, const std::string& langauge);
   void DidChange(const Uri& uri, uint32_t version, const std::vector<DocumentChange>& changes);
   void Completion(const Uri& uri, Coord position);
+  void SignatureHelp(const Uri& uri, Coord position);
   // TODO: did close.
 
   // Callbacks for content recieved from the server. (FIXME: this is a public variable
   // Maybe this is okey, not everything needs to have getters and setters).
   CallbackDiagnostic cb_diagnostics = nullptr;
   CallbackCompletion cb_completion  = nullptr;
+  CallbackSignatureHelp cb_signature_help  = nullptr;
 
 private:
   LspConfig config;
@@ -193,11 +227,13 @@ private:
   std::vector<std::thread> threads;
   std::mutex mutex_threads_pool;
 
-  std::vector<char> triggering_characters;
+  std::vector<char> triggering_characters_completion; // Autocompletion.
+  std::vector<char> triggering_characters_signature;  // For parameters.
 
   enum ResponseType {
     RESP_UNKNOWN    = 0,
     RESP_COMPLETION = 1,
+    RESP_SIGNATURE_HELP = 2,
   };
 
   struct ResponseContext {

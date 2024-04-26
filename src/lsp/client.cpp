@@ -13,6 +13,8 @@
 // FIXME: Remove this (mess), for debugging.
 // #define DUMP_TO_TERM
 
+#define CEHCK_JSON(json, key, is_type) \
+  ((json).contains(key)) && (json)[key].is_type()
 
 #define GET_STRING_OR(json, key, or)                 \
   (((json).contains(key) && (json)[key].is_string()) \
@@ -28,6 +30,12 @@
   (((json).contains(key) && (json)[key].is_number_integer()) \
     ? (json)[key].template get<int>()                        \
     : or)
+
+// The json (documentation) is either string or MarkupContent, either way we
+// just return the plan text and we're not rendering the markdown content.
+#define GET_DOC_STR_OR_MARKUP(json)                                \
+  ((json).is_string() ? (json).template get<std::string>() : (     \
+    (json).is_object() ? ( GET_STRING_OR(json, "value", "")) : ""))
 
 
 // Recursively search if a json value exists. Consider the folloging example:
@@ -100,9 +108,17 @@ void LspClient::StartServer(std::optional<Uri> root_uri) {
 }
 
 
-bool LspClient::IsTriggeringCharacter(char c) const {
+bool LspClient::IsTriggeringCharacterCompletion(char c) const {
   if (BETWEEN('a', c, 'z') || BETWEEN('A', c, 'Z') || c == '_') return true;
-  for (char tc : triggering_characters) {
+  for (char tc : triggering_characters_completion) {
+    if (tc == c) return true;
+  }
+  return false;
+}
+
+
+bool LspClient::IsTriggeringCharacterSignature(char c) const {
+  for (char tc : triggering_characters_signature) {
     if (tc == c) return true;
   }
   return false;
@@ -179,9 +195,24 @@ void LspClient::Completion(const Uri& uri, Coord position) {
 }
 
 
+void LspClient::SignatureHelp(const Uri& uri, Coord position) {
+  RequestId id = SendRequest("textDocument/signatureHelp", {
+      { "textDocument", {{ "uri", uri }} },
+      { "position", {{ "line", position.row }, { "character", position.col }} },
+  });
+  ResponseContext ctx;
+  ctx.type = ResponseType::RESP_SIGNATURE_HELP;
+  ctx.uri = uri;
+  {
+    std::lock_guard<std::mutex> lock(mutex_pending_requests);
+    pending_requests[id] = ctx;
+  }
+}
+
+
 void LspClient::HandleServerInitilized(const Json& result) {
 
-  { // Store the triggering characters.
+  { // Store the completion triggering characters.
     const Json* trig;
     static const char* trig_chars_path[] = {"capabilities", "completionProvider", "triggerCharacters", NULL};
     if(GetJson( &trig, result, trig_chars_path)) {
@@ -190,12 +221,26 @@ void LspClient::HandleServerInitilized(const Json& result) {
           if (!c.is_string()) continue;
           std::string ch = c.template get<std::string>();
           if (ch.empty()) continue;
-          triggering_characters.push_back(ch[0]);
+          triggering_characters_completion.push_back(ch[0]);
         }
       }
     }
   }
 
+  { // Store the signature triggering characters.
+    const Json* trig;
+    static const char* trig_chars_path[] = {"capabilities", "signatureHelpProvider", "triggerCharacters", NULL};
+    if(GetJson( &trig, result, trig_chars_path)) {
+      if (trig->is_array()) {
+        for (auto& c : *trig) {
+          if (!c.is_string()) continue;
+          std::string ch = c.template get<std::string>();
+          if (ch.empty()) continue;
+          triggering_characters_signature.push_back(ch[0]);
+        }
+      }
+    }
+  }
 }
 
 
@@ -214,9 +259,8 @@ void LspClient::SendServerContent(const Json& content) {
   data += dump;
 
   bool is_initialize_request = (
-    content.contains("id") &&
-    content["id"].is_number_integer() &&
-    (content["id"].template get<int>() == INITIALIZE_REQUSET_ID));
+      CEHCK_JSON(content, "id", is_number_integer) &&
+      (content["id"].template get<int>() == INITIALIZE_REQUSET_ID));
 
   if (is_initialize_request) {
     if (ipc) ipc->WriteToStdin(data);
@@ -369,6 +413,55 @@ void LspClient::HandleResponse(RequestId id, const Json& result) {
 
      } break; // case RESP_COMPLETION
 
+    case RESP_SIGNATURE_HELP: 
+     {
+       if (cb_signature_help == nullptr) return;
+       if (result.is_null()) return;
+       if (!result.contains("signatures")) return;
+       if (!result["signatures"].is_array()) return;
+       SignatureItems items;
+       items.active_parameter = GET_INT_OR(result, "activeParameter", -1);
+       items.active_signature = GET_INT_OR(result, "activeSignature", -1);
+       for (auto& sig : result["signatures"]) {
+         if (!sig.is_object()) continue;
+         SignatureInformation signature;
+         signature.label = GET_STRING_OR(sig, "label", "");
+
+         if (sig.contains("documentation")) {
+           signature.documentation = GET_DOC_STR_OR_MARKUP(sig["documentation"]);
+         }
+
+         // According to the docs.
+         int active_parameter = GET_INT_OR(sig, "activeParameter", -1);
+         if (active_parameter >= 0) items.active_parameter = active_parameter;
+
+         if (CEHCK_JSON(sig, "parameters", is_array)) {
+           for (auto& param : sig["parameters"]) {
+             ParameterInformation pi;
+
+             // TODO: this could be either string or a (index, length (exclusive)).
+             // we're parsing only the string, but have to consider the (int, int)
+             // as well.
+             // param["label"] : string | [int, int]
+             //
+             if (CEHCK_JSON(param, "label", is_string)) {
+               std::string label = param["label"].template get<std::string>();
+               size_t pos = signature.label.find(label);
+               if (pos != std::string::npos) {
+                 pi.label.start = pos;
+                 pi.label.end = pos + label.size() - 1;
+               }
+             }
+
+             pi.documentation = GET_STRING_OR(param, "documentation", "");
+             signature.parameters.push_back(pi);
+           }
+         }
+         items.signatures.push_back(signature);
+       }
+
+       cb_signature_help(ctx.uri, std::move(items));
+     } break;
   }
 
 }

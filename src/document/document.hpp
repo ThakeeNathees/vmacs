@@ -419,6 +419,7 @@ public:
   // Lock the completion items and "returns" the pointer to the completion items.
   // The caller can modify the list if they wanted (remove entry if no fuzzy match).
   std::unique_lock<std::mutex> GetCompletionItems(std::vector<CompletionItem>** items);
+  std::unique_lock<std::mutex> GetSignatureHelp(SignatureItems** items);
 
   // This will return the start index of the word (instead of a copy of the word) at
   // the given index which can be at the middle of the word. It's work like
@@ -435,14 +436,15 @@ public:
   void SetLspClient(std::shared_ptr<LspClient> client);
   // --------------------------
 
-  // Remove all the completion item, this is when we <esc> on suggestion or, just
-  // moved away from the current position.
+  // Remove all the completion item, and signature help this is when we <esc>
+  // on suggestion or, just moved away from the current position.
   void ClearCompletionItems();
 
   // If any language server send notification the editor will recieve it first
   // and send to the corresponded document.
   void PushDiagnostics(uint32_t version, std::vector<Diagnostic>&& diagnostics);
   void PushCompletions(bool is_incomplete, std::vector<CompletionItem>&& items);
+  void PushSignatureHelp(SignatureItems&& items);
 
   // Listener super class implementation.
   void OnHistoryChanged(const std::vector<DocumentChange>& changes) override;
@@ -479,6 +481,7 @@ public:
 
   // Lsp actions.
   void TriggerCompletion();
+  void TriggerSignatureHelp();
 
 private:
 
@@ -510,6 +513,10 @@ private:
   std::mutex mutex_completions;
   std::vector<CompletionItem> completion_items;
   bool is_incomplete = true; // Weather the list is incomplete or not.
+
+  // Signature help is set by the LSP IO thread and read by the main loop.
+  std::mutex mutex_signature_help;
+  SignatureItems signatures_helps;
 
   // Document settings.
   bool readonly = false;

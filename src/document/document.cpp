@@ -105,6 +105,14 @@ std::unique_lock<std::mutex> Document::GetCompletionItems(std::vector<Completion
 }
 
 
+std::unique_lock<std::mutex> Document::GetSignatureHelp(SignatureItems** items) {
+  ASSERT(items != nullptr, OOPS);
+  std::unique_lock<std::mutex> lock(mutex_signature_help);
+  *items = &signatures_helps;
+  return std::move(lock);
+}
+
+
 // Fixme: this is not how we set client (mess). it'll be set when we call
 // SetLanguage() above.
 void Document::SetLspClient(std::shared_ptr<LspClient> client) {
@@ -118,6 +126,13 @@ void Document::ClearCompletionItems() {
   {
     std::lock_guard<std::mutex> loc(mutex_completions);
     completion_items.clear();
+  }
+
+  {
+    std::lock_guard<std::mutex> loc(mutex_signature_help);
+    signatures_helps.signatures.clear();
+    signatures_helps.active_signature = -1;
+    signatures_helps.active_parameter = -1;
   }
 }
 
@@ -140,6 +155,18 @@ void Document::PushCompletions(bool is_incomplete, std::vector<CompletionItem>&&
     std::lock_guard<std::mutex> lock(mutex_completions);
     this->completion_items = items;
     this->is_incomplete = is_incomplete;
+    std::sort(this->completion_items.begin(), this->completion_items.end(),
+        [](const CompletionItem& l, const CompletionItem& r){
+          return l.sort_text < r.sort_text;
+        });
+  }
+}
+
+
+void Document::PushSignatureHelp(SignatureItems&& items) {
+  {
+    std::lock_guard<std::mutex> lock(mutex_signature_help);
+    this->signatures_helps = items;
   }
 }
 
@@ -168,7 +195,13 @@ void Document::EnterCharacter(char c) {
   InsertText(std::string(1, c));
 
   if (!lsp_client) return;
-  bool is_ch_trigger = lsp_client->IsTriggeringCharacter(c);
+
+  // Trigger signature help if it's a triggering character.
+  if (lsp_client->IsTriggeringCharacterSignature(c)) {
+    TriggerSignatureHelp();
+  }
+
+  bool is_ch_trigger = lsp_client->IsTriggeringCharacterCompletion(c);
   if (!is_ch_trigger) {
     std::lock_guard<std::mutex> lock(mutex_completions);
     completion_items.clear();
@@ -500,9 +533,16 @@ void Document::AddCursorUp() {
 }
 
 
+// TODO: if LSP client is not available, indiate the user to install or something.
 void Document::TriggerCompletion() {
   if (lsp_client) {
     lsp_client->Completion(uri, cursors.GetPrimaryCursor().GetCoord());
   }
-  // TODO: if LSP client is not available, indiate the user to install or something.
+}
+
+
+void Document::TriggerSignatureHelp() {
+  if (lsp_client) {
+    lsp_client->SignatureHelp(uri, cursors.GetPrimaryCursor().GetCoord());
+  }
 }

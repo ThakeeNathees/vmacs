@@ -114,7 +114,7 @@ void theme_test() {
     std::string theme_name = filename.substr(0, filename.find_last_of("."));
 
     std::string text = ReadAll(entry.path().string()); // FIXME: This will throw.
-    Json data = Json::parse(text); // FIXME: this may throw.
+    Json data = Json::parse(text); // FIXME: this may throw.mainc
     themes[theme_name] = std::move(data);
   }
 
@@ -310,6 +310,7 @@ void tree_sitter_test() {
 //
 // Unfinished, working things:
 //   autocompletion + (show documnt, symbol helper for parameter, icon, etc.)
+//   autocompletion selection of items. icon config.
 //   Theme loading from file and swith theme, theme listening for change etc.
 //   proper keybinding and loading that from config.
 //

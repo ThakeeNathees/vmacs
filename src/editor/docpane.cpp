@@ -281,17 +281,54 @@ void DocPane::Draw(DrawBuffer buff, Coord pos, Size area) {
   SET_CELL(buff, 0, area.height-1, icons[curr++], color_text, color_bg, 0);
 }
 
+// FIXME: Move this, add color value.
+static const int completion_kind_nerd_icon[] = {
+  0xea93, //  Text          
+  0xea8c, //  Method        
+  0xf0295, //  Function     󰊕
+  0xea8c, //  Constructor   
+  0xeb5f, //  Field         
+  0xea88, //  Variable      
+  0xeb5b, //  Class         
+  0xeb61, //  Interface     
+  0xea8b, //  Module        
+  0xeb65, //  Property      
+  0xea96, //  Unit          
+  0xea95, //  Value         
+  0xea95, //  Enum          
+  0xeb62, //  Keyword       
+  0xeb66, //  Snippet       
+  0xeb5c, //  Color         
+  0xea7b, //  File          
+  0xea94, //  Reference     
+  0xea83, //  Folder        
+  0xea95, //  EnumMember    
+  0xeb5d, //  Constant      
+  0xea91, //  Struct        
+  0xea86, //  Event         
+  0xeb64, //  Operator      
+  0xea92, //  TypeParameter 
+};
+static const int completion_kind_count = sizeof completion_kind_nerd_icon / sizeof *completion_kind_nerd_icon;
 
+
+// FIXME: This method is not clean.
 void DocPane::DrawAutoCompletions(DrawBuffer buff) {
+
   std::vector<CompletionItem>* completion_items = nullptr;
   std::unique_lock<std::mutex> lock_completions = document->GetCompletionItems(&completion_items);
+
+  SignatureItems* signature_helps;
+  std::unique_lock<std::mutex> lock_signature = document->GetSignatureHelp(&signature_helps);
+
   ASSERT(completion_items != nullptr, OOPS);
-  if (completion_items->size() == 0) return;
+  ASSERT(signature_helps != nullptr, OOPS);
+  if (completion_items->size() == 0 && signature_helps->signatures.size() == 0) return;
 
   // FIXME: Move this.
   Color popup_fg = Theme::Get()->entries["ui.popup"].fg;
   Color popup_bg = Theme::Get()->entries["ui.popup"].bg;
-
+  Color param_active = Theme::Get()->entries["type"].fg;
 
   // TODO: Currently we trigger completion every time a triggering character is
   // pressed, so no need to filter the match ourself. like this:
@@ -308,7 +345,8 @@ void DocPane::DrawAutoCompletions(DrawBuffer buff) {
   Coord cursor_coord = document->cursors.GetPrimaryCursor().GetCoord();
   int cursor_index = document->cursors.GetPrimaryCursor().GetIndex();
 
-  int count_items = completion_items->size();
+  // FIXME: The value is hardcoded (without a limit, the dropdown takes all the spaces).
+  int count_items = MIN(10, completion_items->size());
   int count_lines_above_cursor = cursor_coord.row - view_start.row;
   int count_lines_bellow_cursor = view_start.row + text_area.height - cursor_coord.row - 1;
 
@@ -317,6 +355,8 @@ void DocPane::DrawAutoCompletions(DrawBuffer buff) {
 
   // Determine where we'll be drawgin the popup.
   bool drawing_bellow_cursor = true;
+  Coord coord; // Wil be used to store the current drawing position.
+
   if (count_items > count_lines_bellow_cursor) {
     drawing_bellow_cursor = (count_lines_bellow_cursor >= count_lines_above_cursor);
   }
@@ -336,15 +376,40 @@ void DocPane::DrawAutoCompletions(DrawBuffer buff) {
     max_len = MAX(max_len, item_len);
   }
 
-  int word_index = document->GetWordBeforeIndex(cursor_index);
-  Coord coord = document->buffer->IndexToCoord(word_index);
+  int index_word = document->GetWordBeforeIndex(cursor_index);
+  const Coord coord_word = document->buffer->IndexToCoord(index_word);
 
-  coord.row += (drawing_bellow_cursor) ? 1 : -1;
-  for (auto& item : *completion_items) {
+  // Update the coord, we use macro to inline this since it's used twise here.
+  #define SET_DRAW_START_COORD()         \
+    coord = coord_word;                  \
+    if (coord.row != cursor_coord.row) { \
+      coord.row = cursor_coord.row;      \
+      coord.col = 0;                     \
+    }                                    \
+    coord.row -= view_start.row;         \
+    coord.col -= view_start.col;         \
+    coord.row += (drawing_bellow_cursor) ? 1 : -1
+
+  // Prepare the coord for drawing the completions.
+  SET_DRAW_START_COORD();
+
+  for (int i = 0; i < count_dispaynig_items; i++) {
+    auto& item = (*completion_items)[i];
+    int icon_index = CLAMP(0, (int)item.kind-1, completion_kind_count);
+
+    // FIXME: Draw a scroll bar.
+    SET_CELL(
+        buff, coord.col, coord.row,
+        completion_kind_nerd_icon[icon_index],
+        popup_fg, popup_bg, 0);
+    SET_CELL(
+        buff, coord.col + 1, coord.row,
+        ' ',
+        popup_fg, popup_bg, 0);
     DrawTextLine(
         buff,
         item.label.c_str(),
-        coord.col,
+        coord.col + 2, // + becase we draw the icon above.
         coord.row,
         max_len,
         popup_fg,
@@ -353,6 +418,55 @@ void DocPane::DrawAutoCompletions(DrawBuffer buff) {
         true);
     coord.row += (drawing_bellow_cursor) ? 1 : -1;
   }
+
+  // TODO: Move the drawing of signature and completion list to it's own functions.
+  // --------------------------------------------------------------------------
+  // Drawing the signature help.
+  // --------------------------------------------------------------------------
+
+  // Draw Signature help in the other direction of the dropdown.
+  if (signature_helps->signatures.size() == 0) return;
+
+  int signature_size = signature_helps->signatures.size();
+  int signature_index = CLAMP(0, signature_helps->active_signature, signature_size);
+  const SignatureInformation& si = signature_helps->signatures[signature_index];
+
+  // TODO: This will draw the signature label and draw the parameter on top of it.
+  // pre mark the values when we recieve the signature help info from the other thread
+  // and just draw it here.
+
+  // TODO: Highlight current parameter and draw documentation about the parameter.
+  // Prepare the coord for drawing the signature help.
+  drawing_bellow_cursor = count_items == 0 || !drawing_bellow_cursor;
+  SET_DRAW_START_COORD();
+  DrawTextLine(
+      buff,
+      si.label.c_str(),
+      coord.col,
+      coord.row,
+      si.label.size(),
+      popup_fg,
+      popup_bg,
+      0,
+      true);
+
+  // Draw the current parameter highlighted.
+  if (si.parameters.size() == 0) return; // No parameter to highlight.
+  int param_index = CLAMP(0, signature_helps->active_parameter, si.parameters.size());
+  const ParameterInformation& pi = si.parameters[param_index];
+  if (pi.label.start < 0 || pi.label.end >= si.label.size() || pi.label.start > pi.label.end) return;
+  std::string param_label = si.label.substr(pi.label.start, pi.label.end - pi.label.start + 1);
+  DrawTextLine(
+      buff,
+      param_label.c_str(),
+      coord.col + pi.label.start,
+      coord.row,
+      param_label.size(),
+      param_active,
+      popup_bg,
+      0,
+      true);
+
 }
 
 
