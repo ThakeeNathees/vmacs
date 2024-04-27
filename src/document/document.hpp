@@ -80,7 +80,8 @@ public:
   int ColumnToIndex(int column, int line_num);
 
   // If the index is not nullptr, it'll write the index if the coord is valid.
-  bool IsCoordValid(Coord coord, int* index) const;
+  bool IsValidIndex(int index) const;
+  bool IsValidCoord(Coord coord, int* index) const;
 
   // Methods that modify the buffer.
   void InsertText(int index, const String& text);
@@ -525,13 +526,12 @@ private:
   // The index of the selected item in the completion items list.
   int completion_selected = -1;
 
-  // The index of the first character that triggerd the completion, we'll use
-  // this to replace the entered text. Note that WordBeforeCursor cannot be used
-  // because of "std::something" is a valid completion item that contains ':'
-  // which is not belong to a word.
-  //
-  // Using the 'textEdit.range' has it's own problems (document version change
-  // before the response arrive).
+  // The index of the first character that triggerd the completion. Note that we
+  // won't be using this to replace the selected word, consider typing std::vector
+  // the start index will be the start of the 's' character but the suggestion
+  // updated as 'vector' so we'll first try to get the index from textEdit range.
+  // If not found there we'll use this. This variable is primarily used when
+  // drawing the dropdown popup on where we started typing.
   int completion_start_index = -1;
 
   // Signature help is set by the LSP IO thread and read by the main loop.

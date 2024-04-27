@@ -204,6 +204,14 @@ void Document::OnBufferChanged() {
 void Document::EnterCharacter(char c) {
   InsertText(std::string(1, c));
 
+  // Since <space>, <enter>, and <tab> all call this method we need to call the
+  // ClearCompletionItems() Here as well like we do in others.
+  if (c == ' ' || c == '\n' || c == '\t') {
+    ClearCompletionItems();
+    return;
+  }
+
+  // Trigger autcompletion if we have an lsp client.
   if (!lsp_client) return;
 
   // Trigger signature help if it's a triggering character.
@@ -608,9 +616,11 @@ void Document::SelectCompletionItem() {
     const CompletionItem& item = completion_items[completion_selected];
 
     Cursor& cursor = cursors.GetPrimaryCursor();
-    int start_index = (BETWEEN(0, completion_start_index, buffer->GetSize()-1))
-      ? completion_start_index
-      : GetWordBeforeIndex(cursor.GetIndex());
+    int start_index = -1; // Will be updated by the bello logic.
+    if (!buffer->IsValidCoord(item.text_edit.start, &start_index)) {
+      if (buffer->IsValidIndex(completion_start_index)) start_index = completion_start_index;
+      else start_index = GetWordBeforeIndex(cursor.GetIndex());
+    }
 
     cursors.ClearMultiCursors();
     cursor.SetSelectionStart(start_index);
@@ -619,6 +629,7 @@ void Document::SelectCompletionItem() {
     if (!item.insert_text.empty()) InsertText(item.insert_text);
     else if (!item.text_edit.text.empty()) InsertText(item.text_edit.text);
     else InsertText(item.label);
+
   }
 }
 

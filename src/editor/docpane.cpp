@@ -32,6 +32,7 @@ DocPane::DocPane() {
   actions["insert_space"]   = [&] { if (this->document == nullptr) return; this->document->EnterCharacter(' ');  EnsureCursorOnView(); ResetCursorBlink(); };
   actions["insert_newline"] = [&] { if (this->document == nullptr) return; this->document->EnterCharacter('\n'); EnsureCursorOnView(); ResetCursorBlink(); };
   actions["insert_tab"]     = [&] { if (this->document == nullptr) return; this->document->EnterCharacter('\t'); EnsureCursorOnView(); ResetCursorBlink(); };
+
   actions["backspace"]      = [&] { if (this->document == nullptr) return; this->document->Backspace();      EnsureCursorOnView(); ResetCursorBlink(); };
   actions["undo"]           = [&] { if (this->document == nullptr) return; this->document->Undo();           EnsureCursorOnView(); ResetCursorBlink(); };
   actions["redo"]           = [&] { if (this->document == nullptr) return; this->document->Redo();           EnsureCursorOnView(); ResetCursorBlink(); };
@@ -399,19 +400,15 @@ void DocPane::DrawAutoCompletions(DrawBuffer buff) {
   const Coord popup_start = document->buffer->IndexToCoord(popup_start_index);
   
 
-  // Update the coord, we use macro to inline this since it's used twise here.
-  #define SET_DRAW_START_COORD()         \
-    coord = popup_start;                 \
-    if (coord.row != cursor_coord.row) { \
-      coord.row = cursor_coord.row;      \
-      coord.col = 0;                     \
-    }                                    \
-    coord.row -= view_start.row;         \
-    coord.col -= view_start.col;         \
-    coord.row += (drawing_bellow_cursor) ? 1 : -1
-
   // Prepare the coord for drawing the completions.
-  SET_DRAW_START_COORD();
+  coord = popup_start;
+  if (coord.row != cursor_coord.row) {
+    coord.row = cursor_coord.row;
+    coord.col = 0;
+  }
+  coord.row -= view_start.row;
+  coord.col -= view_start.col;
+  coord.row += (drawing_bellow_cursor) ? 1 : (-count_dispaynig_items);
 
   for (int i = 0; i < count_dispaynig_items; i++) {
     auto& item = (*completion_items)[i];
@@ -439,7 +436,7 @@ void DocPane::DrawAutoCompletions(DrawBuffer buff) {
         bg,
         0,
         true);
-    coord.row += (drawing_bellow_cursor) ? 1 : -1;
+    coord.row++;
   }
 
   // TODO: Move the drawing of signature and completion list to it's own functions.
@@ -461,7 +458,15 @@ void DocPane::DrawAutoCompletions(DrawBuffer buff) {
   // TODO: Highlight current parameter and draw documentation about the parameter.
   // Prepare the coord for drawing the signature help.
   drawing_bellow_cursor = count_items == 0 || !drawing_bellow_cursor;
-  SET_DRAW_START_COORD();
+  coord = popup_start;
+  if (coord.row != cursor_coord.row) {
+    coord.row = cursor_coord.row;
+    coord.col = 0;
+  }
+  coord.row -= view_start.row;
+  coord.col -= view_start.col;
+  coord.row += (drawing_bellow_cursor) ? 1 : -1;
+
   DrawTextLine(
       buff,
       si.label.c_str(),

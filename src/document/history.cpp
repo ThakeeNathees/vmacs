@@ -38,12 +38,12 @@ void Action::PushChange(Change&& change) {
 
   // Insert and backspace.
   if (last.added && !change.added) {
-    if (
-        last.text.size() >= change.text.size() &&
+    if (last.text.size() >= change.text.size() &&
         last.index + last.text.size() == change.index + change.text.size()) {
       ASSERT(EndsWith(last.text, change.text), OOPS);
       int count = last.text.size() - change.text.size();
-      last.text = last.text.substr(0, count);
+      if (count == 0) changes.pop_back(); // Mostlikely when cycling through autocompletions.
+      else last.text = last.text.substr(0, count);
       return;
     }
   }

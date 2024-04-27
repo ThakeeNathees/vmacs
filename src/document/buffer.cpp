@@ -131,7 +131,12 @@ int Buffer::ColumnToIndex(int column, int line_num) {
 }
 
 
-bool Buffer::IsCoordValid(Coord coord, int* index) const {
+bool Buffer::IsValidIndex(int index) const {
+  return BETWEEN(0, index, GetSize()-1);
+}
+
+
+bool Buffer::IsValidCoord(Coord coord, int* index) const {
   if (coord.row < 0) return false;
   if (coord.col < 0) return false;
   if (coord.row >= lines.Get().size()) return false;
