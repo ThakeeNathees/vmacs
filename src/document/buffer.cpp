@@ -131,13 +131,14 @@ int Buffer::ColumnToIndex(int column, int line_num) {
 }
 
 
-bool Buffer::IsCoordValid(Coord coord) const {
+bool Buffer::IsCoordValid(Coord coord, int* index) const {
   if (coord.row < 0) return false;
   if (coord.col < 0) return false;
   if (coord.row >= lines.Get().size()) return false;
   Slice line = GetLine(coord.row);
   int line_len = line.end - line.start + 1;
   if (coord.col >= line_len) return false;
+  if (index) *index = CoordToIndex(coord);
   return true;
 }
 

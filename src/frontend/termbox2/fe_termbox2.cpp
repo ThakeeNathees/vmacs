@@ -17,7 +17,7 @@ bool Termbox2::Initialize() {
 	}
 
   // DEFINE TB_OPT_ATTR_W=32, to termbox for true color.
-	tb_set_input_mode(TB_INPUT_ALT | TB_INPUT_MOUSE);
+	tb_set_input_mode(TB_INPUT_ESC | TB_INPUT_MOUSE);
   tb_set_output_mode(TB_OUTPUT_TRUECOLOR);
   return true;
 }

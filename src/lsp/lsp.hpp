@@ -24,6 +24,10 @@ using Json = nlohmann::json;
 // Unique Id for each request we make to the language server.
 typedef uint32_t RequestId;
 
+// The language id specified by the LSP specification.
+// https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocumentItem
+typedef std::string LanguageId;
+
 
 // TODO: Make the bellow structs json parsable (implement std::optional to be
 // work with nlohmann json)and cleanup all the manual parsing.

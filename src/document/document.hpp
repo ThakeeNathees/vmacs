@@ -13,11 +13,6 @@
 #include <tree_sitter/api.h>
 
 
-// TODO: move this somewhere general (core maybe).
-// Unique identifier for the language.
-typedef std::string LanguageId;
-
-
 class BufferListener {
 public:
   virtual void OnBufferChanged() = 0;
@@ -84,7 +79,8 @@ public:
   int CoordToIndex(Coord coord) const;
   int ColumnToIndex(int column, int line_num);
 
-  bool IsCoordValid(Coord coord) const;
+  // If the index is not nullptr, it'll write the index if the coord is valid.
+  bool IsCoordValid(Coord coord, int* index) const;
 
   // Methods that modify the buffer.
   void InsertText(int index, const String& text);
@@ -484,6 +480,13 @@ public:
   // Lsp actions.
   void TriggerCompletion();
   void TriggerSignatureHelp();
+
+  // Cycling the auto-complete suggestions. Note that Cycleing doesn't insert the
+  // text by default like in most nvim completion plugins, but that can be achieved
+  // by combinging it with SelectCompletionItem. Note that SelectCompletionItem
+  // doesn't clear the completion popup (like if you press enter on vscode),
+  // if needed call ClearCompletionItems after It's designed in this way so the
+  // one using this class can create their desired behavior.
   void CycleCompletionList();
   void CycleCompletionListReversed();
   void SelectCompletionItem();
@@ -522,6 +525,15 @@ private:
   // The index of the selected item in the completion items list.
   int completion_selected = -1;
 
+  // The index of the first character that triggerd the completion, we'll use
+  // this to replace the entered text. Note that WordBeforeCursor cannot be used
+  // because of "std::something" is a valid completion item that contains ':'
+  // which is not belong to a word.
+  //
+  // Using the 'textEdit.range' has it's own problems (document version change
+  // before the response arrive).
+  int completion_start_index = -1;
+
   // Signature help is set by the LSP IO thread and read by the main loop.
   std::mutex mutex_signature_help;
   SignatureItems signatures_helps;
@@ -532,7 +544,6 @@ private:
   // Encoding: utf8, utf16, etc.
   // Line Ending.
   // Indent style (\t, or ' ').
-  // readonly;
 
   // DocPane need cursor and buffer to draw the document, this might not be the
   // "oop" way I don't know.

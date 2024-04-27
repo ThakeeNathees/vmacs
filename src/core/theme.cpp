@@ -18,7 +18,7 @@ std::map<std::string, std::unique_ptr<Theme>> Theme::themes;
 
 
 Theme* Theme::Get() {
-  return themes["catppuccin_frappe"].get();
+  return themes["nightfox"].get();
 }
 
 

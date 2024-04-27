@@ -37,9 +37,20 @@ DocPane::DocPane() {
   actions["redo"]           = [&] { if (this->document == nullptr) return; this->document->Redo();           EnsureCursorOnView(); ResetCursorBlink(); };
 
   actions["trigger_completion"] = [&] { if (this->document == nullptr) return; this->document->TriggerCompletion(); EnsureCursorOnView(); ResetCursorBlink(); };
-  actions["cycle_completion_list"] = [&] { if (this->document == nullptr) return; this->document->CycleCompletionList(); EnsureCursorOnView(); ResetCursorBlink(); };
-  actions["cycle_completion_list_reversed"] = [&] { if (this->document == nullptr) return; this->document->CycleCompletionListReversed(); EnsureCursorOnView(); ResetCursorBlink(); };
-  actions["select_completion_item"] = [&] { if (this->document == nullptr) return; this->document->SelectCompletionItem(); EnsureCursorOnView(); ResetCursorBlink(); };
+
+  // Fixme: TEMP command:
+  actions["clear_completion"] = [&] { if (this->document == nullptr) return; this->document->ClearCompletionItems(); EnsureCursorOnView(); ResetCursorBlink(); };
+  
+  actions["cycle_completion_list"] = [&] {
+    if (this->document == nullptr) return;
+    this->document->CycleCompletionList();
+    this->document->SelectCompletionItem();
+    EnsureCursorOnView(); ResetCursorBlink(); };
+  actions["cycle_completion_list_reversed"] = [&] {
+    if (this->document == nullptr) return;
+    this->document->CycleCompletionListReversed();
+    this->document->SelectCompletionItem();
+    EnsureCursorOnView(); ResetCursorBlink(); };
 
 
   auto get_binding = [this] (const char* name) {
@@ -81,7 +92,7 @@ DocPane::DocPane() {
   REGISTER_BINDING("*", "<C-x><C-k>",  "trigger_completion");
   REGISTER_BINDING("*", "<C-n>",  "cycle_completion_list");
   REGISTER_BINDING("*", "<C-p>",  "cycle_completion_list_reversed");
-  REGISTER_BINDING("*", "<C-k>",  "select_completion_item");
+  REGISTER_BINDING("*", "<esc>",  "clear_completion");
 
   // Temproary event.
   REGISTER_BINDING("*", "<C-x>i", "insert_newline");
@@ -116,7 +127,7 @@ void DocPane::HandleEvent(const Event& event) {
       bool more = false;
 
       FuncAction action = keytree.ConsumeEvent(EncodeKeyEvent(event.key), &more);
-      // if (action && more) { } // TODO: timeout and perform action.
+      // if (action && more) { } // TODO: Timeout and perform action.
 
       if (action) {
         action();
@@ -382,12 +393,15 @@ void DocPane::DrawAutoCompletions(DrawBuffer buff) {
     max_len = MAX(max_len, item_len);
   }
 
-  int index_word = document->GetWordBeforeIndex(cursor_index);
-  const Coord coord_word = document->buffer->IndexToCoord(index_word);
+  int popup_start_index = (BETWEEN(0, document->completion_start_index, document->buffer->GetSize()))
+    ? document->completion_start_index
+    : document->GetWordBeforeIndex(cursor_index);
+  const Coord popup_start = document->buffer->IndexToCoord(popup_start_index);
+  
 
   // Update the coord, we use macro to inline this since it's used twise here.
   #define SET_DRAW_START_COORD()         \
-    coord = coord_word;                  \
+    coord = popup_start;                 \
     if (coord.row != cursor_coord.row) { \
       coord.row = cursor_coord.row;      \
       coord.col = 0;                     \

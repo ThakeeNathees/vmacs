@@ -276,8 +276,14 @@ void tree_sitter_test() {
 // THE DRAW FUNCTIONS ARE JUST UGLY AND TEMPROARY ---- FIXXXXXX.
 //
 // Now:
-//   cycle completion items.
-//
+//   Setting languge (treesitter) and lsp lang id currently is a mess.
+//   structure:
+//     keybinding move.
+//     config move.
+//     theme: getting values and proper, dynamic changeing (listener);
+//   cleanup what ever we have and try to complete: before adding more things.
+//   Platform interface and Utils class.
+//   thememes and querty integrate.
 //
 // Big things:
 //   file tree.
@@ -288,15 +294,15 @@ void tree_sitter_test() {
 //   number line + diagnos gutter.
 //   scrollbar
 //   macro.
-//   picer (file, rgrep, diagnos, buffer, symbols(treesitter) )
+//   picker (file, rgrep, diagnos, buffer, symbols(treesitter) )
 //   open/close files.
 //   splits and tabs.
 //   copy paste clipboard.
 //   nerdfont support (maybe not)
 //   terminal (maybe)
 //
-//
 // LSP:
+//   completion: additional text (like import statement).
 //   goto definition.
 //   rename.
 //   get all references.
@@ -305,7 +311,7 @@ void tree_sitter_test() {
 //
 // BUG:
 //   draw auto completion popup only in the current focused pane.
-//   auto completion -> scroll if we cycle and add a scroll bar.
+//   drawing popup needs to be reviewed since if it goes out of the window, we just trim it but it needs to be pushed inside. (better draw primitives required)
 //
 //
 // Cleanups:
@@ -328,6 +334,8 @@ void tree_sitter_test() {
 //   autocompletion selection of items. icon config.
 //   Theme loading from file and swith theme, theme listening for change etc.
 //   proper keybinding and loading that from config.
+//   auto completion -> scroll if we cycle and add a scroll bar depends on better drawing code. (not current temp).
+//   IPC instead of "sh" as the file, use correct file with va_args (variadic parameters);
 //
 // Pending:
 //

@@ -200,7 +200,7 @@ l_loop_end:
   // Wait for the child process to finish it's thing and cleanup resources.
   int status;
   if (waitpid(*pid, &status, 0) == -1) {
-    // TODO: check errno.
+    // TODO: Check errno and report / log.
   } else if (opt.cb_exit) {
     opt.cb_exit(opt.user_data, exit_type, WEXITSTATUS(status));
   }
@@ -226,9 +226,8 @@ public:
     execopt.cb_exit     = IpcUnix::ExitCallback;
   }
 
+  // Note that this method isn't supposed to be called multiple times.
   void StartListening() override {
-    // TODO: Assert that the server_io_thread is not assigned yet and only
-    // call this method only once.
     server_io_thread = std::thread([this] () {
       ShellExec(execopt, &pid);
     });
@@ -278,7 +277,7 @@ private:
     while (!self->queue_to_server.Empty()) {
       std::string data = self->queue_to_server.Dequeue();
 
-      // TODO: What if count is != data.size();
+      // TODO: Handle if count is != data.size();
       if (data.size() > 0) {
         int wc = write(fd, data.c_str(), data.size());
         if (wc < 0) {

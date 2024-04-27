@@ -72,7 +72,7 @@ std::unique_lock<std::mutex> Document::GetDiagnosticAt(const Diagnostic** diagno
     std::unique_lock<std::mutex> lock(mutex_diagnostics);
     Coord coord = buffer->IndexToCoord(index);
 
-    // TODO: sort the diagnostics when recieved and do a binary search.
+    // TODO: Sort the diagnostics when recieved and do a binary search.
     for (Diagnostic& diag : diagnostics) {
 
       // Check if the coordinate comes before this diagnostic.
@@ -116,9 +116,9 @@ std::unique_lock<std::mutex> Document::GetSignatureHelp(SignatureItems** items) 
 // Fixme: this is not how we set client (mess). it'll be set when we call
 // SetLanguage() above.
 void Document::SetLspClient(std::shared_ptr<LspClient> client) {
-  ASSERT(language != nullptr, "TODO: Right now hardcoded, do it properly");
+  if (language == nullptr) return;
   lsp_client = client;
-  lsp_client->DidOpen(uri, buffer->GetData(), language->id);
+  lsp_client->DidOpen(uri, buffer->GetData(), "cpp");
 }
 
 
@@ -126,7 +126,8 @@ void Document::ClearCompletionItems() {
   {
     std::lock_guard<std::mutex> loc(mutex_completions);
     completion_items.clear();
-    completion_selected = -1;
+    completion_selected    = -1;
+    completion_start_index = -1;
   }
 
   {
@@ -139,13 +140,17 @@ void Document::ClearCompletionItems() {
 
 
 void Document::PushDiagnostics(uint32_t version, std::vector<Diagnostic>&& diagnostics) {
-  // TODO: Ignore if the version isn't our current version.
   {
     // This function is a callback called from from LSP's IO thread. So we need to
     // lock the mutex of the diagnostics vector. This will clear our current
     // diagnostics and update with the new values.
     std::lock_guard<std::mutex> lock(mutex_diagnostics);
-    this->diagnostics = diagnostics;
+
+    if (version == this->history.GetVersion()) {
+      this->diagnostics = diagnostics;
+    } else {
+      this->diagnostics.clear();
+    }
   }
 }
 
@@ -153,13 +158,17 @@ void Document::PushDiagnostics(uint32_t version, std::vector<Diagnostic>&& diagn
 void Document::PushCompletions(bool is_incomplete, std::vector<CompletionItem>&& items) {
   {
     // This will clear our current diagnostics and update with the new values.
+    // Note that we don't reset 'completion_start_index' since we may already
+    // doing the completion and this response just filters the list.
     std::lock_guard<std::mutex> lock(mutex_completions);
-    this->completion_items = items;
+    completion_items = items;
+    completion_selected = -1;
     this->is_incomplete = is_incomplete;
     std::sort(this->completion_items.begin(), this->completion_items.end(),
         [](const CompletionItem& l, const CompletionItem& r){
           return l.sort_text < r.sort_text;
         });
+
   }
 }
 
@@ -201,12 +210,25 @@ void Document::EnterCharacter(char c) {
   if (lsp_client->IsTriggeringCharacterSignature(c)) {
     TriggerSignatureHelp();
   }
+  // Note that if it's not a signature triggering character, we don't clear the
+  // signature help, since the user still typeing the parameters and we want to
+  // continue showing the signature help till it's cleared by some other means.
 
-  bool is_ch_trigger = lsp_client->IsTriggeringCharacterCompletion(c);
-  if (!is_ch_trigger) {
+  {
+    bool is_ch_trigger = lsp_client->IsTriggeringCharacterCompletion(c);
     std::lock_guard<std::mutex> lock(mutex_completions);
-    completion_items.clear();
-    return;
+    if (!is_ch_trigger) {
+      // Only clear the completion items (signature help might be valid).
+      completion_items.clear();
+      completion_selected = -1;
+      return;
+    }
+
+    // We have inserted a character so all the past completion item text_edit
+    // range will be outdated by 1 character, update it here.
+    for (auto& item : completion_items) {
+      item.text_edit.end.col += 1;
+    }
   }
 
   // This is the proper way instead of requesting the server every time, but in that
@@ -219,8 +241,14 @@ void Document::EnterCharacter(char c) {
   //     return;
   //   }
   // }
-
   TriggerCompletion();
+
+  // Set the completion start index if we're not in completion already.
+  // Note that we already inserted the character and the cursor has moved, so
+  // just -1 to get the index.
+  if (completion_start_index < 0) {
+    completion_start_index = cursors.GetPrimaryCursor().GetIndex() - 1;
+  }
 }
 
 
@@ -534,7 +562,6 @@ void Document::AddCursorUp() {
 }
 
 
-// TODO: if LSP client is not available, indiate the user to install or something.
 void Document::TriggerCompletion() {
   if (lsp_client) {
     lsp_client->Completion(uri, cursors.GetPrimaryCursor().GetCoord());
@@ -580,22 +607,18 @@ void Document::SelectCompletionItem() {
     if (completion_items.size() == 0 || !BETWEEN(0, completion_selected, completion_items.size()-1)) return;
     const CompletionItem& item = completion_items[completion_selected];
 
-    // TODO: text_edit and insert_text need to be handled properly.
-
-    if (!buffer->IsCoordValid(item.text_edit.start)) return;
-    if (!buffer->IsCoordValid(item.text_edit.end)) return;
-    int start = buffer->CoordToIndex(item.text_edit.start);
-    int end = buffer->CoordToIndex(item.text_edit.end);
+    Cursor& cursor = cursors.GetPrimaryCursor();
+    int start_index = (BETWEEN(0, completion_start_index, buffer->GetSize()-1))
+      ? completion_start_index
+      : GetWordBeforeIndex(cursor.GetIndex());
 
     cursors.ClearMultiCursors();
-    Cursor& cursor = cursors.GetPrimaryCursor();
-    cursor.SetSelectionStart(start);
-    cursor.SetIndex(end);
-    InsertText(item.text_edit.text);
-  }
+    cursor.SetSelectionStart(start_index);
 
-  // This should be called outside of teh above scope otherwise will result in
-  // a dead lock.
-  ClearCompletionItems();
+    // Fill the text based on the order: insert_text or text_edit or label.
+    if (!item.insert_text.empty()) InsertText(item.insert_text);
+    else if (!item.text_edit.text.empty()) InsertText(item.text_edit.text);
+    else InsertText(item.label);
+  }
 }
 

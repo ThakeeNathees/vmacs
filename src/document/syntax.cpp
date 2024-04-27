@@ -8,8 +8,15 @@
 
 #include "document.hpp"
 
-// TODO Move this to somewhere else.
-// Returns true if the "match" matches the predicate otherwise false.
+// Treesitter docs:
+//
+//   Note — Predicates are not handled directly by the Tree-sitter C library.
+//   They are just exposed in a structured form so that higher-level code can
+//   perform the filtering. However, higher-level bindings to Tree-sitter like
+//   the Rust Crate or the WebAssembly binding do implement a few common
+//   predicates like the #eq?, #match?, and #any-of? predicates explained above.
+//
+// Here is our "high-level-language" implementation.
 static bool TreeSitterCheckPredicate(const char* source, const TSQuery* query, TSQueryMatch match);
 
 
@@ -51,7 +58,7 @@ void Syntax::Parse(const Language* language, const Buffer* buffer) {
   if (parser == NULL) parser = ts_parser_new();
   ts_parser_set_language(parser, language->data);
 
-  // TODO: use ts_tree_edit and pass old tree here to make the parsing much
+  // TODO: Use ts_tree_edit and pass old tree here to make the parsing much
   // faster and efficient.
   if (tree) ts_tree_delete(tree);
   tree = ts_parser_parse_string(parser, NULL, buffer->GetData().c_str(), buffer->GetSize());
@@ -84,7 +91,8 @@ void Syntax::CacheHighlightSlices(const TSQuery* query, const Buffer* buffer) {
       TSQueryCapture capture = match.captures[0];
       TSNode node = capture.node;
 
-      // TODO: Maybe we can do a red underline to indicate syntax error.
+      // TODO: Maybe we can do a red underline to indicate syntax error. if the
+      // language server isn't available.
       if (ts_node_is_error(node)) continue;
 
       HighlightSlice slice;
@@ -109,8 +117,6 @@ void Syntax::CacheHighlightSlices(const TSQuery* query, const Buffer* buffer) {
 }
 
 
-
-// TODO: Move this to a general place to parse tree-sitter predicates.
 // FIXME: This function is incomplete and will crash if a TODO; statement is met.
 // The logic is stolen from: https://github.com/tree-sitter/tree-sitter/blob/a0cf0a7104f4a64eac04bd916297524db83d09c0/lib/binding_web/binding.js#L844
 static bool TreeSitterCheckPredicate(const char* source, const TSQuery* query, TSQueryMatch match) {
@@ -174,16 +180,15 @@ static bool TreeSitterCheckPredicate(const char* source, const TSQuery* query, T
       }
     } break;
 
-    case "set!"_hash:
-      TODO;
-    break;
-
-    case "is?"_hash: {
-      [[fallthrough]];
-
-    case "is-not?"_hash:
-      TODO;
-    } break;
+// Not supporting these predicates, If needed someone contribute.
+//    case "set!"_hash:
+//    break;
+//
+//    case "is?"_hash: {
+//      [[fallthrough]];
+//
+//    case "is-not?"_hash:
+//    } break;
     
   }
 

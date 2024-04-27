@@ -73,9 +73,6 @@ void History::EndAction() {
 }
 
 
-// TODO: when inserting or removing text, instead of creating new change object
-// try to merge it with the last change of the action if possible to prevent a
-// bunch of objects eat RAM.
 MultiCursor History::CommitInsertText(const MultiCursor& cursors_, const std::string& text) {
 
   // Make a copy of the given cursors modify and return.
