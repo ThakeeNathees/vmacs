@@ -429,11 +429,8 @@ public:
   void SetReadOnly(bool readonly);
   void SetLanguage(std::shared_ptr<const Language> language);
 
-  // --------------------------
-  // FIXME: Language client will be fetched from the global registry once the
-  // language is set by the above method.
+  // Set the language server client for this document.
   void SetLspClient(std::shared_ptr<LspClient> client);
-  // --------------------------
 
   // Remove all the completion item, and signature help this is when we <esc>
   // on suggestion or, just moved away from the current position.

@@ -211,15 +211,10 @@ class Theme {
 
 public:
 
-  // FIXME: This is temproary.
-  static void Load();
-  static Theme* Get();
-  static std::map<std::string, std::unique_ptr<Theme>> themes;
-
   // Load the theme from a json object, unlike "Helix" editor (which is where
   // we've "borrowed" the syntax highlighting and themes) this json doesn't have
   // inherits, if so that needs to be resolved beforehand by the caller.
-  void LoadFromJson(const Json& json);
+  Theme(const Json& json);
 
   // Returns the Style for the given capture.
   // For a key like "keyword.control.conditional" if not exists, we again
@@ -227,18 +222,31 @@ public:
   // and the style parameter will be updated, otherwise, return false.
   bool GetStyle(Style* style, const std::string& capture) const;
 
+  // Return the style for the given capture, this is the same as GetStyle but
+  // with a defalt value if not present.
+  Style GetStyleOr(const std::string& capture, Style fallback) const;
+
   // Converts a hex string of color values and returns as the equelevent numeric value.
   // as 0x00rrggbb value.
   static bool StringToColor(const char* str, Color* rgb);
 
-
-// private:
+private:
   // An entry is a pair of capture name ("keyword", "constant", "string-literal")
   // and the style for that cpature.
   std::map<std::string, Style> entries;
 
-private:
+};
 
+
+// The global interface like logging/error to editor, ask the current theme, Get
+// certain configuration etc. Note that the functionalities are defined in the
+// editor module as it's the one who provides them.
+class Global {
+public:
+
+  // Since the resources are loaded at the start of the application and only
+  // released at the very end, it's safe to use the raw pointers.
+  static const Theme* GetCurrentTheme();
 };
 
 
@@ -268,10 +276,6 @@ bool IsCharName(int c); // Returns the given codepoint [a-zA-Z0-9_].
 bool IsCharWhitespace(int c);
 bool EndsWith(StringView str, StringView suffix);
 bool StartsWith(StringView str, StringView suffix);
-
-// TODO: This is a temproary function, used to debug certain things, remove it
-// once finished with this.
-std::string ReadAll(const std::string& path);
 
 uint8_t RgbToXterm(uint32_t rgb);
 uint32_t XtermToRgb(uint8_t xterm);

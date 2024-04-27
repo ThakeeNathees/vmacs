@@ -7,7 +7,7 @@
 // Licenced under: MIT
 
 #if defined(__unix__) || defined(__APPLE__)
-#include "unix.hpp"
+#include "posix.hpp"
 
 #include <thread>
 
@@ -16,7 +16,7 @@
 #define PE_WRITE 1
 
 
-uint64_t GetPid() {
+uint64_t Platform::GetPid() {
   return (uint64_t) getpid();
 }
 

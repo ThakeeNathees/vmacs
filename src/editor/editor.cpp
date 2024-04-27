@@ -7,6 +7,7 @@
 // Licenced under: MIT
 
 #include "core/core.hpp"
+#include "platform//platform.hpp"
 #include "editor.hpp"
 
 #include <chrono>
@@ -19,8 +20,23 @@ std::shared_ptr<Editor> Editor::singleton = nullptr;
 
 
 std::shared_ptr<IEditor> IEditor::Singleton() {
-  return std::make_shared<Editor>();
+  return std::static_pointer_cast<IEditor>(Editor::Singleton());
 }
+
+
+std::shared_ptr<Editor> Editor::Singleton() {
+  if (singleton == nullptr) {
+    singleton = std::make_shared<Editor>();
+  }
+  return singleton;
+}
+
+
+// FIXME: This is temproary. Set current theme and get from there.
+const Theme* Global::GetCurrentTheme() {
+  return Editor::Singleton()->themes["dracula"].get();
+}
+
 
 // FIXME: move this to somewhere else.
 extern "C" const TSLanguage* tree_sitter_c(void);
@@ -31,27 +47,51 @@ Editor::Editor() {
 
   // FIXME: Implement a proper language loading system with support to load from
   // dynamic linked library.
-  std::shared_ptr<Language> lang_c = std::make_shared<Language>();
-  lang_c->id = "c";
-  lang_c->data = tree_sitter_c();
+  {
+    std::shared_ptr<Language> lang_c = std::make_shared<Language>();
+    lang_c->id = "c";
+    lang_c->data = tree_sitter_c();
+    uint32_t error_offset;
+    TSQueryError err;
+    const char* source =
+  #include "../../res/c.scm.hpp"
+      ;
+    TSQuery* query = ts_query_new(
+      lang_c->data,
+      source,
+      strlen(source),
+      &error_offset,
+      &err
+    );
+    lang_c->query_highlight = query;
+    languages["c"] = lang_c;
+  }
 
-  uint32_t error_offset;
-  TSQueryError err;
-  const char* source =
-#include "../../res/c.scm.hpp"
-    ;
-  TSQuery* query = ts_query_new(
-    lang_c->data,
-    source,
-    strlen(source),
-    &error_offset,
-    &err
-  );
-  lang_c->query_highlight = query;
-  languages["c"] = lang_c;
+  {
+    std::shared_ptr<Language> lang_cpp = std::make_shared<Language>();
+    lang_cpp->id = "cpp";
+    lang_cpp->data = tree_sitter_c();
+    uint32_t error_offset;
+    TSQueryError err;
+    const char* source =
+  #include "../../res/c.scm.hpp"
+      ;
+    TSQuery* query = ts_query_new(
+      lang_cpp->data,
+      source,
+      strlen(source),
+      &error_offset,
+      &err
+    );
+    lang_cpp->query_highlight = query;
+    languages["cpp"] = lang_cpp;
+  }
 
-  // Fixme: This is temproary.
-  Theme::Load();
+  // Load the themes.
+  std::map<std::string, Json> theme_data = Platform::LoadThemes();
+  for (auto& it : theme_data) {
+    themes[it.first] = std::make_shared<Theme>(it.second);
+  }
 }
 
 
@@ -105,7 +145,7 @@ int Editor::MainLoop() {
     DrawBuffer buff = frontend->GetDrawBuffer();
 
     // uint8_t color_bg = 0x272829;
-    Color color_bg = Theme::Get()->entries["ui.background"].bg;
+    Color color_bg = Global::GetCurrentTheme()->GetStyleOr("ui.background", {.fg=0, .bg=0xffffff, .attrib=0}).bg;
 
     // Clean the buffer.
     for (int i    = 0; i < buff.width*buff.height; i++) {
@@ -164,12 +204,13 @@ uint32_t IEditor::XtermToRgb(uint8_t xterm) {
 std::shared_ptr<Document> Editor::OpenDocument(const std::string& path) {
 
   Uri uri = std::string("file://") + path;
-  std::string text = ReadAll(path);
+  std::string text;
+  ASSERT(Platform::ReadFile(&text, path), "My ugly code");
 
   std::shared_ptr<Buffer> buff = std::make_shared<Buffer>(text);
   std::shared_ptr<Document> document = std::make_shared<Document>(uri, buff);
 
-  document->SetLanguage(languages["c"]);
+  document->SetLanguage(languages["cpp"]);
 
   LspConfig config;
   config.server = "clangd";

@@ -113,12 +113,10 @@ std::unique_lock<std::mutex> Document::GetSignatureHelp(SignatureItems** items) 
 }
 
 
-// Fixme: this is not how we set client (mess). it'll be set when we call
-// SetLanguage() above.
 void Document::SetLspClient(std::shared_ptr<LspClient> client) {
   if (language == nullptr) return;
   lsp_client = client;
-  lsp_client->DidOpen(uri, buffer->GetData(), "cpp");
+  lsp_client->DidOpen(uri, buffer->GetData(), language->id);
 }
 
 
@@ -156,11 +154,17 @@ void Document::PushDiagnostics(uint32_t version, std::vector<Diagnostic>&& diagn
 
 
 void Document::PushCompletions(bool is_incomplete, std::vector<CompletionItem>&& items) {
+
+
   {
     // This will clear our current diagnostics and update with the new values.
-    // Note that we don't reset 'completion_start_index' since we may already
-    // doing the completion and this response just filters the list.
     std::lock_guard<std::mutex> lock(mutex_completions);
+
+    // If the completion_start_index < 0 that means the, we triggered the
+    // completion request but before the response arrive, we canceled
+    // (by moving the cursor or typing <space>). So just disregard this response.
+    if (completion_start_index < 0) return;
+
     completion_items = items;
     completion_selected = -1;
     this->is_incomplete = is_incomplete;

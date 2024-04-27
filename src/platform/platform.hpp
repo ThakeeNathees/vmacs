@@ -10,15 +10,53 @@
 
 #include "core/core.hpp"
 
-#include <string>
-#include <functional>
 
-
+// IPC callback functions.
 typedef std::function<void(void* user_data, const char* buff, size_t length)> FuncStdoutCallback;
 typedef std::function<void(void* user_data, int exit_code)> FuncExitCallback;
 
-// Os dependent functions.
-uint64_t GetPid();
+
+class Path {
+
+public:
+  Path() = default;
+  Path(std::string path);
+
+  const std::string& Get() const;
+  Path operator /(const std::string& inner) const;
+
+private:
+  std::string path;
+};
+
+
+// A platform is an an "abstract" interface to comminicate to the host system.
+// It could be a direct os level of if it's running inside another application, 
+// Tha application will be the platform, Loading files, resources logging etc.
+// all are provided by the platform.
+class Platform {
+
+public:
+  // --------------------------------------------------------------------------
+  // Os dependent functions each os should implement this functionalities.
+  // --------------------------------------------------------------------------
+  static uint64_t GetPid();
+
+  // --------------------------------------------------------------------------
+  // Os independent but still we need this from the host system.
+  // --------------------------------------------------------------------------
+
+  // Load all the themes in the themes config directory and return them as json
+  // object, that will be used to construct the Theme instance.
+  static std::map<std::string, Json> LoadThemes();
+
+  // TODO: Implement error type for reading since it could be permission error
+  // or invalid path or already in used etc.
+  // Reads an entire file and return the content. if the path is invalid or an error,
+  // this will return false.
+  static bool ReadFile(std::string* ret, const Path& path);
+  static bool ListDirectory(std::vector<std::string>* items, const Path& path);
+};
 
 
 // A platform independent abstract interface for two way inter process

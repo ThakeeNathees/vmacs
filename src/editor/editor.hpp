@@ -63,6 +63,8 @@ public:
   Editor();
   ~Editor();
 
+  static std::shared_ptr<Editor> Singleton();
+
   void SetFrontEnd(std::unique_ptr<FrontEnd> frontend) override;
   int MainLoop() override;
 
@@ -80,16 +82,12 @@ private:
   // Note that the bellow maps are "global" registry where, and if it's shared
   // and modified between multiple threads, they needs to be locked and unlocked.
   // properly (at the moment It's not doing that).
+  std::map<Uri, std::shared_ptr<Document>>                 documents;
+  std::map<std::string, std::shared_ptr<const Theme>>      themes;
+  std::map<LanguageId, std::shared_ptr<const Language>>    languages;
+  std::map<LspClientId, std::shared_ptr<const LspClient>>  lsp_clients;
 
-  // All the documents that are currently opened.
-  std::map<Uri, std::shared_ptr<Document>> documents;
-
-  // All the lsp clients running here are registered here where the key is the
-  // code name of the lsp client. (ex: clangd).
-  std::map<std::string, std::shared_ptr<LspClient>> lsp_clients;
-
-  // All the languages registered.
-  std::map<LanguageId, std::shared_ptr<const Language>> languages;
+  friend class Global;
 
 private:
   // Lsp listeners.

@@ -11,14 +11,31 @@ OUTPUT_DIR       = "../res/themes/"
 
 
 def main():
+  themes = {} # key: theme_name, value: obj
+
+  # load the files to the above dictionary.
   for item in os.listdir(HELIX_THEMES_DIR):
     if not item.endswith(".toml"): continue
     file_path = os.path.join(HELIX_THEMES_DIR, item)
     with open(file_path, 'r') as fi:
       content = fi.read()
       data = toml.loads(content)
-      with open(OUTPUT_DIR + item.replace(".toml", ".json"), 'w') as fo:
-        fo.write(dump(data))
+      theme_name = item.replace(".toml", "")
+      themes[theme_name] = data
+  
+  # resolve inheritance.
+  for theme_name, theme in themes.items():
+    if "inherits" in theme:
+      parent_name = theme.pop("inherits")
+      parent = themes[parent_name] # This may throw but that's okey.
+      parent_copy = parent.copy()
+      for k, v in theme.items():
+        parent_copy[k] = v # Override by child.
+      themes[theme_name] = parent_copy
+
+  for theme_name, theme in themes.items():
+    with open(OUTPUT_DIR + theme_name + '.json', 'w') as f:
+      f.write(dump(theme))
 
 
 # https://stackoverflow.com/a/68426598/10846399

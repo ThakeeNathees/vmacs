@@ -12,7 +12,7 @@
 
 // This "module" doesn't depend on anything else other than core and os.
 #include "core/core.hpp"
-#include "os/os.hpp"
+#include "platform/platform.hpp"
 
 
 #include <nlohmann/json.hpp>
@@ -26,7 +26,8 @@ typedef uint32_t RequestId;
 
 // The language id specified by the LSP specification.
 // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocumentItem
-typedef std::string LanguageId;
+typedef std::string LanguageId;  // c, cpp, python, js, etc.
+typedef std::string LspClientId; // clangd, ccls, pyright, etc.
 
 
 // TODO: Make the bellow structs json parsable (implement std::optional to be

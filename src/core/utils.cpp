@@ -101,16 +101,6 @@ int GetElapsedTime() {
 }
 
 
-std::string ReadAll(const std::string& path) {
-  std::ifstream inputFile(path.data());
-  assert(inputFile.is_open() && "Failed to open file.");
-  std::stringstream buffer;
-  buffer << inputFile.rdbuf();
-  inputFile.close();
-  return buffer.str();
-}
-
-
 void DrawTextLine(
     DrawBuffer buff,
     const char* text,

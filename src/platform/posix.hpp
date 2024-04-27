@@ -9,7 +9,7 @@
 #if defined(__unix__) || defined(__APPLE__)
 #pragma once
 
-#include "os.hpp"
+#include "platform.hpp"
 
 #include <stdlib.h>
 #include <unistd.h>

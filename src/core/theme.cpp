@@ -9,80 +9,6 @@
 #include "core/core.hpp"
 #include <tomlcpp.hpp>
 
-// FIXME: This is included for loading themes. Remove and refactor.
-#include <filesystem>
-namespace fs = std::filesystem;
-
-
-std::map<std::string, std::unique_ptr<Theme>> Theme::themes;
-
-
-Theme* Theme::Get() {
-  return themes["nightfox"].get();
-}
-
-
-void Theme::Load() {
-
-  std::map<std::string, Json> themes;
-
-  // FIXME: Resolve path and handle if the path doesn't exists.
-  std::string path = "./res/themes";
-
-  for (const auto & entry : fs::directory_iterator(path)) {
-    std::string filename = entry.path().filename().string();
-    std::string theme_name = filename.substr(0, filename.find_last_of("."));
-
-    std::string text = ReadAll(entry.path().string()); // FIXME: This will throw.
-    Json data = Json::parse(text); // FIXME: this may throw.
-    themes[theme_name] = std::move(data);
-  }
-
-  // Resolve inheritance by adding the non-overriden properties from the parent.
-  // currently we assume that only a single parent child will be there and not
-  // inheritance tree.
-  for (auto _ = themes.begin(); _ != themes.end(); ++_) {
-    Json& curr = _->second;
-    if (curr.contains("inherits")) {
-      // FIXME: this will throw if the value isn't string.
-      std::string parent_name = curr["inherits"].template get<std::string>();
-
-      Json& parent = themes[parent_name]; // FIXME: This may throw.
-
-      for (auto it = parent.begin(); it != parent.end(); ++it) {
-        if (it.key() == "palette") {
-          if (!curr.contains("palette")) {
-            curr["palette"] = it.value();
-          } else {
-            Json& curr_palette = curr["palette"];
-            Json& parent_palette = parent["palette"];
-
-            for (auto it = parent_palette.begin(); it != parent_palette.end(); ++it) {
-              if (curr_palette.contains(it.key())) continue;
-              curr_palette[it.key()] = it.value();
-            }
-          }
-
-        } else if (curr.contains(it.key())) {
-          continue; // We've override it already.
-
-        } else {
-          curr[it.key()] = it.value();
-        }
-      }
-    }
-  } // End of inheritance resolve.
-
-
-  for (auto _ = themes.begin(); _ != themes.end(); ++_) {
-    Json& curr = _->second;
-    std::unique_ptr<Theme> theme = std::make_unique<Theme>();
-    theme->LoadFromJson(curr);
-    Theme::themes[_->first] = std::move(theme);
-  }
-
-}
-
 
 static bool ResolveColorFromString(
     const std::map<std::string, Color>& palette,
@@ -100,7 +26,8 @@ static bool ResolveColorFromString(
 }
 
 
-void Theme::LoadFromJson(const Json& json) {
+// TODO: Comup with a proper set of ui entries this one only rely on helix.
+Theme::Theme(const Json& json) {
   std::map<std::string, Color> palette;
 
   if (json.contains("palette")) {
@@ -218,6 +145,13 @@ bool Theme::GetStyle(Style* style, const std::string& capture_) const {
 }
 
 
+Style Theme::GetStyleOr(const std::string& capture, Style fallback) const {
+  Style style;
+  if (!GetStyle(&style, capture)) return fallback;
+  return style;
+}
+
+
 bool Theme::StringToColor(const char* str, Color* rgb) {
   ASSERT(str != nullptr && rgb != nullptr, OOPS);
   if (*str != '#') return false;
@@ -248,3 +182,4 @@ bool Theme::StringToColor(const char* str, Color* rgb) {
 
   return true;
 }
+

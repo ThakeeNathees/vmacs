@@ -94,6 +94,7 @@ DocPane::DocPane() {
   REGISTER_BINDING("*", "<C-n>",  "cycle_completion_list");
   REGISTER_BINDING("*", "<C-p>",  "cycle_completion_list_reversed");
   REGISTER_BINDING("*", "<esc>",  "clear_completion");
+  // REGISTER_BINDING("*", "<tab>",   "cycle_completion_list");
 
   // Temproary event.
   REGISTER_BINDING("*", "<C-x>i", "insert_newline");
@@ -175,6 +176,8 @@ void DocPane::Draw(DrawBuffer buff, Coord pos, Size area) {
   // drawing, needed to ensure the cursors are on the view area, etc.
   text_area = area;
 
+  const Theme* theme = Global::GetCurrentTheme();
+
   // FIXME: Move this to themes.
   Color color_red           = 0xff0000;
   Color color_yellow        = 0xcccc2d;
@@ -184,10 +187,16 @@ void DocPane::Draw(DrawBuffer buff, Coord pos, Size area) {
   Color color_bg            = 0x272829;
   Color color_tab_indicator = 0x656966;
   // Color color_cursor     = 0x1b4f8f;
-  Color color_cursor_fg = Theme::Get()->entries["ui.cursor.primary"].fg;
-  Color color_cursor_bg = Theme::Get()->entries["ui.cursor.primary"].bg;
-  color_sel = Theme::Get()->entries["ui.selection"].bg;
-  color_bg = Theme::Get()->entries["ui.background"].bg;
+
+  // Our fallback color if the sytle not present.
+  const Style style_default = {.fg = 0, .bg = 0xffffff, .attrib = 0};
+  Style style;
+#define GET_STYLE(style_name) \
+  (theme->GetStyle(&style, style_name) ? style : style_default)
+  Color color_cursor_fg     = GET_STYLE("ui.cursor.primary").fg;
+  Color color_cursor_bg     = GET_STYLE("ui.cursor.primary").bg;
+  color_sel                 = GET_STYLE("ui.selection").bg;
+  color_bg                  = GET_STYLE("ui.background").bg;
 
   // FIXME: Move this somewhere general.
   // We draw an indicator for the tab character.
@@ -343,10 +352,15 @@ void DocPane::DrawAutoCompletions(DrawBuffer buff) {
   ASSERT(signature_helps != nullptr, OOPS);
   if (completion_items->size() == 0 && signature_helps->signatures.size() == 0) return;
 
-  // FIXME: Move this.
-  Color popup_fg = Theme::Get()->entries["ui.popup"].fg;
-  Color popup_bg = Theme::Get()->entries["ui.popup"].bg;
-  Color param_active = Theme::Get()->entries["type"].fg;
+  // FIXME: Cleanup this mess.
+  const Theme* theme = Global::GetCurrentTheme();
+  Style style;
+  Style style_default = {.fg = 0, .bg = 0xffffff, .attrib = 0};
+#define GET_STYLE(style_name) \
+  (theme->GetStyle(&style, style_name) ? style : style_default)
+  Color popup_fg     = GET_STYLE("ui.popup").fg;
+  Color popup_bg     = GET_STYLE("ui.popup").bg;
+  Color param_active = GET_STYLE("type").fg;
 
   // TODO: Currently we trigger completion every time a triggering character is
   // pressed, so no need to filter the match ourself. like this:
@@ -364,7 +378,7 @@ void DocPane::DrawAutoCompletions(DrawBuffer buff) {
   int cursor_index = document->cursors.GetPrimaryCursor().GetIndex();
 
   // FIXME: The value is hardcoded (without a limit, the dropdown takes all the spaces).
-  int count_items = MIN(10, completion_items->size());
+  int count_items = MIN(20, completion_items->size());
   int count_lines_above_cursor = cursor_coord.row - view_start.row;
   int count_lines_bellow_cursor = view_start.row + text_area.height - cursor_coord.row - 1;
 

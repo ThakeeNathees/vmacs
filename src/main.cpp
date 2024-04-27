@@ -19,7 +19,7 @@
 
 // FIXME: For util function of vmacs class, remove it.
 #include "core/core.hpp"
-#include "os/os.hpp"
+#include "platform/platform.hpp"
 
 #include "lsp/lsp.hpp"
 
@@ -49,7 +49,9 @@ void lsp_test() {
   Uri uri = std::string("file://") + path;
   std::string x;
 
-  client.DidOpen(uri, ReadAll(path), "c");
+  std::string text;
+  ASSERT(Platform::ReadFile(&text, path), "My ugly code");
+  client.DidOpen(uri, text, "c");
 
   // goto definition.
   // std::cin >> x;
@@ -67,8 +69,6 @@ void lsp_test() {
   //     },
   //   }
   // });
-
-
 
   { std::string s; std::cin >> s; }
   client.SendRequest(
@@ -101,72 +101,6 @@ void lsp_test() {
   // Otherwise it'll wait forever.
   global_thread_stop = true;
 }
-
-void theme_test() {
-
-  std::map<std::string, Json> themes;
-
-  // FIXME: Resolve path and handle and handle if the path doesn't exists.
-  std::string path = "./res/themes";
-
-  for (const auto & entry : fs::directory_iterator(path)) {
-    std::string filename = entry.path().filename().string();
-    std::string theme_name = filename.substr(0, filename.find_last_of("."));
-
-    std::string text = ReadAll(entry.path().string()); // FIXME: This will throw.
-    Json data = Json::parse(text); // FIXME: this may throw.mainc
-    themes[theme_name] = std::move(data);
-  }
-
-  // Resolve inheritance by adding the non-overriden properties from the parent.
-  // currently we assume that only a single parent child will be there and not
-  // inheritance tree.
-  for (auto _ = themes.begin(); _ != themes.end(); ++_) {
-    Json& curr = _->second;
-    if (curr.contains("inherits")) {
-      // FIXME: this will throw if the value isn't string.
-      std::string parent_name = curr["inherits"].template get<std::string>();
-
-      Json& parent = themes[parent_name]; // FIXME: This may throw.
-
-      for (auto it = parent.begin(); it != parent.end(); ++it) {
-        if (it.key() == "palette") {
-          if (!curr.contains("palette")) {
-            curr["palette"] = it.value();
-          } else {
-            Json& curr_palette = curr["palette"];
-            Json& parent_palette = parent["palette"];
-
-            for (auto it = parent_palette.begin(); it != parent_palette.end(); ++it) {
-              if (curr_palette.contains(it.key())) continue;
-              curr_palette[it.key()] = it.value();
-            }
-          }
-
-        } else if (curr.contains(it.key())) {
-          continue; // We've override it already.
-
-        } else {
-          curr[it.key()] = it.value();
-        }
-      }
-    }
-  } // End of inheritance resolve.
-
-
-  for (auto _ = themes.begin(); _ != themes.end(); ++_) {
-    Json& curr = _->second;
-    Theme t;
-    t.LoadFromJson(curr);
-  }
-
-}
-
-
-
-
-
-
 
 
 extern "C" const TSLanguage* tree_sitter_c(void);
@@ -276,6 +210,8 @@ void tree_sitter_test() {
 // THE DRAW FUNCTIONS ARE JUST UGLY AND TEMPROARY ---- FIXXXXXX.
 //
 // Now:
+//   REGISTRY: langauge (tree-sitter)
+//
 //   Setting languge (treesitter) and lsp lang id currently is a mess.
 //   structure:
 //     keybinding move.
@@ -286,6 +222,7 @@ void tree_sitter_test() {
 //   thememes and querty integrate.
 //
 // Big things:
+//   gap buffer.
 //   file tree.
 //   mouse support.
 //   load configs.
@@ -312,6 +249,7 @@ void tree_sitter_test() {
 // BUG:
 //   draw auto completion popup only in the current focused pane.
 //   drawing popup needs to be reviewed since if it goes out of the window, we just trim it but it needs to be pushed inside. (better draw primitives required)
+//   signature help will hide pressing space after comma.
 //
 //
 // Cleanups:

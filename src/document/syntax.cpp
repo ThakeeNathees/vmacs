@@ -201,15 +201,11 @@ static bool TreeSitterCheckPredicate(const char* source, const TSQuery* query, T
 
 
 void Syntax::CacheBufferStyle(const Buffer* buffer) {
-
-  // FIXME: properly get theme.
-  // return if GetTheme() == nullptr;
-  // static Theme theme = Theme::Get();
-  Theme* theme = Theme::Get();
-
+  const Theme* theme = Global::GetCurrentTheme();
   size_t buffer_size = buffer->GetSize();
-  Style text = theme->entries["ui.text"];
-  highlights.assign(buffer_size, text);
+  highlights.assign(
+    buffer_size, // FIXME: Have a default value for each themes and get them properly.
+    theme->GetStyleOr("ui.text", {.fg = 0, .bg = 0xffffff, .attrib=0}));
 
   Style style; // To store the return value.
   for (auto it = slices.begin(); it != slices.end(); ++it) {
