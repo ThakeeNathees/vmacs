@@ -6,8 +6,8 @@ import os
 # This will convert Helix (https://helix-editor.com/) themes from toml to json
 # which is what our editor is using.
 
-HELIX_THEMES_DIR = "path/to/heilx/runtime/themes/"
-OUTPUT_DIR       = "../res/themes/"
+HELIX_THEMES_DIR = "/opt/homebrew/Cellar/helix/24.03/libexec/runtime/themes/"
+RESOURCE_DIR     = "../src/resources/"
 
 
 def main():
@@ -34,8 +34,24 @@ def main():
       themes[theme_name] = parent_copy
 
   for theme_name, theme in themes.items():
-    with open(OUTPUT_DIR + theme_name + '.json', 'w') as f:
+    file_path = RESOURCE_DIR + '/themes/' + theme_name + '.json.inl'
+    with open(file_path, 'w') as f:
+      f.write('R"!!(')
       f.write(dump(theme))
+      f.write(')!!"')
+
+  with open(RESOURCE_DIR + 'themes.xmacro.inl', 'w') as f:
+    f.write('\n#define THEMES(X) \\\n')
+    for theme_name in themes.keys():
+      theme_var_name = 'theme_' + theme_name.replace('-', '_').replace('+', '_')
+      f.write(f'  X("{theme_name}", {theme_var_name})\\\n')
+    f.write('\n\n')
+
+    for theme_name in themes.keys():
+      theme_var_name = 'theme_' + theme_name.replace('-', '_').replace('+', '_')
+      f.write(f'static const char* {theme_var_name} =\n')
+      f.write(f'  #include "./themes/{theme_name}.json.inl"\n')
+      f.write(f';\n\n')
 
 
 # https://stackoverflow.com/a/68426598/10846399

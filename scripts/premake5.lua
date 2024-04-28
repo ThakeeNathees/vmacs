@@ -180,7 +180,6 @@ project (project_name)
     root_dir_rel .. "/thirdparty/tomlcpp/**.hpp",
     root_dir_rel .. "/thirdparty/tree-sitter/include/**.h",
     root_dir_rel .. "/thirdparty/tree-sitter/src/lib.c",
-    root_dir_rel .. "/thirdparty/tree-sitter/parsers/*.c",
   }
 
   includedirs {

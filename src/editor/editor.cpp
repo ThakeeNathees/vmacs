@@ -34,7 +34,7 @@ std::shared_ptr<Editor> Editor::Singleton() {
 
 // FIXME: This is temproary. Set current theme and get from there.
 const Theme* Global::GetCurrentTheme() {
-  return Editor::Singleton()->themes["dracula"].get();
+  return Editor::Singleton()->themes["dark_plus"].get();
 }
 
 
@@ -54,7 +54,7 @@ Editor::Editor() {
     uint32_t error_offset;
     TSQueryError err;
     const char* source =
-  #include "../../res/c.scm.hpp"
+  #include "../resources/queries/c_highlight.scm.inl"
       ;
     TSQuery* query = ts_query_new(
       lang_c->data,
@@ -74,7 +74,7 @@ Editor::Editor() {
     uint32_t error_offset;
     TSQueryError err;
     const char* source =
-  #include "../../res/c.scm.hpp"
+  #include "../resources/queries/c_highlight.scm.inl"
       ;
     TSQuery* query = ts_query_new(
       lang_cpp->data,
@@ -116,7 +116,7 @@ int Editor::MainLoop() {
   }
 
   // What a mess.
-  OpenDocument("/Users/thakeenathees/Desktop/thakee/repos/vmacs/build/main.cpp");
+  OpenDocument("/Users/thakeenathees/Desktop/thakee/repos/vmacs/src/document/buffer.cpp");
 
   // Async run event loop.
   std::thread event_loop([this]() { EventLoop(); });

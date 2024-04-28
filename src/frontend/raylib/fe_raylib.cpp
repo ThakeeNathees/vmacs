@@ -22,7 +22,7 @@ bool Raylib::Initialize() {
   SetTargetFPS(60);
   SetExitKey(0); // Don't close on escape.
 
-  const char* font_path = "./res/SauceCodeProNerdFontPropo-Medium.ttf";
+  const char* font_path = "./src/frontend/raylib/SauceCodeProNerdFontPropo-Medium.ttf";
   font = LoadFontEx(font_path, font_size, NULL, 0);
 
   return true;

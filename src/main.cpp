@@ -210,7 +210,7 @@ void tree_sitter_test() {
 // THE DRAW FUNCTIONS ARE JUST UGLY AND TEMPROARY ---- FIXXXXXX.
 //
 // Now:
-//   REGISTRY: langauge (tree-sitter)
+//   REGISTRY: trieesitter.
 //
 //   Setting languge (treesitter) and lsp lang id currently is a mess.
 //   structure:
