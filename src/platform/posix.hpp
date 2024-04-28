@@ -16,8 +16,8 @@
 #include <stdbool.h>
 #include <errno.h>
 
-// 2 kilo bytes will be read from child's stdout each iteration.
-#define READ_BUFF_SIZE 2048
+// 4 kilo bytes will be read from child's stdout each iteration.
+#define READ_BUFF_SIZE (4*1024)
 
 
 // Callback function to send stdin for the child process, where the fd will be
@@ -45,6 +45,7 @@ typedef void (*cb_stdout_f)(void* user_data, const char* buff, size_t length);
 typedef void (*cb_exit_f)(void* user_data, int exit_type, int status_code);
 
 
+// TODO(grep): Timeout in micro/milli seconds.
 typedef struct {
   void*        user_data;
   const char*  file;

@@ -35,9 +35,34 @@ using Json = nlohmann::json;
 #include "platform/posix.hpp"
 
 void fzf_things_test() {
-  // IPC::IpcOptions opt;
-  // opt.cmd = "fzf";
-  // auto ipc = IPC::New(opt);
+  IPC::IpcOptions opt;
+  opt.timeout_sec = 3;
+
+  opt.file = "sh";
+  // opt.argv = {  "-c", "fd | fzf --filter edit" };
+  opt.argv = {  "-c", "find . -type f | fzf --filter buffer" };
+
+  // opt.file = "grep";
+  // opt.argv = {  "-rn", "editor" };
+
+  opt.stdout_cb = [] (void*, const char* buff, size_t len) {
+    printf("out: %*s\n", (int)len, buff);
+  };
+  opt.stderr_cb = [](void*, const char* buff, size_t len) {
+    printf("err: %*s\n", (int)len, buff);
+  };
+
+  bool done = false;
+  opt.exit_cb = [&done](void*, int) {
+    done = true;
+    printf("exitted.\n");
+  };
+
+  // opt.stdout_cb =
+  auto ipc = IPC::New(opt);
+  ipc->StartListening();
+
+  while (!done);
 }
 
 
@@ -206,7 +231,6 @@ void tree_sitter_test() {
 // THE DRAW FUNCTIONS ARE JUST UGLY AND TEMPROARY ---- FIXXXXXX.
 //
 // Now:
-//   Experment with fzf, rg, ...
 //
 //
 //   structure:
@@ -329,6 +353,9 @@ int main(int argc, char** argv) {
   // Test it with send the language server "exit" notification twise.
   //
   signal(SIGPIPE, SIG_IGN);
+
+  // fzf_things_test();
+  // return 0;
 
   // theme_test();
   // return 0;

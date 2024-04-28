@@ -10,6 +10,7 @@
 #include "posix.hpp"
 
 #include <thread>
+#include <signal.h>
 
 // Read and write end of a pipe.
 #define PE_READ  0
@@ -111,6 +112,9 @@ bool ShellExec(exec_options_t opt, pid_t* pid) {
   // Blocking IO loop.
   while (true) {
 
+    // The buffer where we'll be reading the stdout and stderr to.
+    char buff[READ_BUFF_SIZE];
+
     // If we're exiting don't run this anymore.
     if (global_thread_stop.load()) break;
 
@@ -141,7 +145,10 @@ bool ShellExec(exec_options_t opt, pid_t* pid) {
       // calling select each time. Event if we're listening wihtout timeout
       // (timeout < 0) we set the timout to 0.01 seconds so the stdin in the
       // above will not be blocked.
-      if (opt.timeout_sec < 0) {
+      //
+      // Note that for  stderr we don't wait for too long since it'll block the
+      // stdout (same as timeout = -1).
+      if (opt.timeout_sec < 0 || !is_stdout) {
         timeout.tv_sec  = 0;      // Seconds.
         timeout.tv_usec = 10000;  // Microseconds.
       } else {
@@ -159,14 +166,13 @@ bool ShellExec(exec_options_t opt, pid_t* pid) {
         goto l_loop_end;
       }
 
-      if (rv == 0) { // Timed out.
-        if (opt.timeout_sec == -1) continue; // Continue listening.
+      if (rv == 0) { // Timed out we don't stop on stderr timeout (only for stdout).
+        if (opt.timeout_sec == -1 || !is_stdout) continue; // Continue listening.
         exit_type = EXIT_TYPE_TIMEOUT;
         goto l_loop_end;
       }
 
       // File descriptor is ready to read immediately.
-      char buff[READ_BUFF_SIZE];
       read_count = read(fdread, buff, READ_BUFF_SIZE-1); // -1 So we'll add \0 character at the end.
 
       if (read_count < 0) {
@@ -188,9 +194,10 @@ bool ShellExec(exec_options_t opt, pid_t* pid) {
   }
 
 l_loop_end:
-  if (fdwrite_in >= 0) close(fdwrite_in);
-  if (fdread_out >= 0) close(fdread_out);
-  if (fdread_err >= 0) close(fdread_err);
+
+  // SIGKILL: kills the process immediately without letting the child process to cleanup.
+  // SIGTERM: Stop the process peacefully letting the child cleanup.
+  kill(*pid, SIGTERM);
 
   // Wait for the child process to finish it's thing and cleanup resources.
   int status;
@@ -200,6 +207,11 @@ l_loop_end:
     opt.cb_exit(opt.user_data, exit_type, WEXITSTATUS(status));
   }
 
+  // Now that the child is finished we can safely close all the pipes.
+  if (fdwrite_in >= 0) close(fdwrite_in);
+  if (fdread_out >= 0) close(fdread_out);
+  if (fdread_err >= 0) close(fdread_err);
+
   return true;
 }
 
@@ -207,17 +219,17 @@ l_loop_end:
  * Inter Process Communication
  ******************************************************************************/
 
-class IpcUnix : public IPC {
+class IpcPosix : public IPC {
 
 public:
-  IpcUnix(IpcOptions opt) : IPC(opt) {
+  IpcPosix(IpcOptions opt) : IPC(opt) {
 
     // Construct argv.
     int argv_size = 2 + this->opt.argv.size();
     argv = (char**) malloc(sizeof(char*) * argv_size);
     argv[0] = this->opt.file.data(); // Convention.
-    for (int i = 1; i < argv_size-1; i++) {
-      argv[i] = this->opt.argv[i].data();
+    for (int i = 0; i < this->opt.argv.size(); i++) {
+      argv[i+1] = this->opt.argv[i].data();
     }
     argv[argv_size-1] = NULL;
 
@@ -228,14 +240,14 @@ public:
     execopt.file        = this->opt.file.c_str();
     execopt.argv        = argv;
     execopt.timeout_sec = this->opt.timeout_sec;
-    execopt.cb_stdin    = (opt.sending_inputs) ? IpcUnix::StdinCallback : NULL;
-    execopt.cb_stdout   = IpcUnix::StdoutCallback;
-    execopt.cb_stderr   = IpcUnix::StderrCallback;
-    execopt.cb_exit     = IpcUnix::ExitCallback;
+    execopt.cb_stdin    = (opt.sending_inputs)  ? IpcPosix::StdinCallback  : NULL;
+    execopt.cb_stdout   = IpcPosix::StdoutCallback;
+    execopt.cb_stderr   = IpcPosix::StderrCallback;
+    execopt.cb_exit     = IpcPosix::ExitCallback;
   }
 
 
-  ~IpcUnix() {
+  ~IpcPosix() {
     if (argv != nullptr) free(argv);
     pending_inputs = false;
     if (server_io_thread.joinable()) {
@@ -280,7 +292,7 @@ private:
 
 private:
   static int StdinCallback(void* user_data, int fd, bool* pending) {
-    IpcUnix* self = (IpcUnix*) user_data;
+    IpcPosix* self = (IpcPosix*) user_data;
 
     // Don't call this at the end of this function since the queue can be filled
     // at the middle of the write bellow so we check if it's empty here.
@@ -306,21 +318,21 @@ private:
 
 
   static void StdoutCallback(void* user_data, const char* buff, size_t length) {
-    IpcUnix* self = (IpcUnix*) user_data;
+    IpcPosix* self = (IpcPosix*) user_data;
     FuncStdoutCallback cb = self->opt.stdout_cb;
     if (cb) cb(self->opt.user_data, buff, length);
   }
 
 
   static void StderrCallback(void* user_data, const char* buff, size_t length) {
-    IpcUnix* self = (IpcUnix*) user_data;
+    IpcPosix* self = (IpcPosix*) user_data;
     FuncStdoutCallback cb = self->opt.stderr_cb;
     if (cb) cb(self->opt.user_data, buff, length);
   }
 
 
   static void ExitCallback(void* user_data, int exit_type, int exit_code) {
-    IpcUnix* self = (IpcUnix*) user_data;
+    IpcPosix* self = (IpcPosix*) user_data;
     FuncExitCallback cb = self->opt.exit_cb;
     if (cb) cb(self->opt.user_data, exit_code);
   }
@@ -329,7 +341,7 @@ private:
 
 
 std::unique_ptr<IPC> IPC::New(IpcOptions opt) {
-  return std::make_unique<IpcUnix>(opt);
+  return std::make_unique<IpcPosix>(opt);
 }
 
 
