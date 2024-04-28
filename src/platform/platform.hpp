@@ -78,9 +78,10 @@ class IPC {
 
 public:
   struct IpcOptions {
-    void* user_data              = nullptr;
-    std::string cmd              = "";
-    int timeout_sec              = -1;    // -1 means no timeout.
+    void* user_data  = nullptr;    // Used in the callbacks.
+    std::string file; // The executable (command/file) we'll be calling execvp.
+    std::vector<std::string> argv; // Optional additional arguments.
+    int timeout_sec  = -1;         // -1 means no timeout.
     
     // Set to true to the child process to listen for inputs which we'll be
     // send using WriteToStdin() method. If this is false, WriteToStdin

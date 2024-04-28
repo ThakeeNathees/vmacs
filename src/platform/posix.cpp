@@ -23,7 +23,7 @@ uint64_t Platform::GetPid() {
 
 // Returns true on success. If the fdread is not NULL, it'll open pipe from child to parent to listen stdout of the child and
 // if the fdwrite is not NULL it'll open pipe from parent to child to send message from parent's stdout.
-bool SpawnProcess(const char* shell, const char* cmd, pid_t* pid, int* fdwrite_in, int* fdread_out, int* fdread_err) {
+bool SpawnProcess(const char* file, char* const argv[], pid_t* pid, int* fdwrite_in, int* fdread_out, int* fdread_err) {
 
   int pipe_parent_to_child_in[2];  // Pipe to write to child's  stdin.
   int pipe_child_to_parent_out[2]; // Pipe to read from child's stdout.
@@ -32,8 +32,6 @@ bool SpawnProcess(const char* shell, const char* cmd, pid_t* pid, int* fdwrite_i
   if (fdwrite_in && pipe(pipe_parent_to_child_in) != 0) return false;
   if (fdread_out && pipe(pipe_child_to_parent_out) != 0) return false;
   if (fdread_err && pipe(pipe_child_to_parent_err) != 0) return false;
-
-  shell = (shell) ? shell : "sh";
 
   *pid = fork();
   if (*pid == -1) return false;
@@ -59,10 +57,7 @@ bool SpawnProcess(const char* shell, const char* cmd, pid_t* pid, int* fdwrite_i
       close(pipe_parent_to_child_in[PE_READ]);
     }
 
-    // TODO:
-    //   consider refactor the parameter.
-    //   consider setsid();
-    execlp(shell, shell, "-c", cmd, NULL);
+    execvp(file, argv);
     exit(EXIT_FAILURE); // Unreachable.
   }
 
@@ -103,8 +98,8 @@ bool ShellExec(exec_options_t opt, pid_t* pid) {
   bool writing_in  = (opt.cb_stdin  != NULL);
 
   if (!SpawnProcess(
-        opt.shell,
-        opt.cmd,
+        opt.file,
+        opt.argv,
         pid,
         (writing_in)  ? &fdwrite_in : NULL,
         (reading_out) ? &fdread_out : NULL,
@@ -216,15 +211,38 @@ class IpcUnix : public IPC {
 
 public:
   IpcUnix(IpcOptions opt) : IPC(opt) {
+
+    // Construct argv.
+    int argv_size = 2 + this->opt.argv.size();
+    argv = (char**) malloc(sizeof(char*) * argv_size);
+    argv[0] = this->opt.file.data(); // Convention.
+    for (int i = 1; i < argv_size-1; i++) {
+      argv[i] = this->opt.argv[i].data();
+    }
+    argv[argv_size-1] = NULL;
+
+    // FIXME(grep): We have tow options struct that does the same thing and a
+    // callback calls another callback. These two needs to be merged.
     memset(&execopt, 0, sizeof(execopt));
     execopt.user_data   = this;
-    execopt.cmd         = this->opt.cmd.c_str();
+    execopt.file        = this->opt.file.c_str();
+    execopt.argv        = argv;
     execopt.timeout_sec = this->opt.timeout_sec;
     execopt.cb_stdin    = (opt.sending_inputs) ? IpcUnix::StdinCallback : NULL;
     execopt.cb_stdout   = IpcUnix::StdoutCallback;
     execopt.cb_stderr   = IpcUnix::StderrCallback;
     execopt.cb_exit     = IpcUnix::ExitCallback;
   }
+
+
+  ~IpcUnix() {
+    if (argv != nullptr) free(argv);
+    pending_inputs = false;
+    if (server_io_thread.joinable()) {
+      server_io_thread.join();
+    }
+  }
+
 
   // Note that this method isn't supposed to be called multiple times.
   void StartListening() override {
@@ -246,18 +264,13 @@ public:
   }
 
 
-  ~IpcUnix() {
-    pending_inputs = false;
-    if (server_io_thread.joinable()) {
-      server_io_thread.join();
-    }
-  }
-
-
 private:
   // Buffer all the write to server request in this queue and we dispatch them
   // in the stdin callback.
   ThreadSafeQueue<std::string> queue_to_server;
+
+  // This manually needs to be cleaned up as it will be mallocd.
+  char** argv = nullptr;
 
   exec_options_t execopt;
   pid_t pid;

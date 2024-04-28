@@ -32,11 +32,19 @@
 #include <nlohmann/json.hpp>
 using Json = nlohmann::json;
 
+#include "platform/posix.hpp"
+
+void fzf_things_test() {
+  // IPC::IpcOptions opt;
+  // opt.cmd = "fzf";
+  // auto ipc = IPC::New(opt);
+}
+
 
 void lsp_test() {
 
   LspConfig config;
-  config.client = "clangd";
+  config.id = "clangd";
 
   LspClient client(config);
   client.StartServer(std::nullopt);
@@ -82,14 +90,6 @@ void lsp_test() {
     }
   });
 
-
-  // std::vector<DocumentChange> chs;
-  // DocumentChange ch;
-  // ch.start = {1, 0};
-  // ch.end = {1, 0};
-  // ch.text = "void";
-  // chs.push_back(ch);
-  // client.DidChange(uri, 1, chs);
 
   // Prevent the client from destroy before we got response from server.
   { std::string s; std::cin >> s; }
@@ -206,9 +206,9 @@ void tree_sitter_test() {
 // THE DRAW FUNCTIONS ARE JUST UGLY AND TEMPROARY ---- FIXXXXXX.
 //
 // Now:
-//   REGISTRY: trieesitter.
+//   Experment with fzf, rg, ...
 //
-//   Setting languge (treesitter) and lsp lang id currently is a mess.
+//
 //   structure:
 //     keybinding move.
 //     config move.

@@ -64,7 +64,8 @@ Editor::Editor() {
 
   // Register LSP clients. TODO(grep): load the config from RESLOAD.
   LspConfig config;
-  config.client = "clangd";
+  config.id = "clangd";
+  config.server_file = "clangd";
   RegisterLspClient(config);
 }
 
@@ -208,7 +209,7 @@ void Editor::RegisterLspClient(const LspConfig& config) {
   };
 
   // Register the client.
-  lsp_clients[config.client] = client;
+  lsp_clients[config.id] = client;
 
   // FIXME(grep): We shouldn't start all the servers at the start. Move this to
   // somewhere else.

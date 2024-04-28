@@ -46,10 +46,10 @@ typedef void (*cb_exit_f)(void* user_data, int exit_type, int status_code);
 
 
 typedef struct {
-  void*       user_data;
-  const char* shell;
-  const char* cmd;
-  int         timeout_sec; // Set -1 for no timeout.
+  void*        user_data;
+  const char*  file;
+  char* const* argv;
+  int          timeout_sec; // Set -1 for no timeout.
 
   // Callbacks.
   cb_stdin_f  cb_stdin;
@@ -65,14 +65,14 @@ typedef enum {
   EXIT_TYPE_TIMEOUT = 2,
 } exec_exit_type;
 
-
+// By convention argv[0] should be the same as file.
 bool SpawnProcess(
-    const char* shell, // The shell it'll execute the bellow command.
-    const char* cmd,   // The shell command (sh -c cmd).
-    pid_t* pid,        // Return value process id.
-    int* fdwrite_in,   // Return file descriptor for stdin.
-    int* fdread_out,   // Return file descriptor for stdout.
-    int* fdread_err);  // Return file descriptor for stderr.
+    const char* file,   // The executable file we'll be executing.
+    char* const argv[], // Arguments (last elements *MUST* be NULL).
+    pid_t* pid,         // Return value process id.
+    int* fdwrite_in,    // Return file descriptor for stdin.
+    int* fdread_out,    // Return file descriptor for stdout.
+    int* fdread_err);   // Return file descriptor for stderr.
 
 bool ShellExec(exec_options_t opt, pid_t* pid);
 

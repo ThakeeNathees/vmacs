@@ -163,7 +163,9 @@ typedef std::function<void(const Uri&, SignatureItems&&)> CallbackSignatureHelp;
 
 // Currently only the IPC method is supported.
 struct LspConfig {
-  LspClientId client; // Client of which server (ccls, clangd, jedi, etc).
+  LspClientId id;                // Client of which server (ccls, clangd, jedi, etc).
+  std::string server_file;       // The command (executable file) for the server.
+  std::vector<std::string> argv; // Optional arguments for the server_cmd.
 };
 
 
@@ -189,7 +191,7 @@ public:
   void DidChange(const Uri& uri, uint32_t version, const std::vector<DocumentChange>& changes);
   void Completion(const Uri& uri, Coord position);
   void SignatureHelp(const Uri& uri, Coord position);
-  // TODO: did close.
+  // TODO(grep): Did close.
 
   // Callbacks for content recieved from the server. (FIXME: this is a public variable
   // Maybe this is okey, not everything needs to have getters and setters).

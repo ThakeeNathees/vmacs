@@ -59,7 +59,8 @@ LspClient::LspClient(LspConfig config) : config(config) {
 
   IPC::IpcOptions opt;
   opt.user_data      = this;
-  opt.cmd            = config.client;
+  opt.file           = config.server_file;
+  opt.argv           = config.argv;
   opt.timeout_sec    = -1;
   opt.sending_inputs = true;
   opt.stdout_cb      = LspClient::StdoutCallback;
