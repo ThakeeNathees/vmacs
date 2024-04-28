@@ -114,20 +114,37 @@ int Buffer::CoordToIndex(Coord coord) const {
 }
 
 
-int Buffer::ColumnToIndex(int column, int line_num) {
+int Buffer::ColumnToIndex(int column, int line_num, int* col_delta) {
 
   Slice line = GetLine(line_num);
 
   int curr_column = 0; // Column of the current character.
   for (int i = line.start; i <= line.end; i++) {
-    if (curr_column == column) return i;
-    if (curr_column > column) return i-1;
+    if (curr_column == column) {
+      if (col_delta) *col_delta = 0;
+      return i;
+    }
+    if (curr_column > column) {
+      if (col_delta) *col_delta = (curr_column - column);
+      return i-1;
+    }
     curr_column += (At(i) == '\t') ? TABSIZE : 1;
   }
 
   // The column is way beyond the end of the line so we just return the end of
   // the line index.
+  if (col_delta) *col_delta = (column - curr_column);
   return line.end;
+}
+
+
+int Buffer::IndexToColumn(int index) {
+  Slice line = GetLine(IndexToCoord(index).row);
+  int column = 0;
+  for (int i = line.start; i < index; i++) {
+    column += (At(i) == '\t') ? TABSIZE : 1;
+  }
+  return column;
 }
 
 

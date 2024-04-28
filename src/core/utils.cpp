@@ -102,7 +102,7 @@ int GetElapsedTime() {
 
 
 void DrawTextLine(
-    DrawBuffer buff,
+    FrameBuffer buff,
     const char* text,
     int x,
     int y,

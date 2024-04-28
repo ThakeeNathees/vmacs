@@ -45,7 +45,7 @@ typedef struct {
   Cell* cells;
   int width;
   int height;
-} DrawBuffer;
+} FrameBuffer;
 
 
 // All the event enums here are copied from raylib, since the core should be
@@ -247,7 +247,7 @@ public:
   // the display takes a cleaer color argument which needed to clear the color
   // outside of the grid otherwise the color outside gride will be different and
   // also raylib requires a clear_color swap a new buffer and start drawing.
-  virtual DrawBuffer GetDrawBuffer() = 0;
+  virtual FrameBuffer GetDrawBuffer() = 0;
  
   // TODO: Remove the clear color and get the color for raylib from the theme
   // config or somewhere.

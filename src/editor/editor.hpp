@@ -24,7 +24,7 @@ public:
 
   void HandleEvent(const Event& event);
   void Update();
-  void Draw(DrawBuffer buff, Coord pos, Size area);
+  void Draw(FrameBuffer buff, Coord pos, Size area);
 
 
 private:
@@ -53,7 +53,8 @@ private:
   void ResetCursorBlink();
   void EnsureCursorOnView();
 
-  void DrawAutoCompletions(DrawBuffer buff);
+  void DrawBuffer(FrameBuffer buff, Coord pos, Size area);
+  void DrawAutoCompletions(FrameBuffer buff);
 };
 
 

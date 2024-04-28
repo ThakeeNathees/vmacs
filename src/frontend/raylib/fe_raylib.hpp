@@ -21,14 +21,14 @@ public:
   virtual bool Cleanup() override;
   virtual std::vector<Event> GetEvents() override;
 
-  virtual DrawBuffer GetDrawBuffer() override;
+  virtual FrameBuffer GetDrawBuffer() override;
   virtual void Display(Color clear_color) override;
 
 private:
   int font_size = 30;
   Font font;
 
-  DrawBuffer draw_buffer;
+  FrameBuffer draw_buffer;
   std::vector<Cell> cells;
 };
 

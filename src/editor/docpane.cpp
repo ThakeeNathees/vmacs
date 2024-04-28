@@ -111,13 +111,10 @@ void DocPane::SetDocument(std::shared_ptr<Document> document) {
 
 
 void DocPane::HandleEvent(const Event& event) {
-
-  // FIXME:
   if (this->document == nullptr) return;
 
   switch (event.type) {
 
-    // TODO: Handle.
     case Event::Type::RESIZE:
     case Event::Type::MOUSE:
     case Event::Type::WHEEL:
@@ -147,6 +144,7 @@ void DocPane::HandleEvent(const Event& event) {
 
         document->EnterCharacter(c);
         EnsureCursorOnView();
+        ResetCursorBlink();
 
         keytree.ResetCursor();
       }
@@ -168,8 +166,40 @@ void DocPane::Update() {
 }
 
 
-void DocPane::Draw(DrawBuffer buff, Coord pos, Size area) {
+void DocPane::ResetCursorBlink() {
+  cursor_blink_show = true;
+  cursor_last_blink = GetElapsedTime();
+}
 
+
+void DocPane::EnsureCursorOnView() {
+
+  // Note that the col of Coord is not the view column, and cursor.GetColumn()
+  // will return the column it wants go to and not the column it actually is.
+  const Cursor& cursor = document->cursors.GetPrimaryCursor();
+  int row = cursor.GetCoord().row;
+  int col = document->buffer->IndexToColumn(cursor.GetIndex());
+
+  if (col <= view_start.col) {
+    view_start.col = col;
+  } else if (view_start.col + text_area.width <= col) {
+    view_start.col = col - text_area.width + 1;
+  }
+
+  if (row <= view_start.row) {
+    view_start.row = row;
+  } else if (view_start.row + text_area.height <= row) {
+    view_start.row = row - text_area.height + 1;
+  }
+}
+
+
+void DocPane::Draw(FrameBuffer buff, Coord pos, Size area) {
+  DrawBuffer(buff, pos, area);
+}
+
+
+void DocPane::DrawBuffer(FrameBuffer buff, Coord pos, Size area) {
   ASSERT(this->document != nullptr, OOPS);
 
   // Update our text area so we'll know about the viewing area when we're not
@@ -179,62 +209,95 @@ void DocPane::Draw(DrawBuffer buff, Coord pos, Size area) {
   const Theme* theme = Global::GetCurrentTheme();
 
   // FIXME: Move this to themes.
+  // --------------------------------------------------------------------------
   Color color_red           = 0xff0000;
   Color color_yellow        = 0xcccc2d;
   Color color_black         = 0x000000;
   Color color_text          = 0xffffff;
-  Color color_sel           = 0x87898c;
-  Color color_bg            = 0x272829;
   Color color_tab_indicator = 0x656966;
-  // Color color_cursor     = 0x1b4f8f;
 
-  // Our fallback color if the sytle not present.
   const Style style_default = {.fg = 0, .bg = 0xffffff, .attrib = 0};
   Style style;
-#define GET_STYLE(style_name) \
-  (theme->GetStyle(&style, style_name) ? style : style_default)
+  #define GET_STYLE(style_name) \
+    (theme->GetStyle(&style, style_name) ? style : style_default)
+
   Color color_cursor_fg     = GET_STYLE("ui.cursor.primary").fg;
   Color color_cursor_bg     = GET_STYLE("ui.cursor.primary").bg;
-  color_sel                 = GET_STYLE("ui.selection").bg;
-  color_bg                  = GET_STYLE("ui.background").bg;
+  Color color_sel           = GET_STYLE("ui.selection").bg;
+  Color color_bg            = GET_STYLE("ui.background").bg;
 
   // FIXME: Move this somewhere general.
   // We draw an indicator for the tab character.
   // 0x2102 : '→'
   int tab_indicator = 0x2192;
+  // --------------------------------------------------------------------------
 
-  int line_count   = document->buffer->GetLineCount();
+  int line_count = document->buffer->GetLineCount(); // Total lines in the buffer.
+  const std::vector<Style>& highlights = document->syntax.GetHighlights();
 
   // y is the current relative y coordinate from pos we're drawing.
   for (int y = 0; y < area.height; y++) {
 
+    // Check if we're done writing the lines (buffer end reached).
     int line_index = view_start.row + y;
     if (line_index >= line_count) break;
 
+    // Current line we're drawing.
     Slice line = document->buffer->GetLine(line_index);
+
+    // If the current view_start column is either at at the middle of a tab
+    // character or after the EOL of the current line. In that case we draw the
+    // rest half of the tab character and start from the next character. we'll
+    // use this variable to keep track of how many columns have trimmed.
+    int col_delta = 0;
+    int index = document->buffer->ColumnToIndex(view_start.col, line_index, &col_delta);
+    ASSERT(col_delta >= 0, OOPS);
+
+    // // FIXME(BUG): Use the ColumnToIndex bellow and consider tabs.
+    // // Index of the current character we're displaying.
+    // // int index = document->buffer->ColumnToIndex(view_start.col, line_index);
+    // int index = line.start + view_start.col;
 
     // x is the current relative x coordinate from pos we're drawing.
     int x = 0;
 
-    // Index of the current character we're displaying.
-    int index = line.start + view_start.col;
-
     while (x < area.width && index <= line.end) {
 
       // Current cell configuration.
-      int c = document->buffer->At(index);
-      Color fg = color_text;
-      Color bg = color_bg;
+      int c      = document->buffer->At(index);
+      Color fg   = color_text;
+      Color bg   = color_bg;
       int attrib = 0;
 
+
+      // Get teh syntax highlighting of the character. Note that the background
+      // color is fetched from theme (not from syntax highlighter).
+      if (highlights.size() > index) {
+        style = highlights[index];
+        fg = style.fg;
+        attrib |= style.attrib;
+      }
+
+
+      // Check if we're in tab character.
+      bool istab = (c == '\t');
+      if (istab) {
+        c  = tab_indicator;
+        fg = color_tab_indicator;
+      } else if (isspace(c) || c == '\0') {
+        c = ' ';
+      }
+
+
       // We get the diagnostics and a lock so the returned pointer will be valid
-      // till we're using.
+      // till we're using. If the current character has diagnostic 
       const Diagnostic* diagnos = nullptr;
       std::unique_lock<std::mutex> diagnos_lock = document->GetDiagnosticAt(&diagnos, index);
-
       if (diagnos != nullptr) attrib |= VMACS_CELL_UNDERLINE;
 
-      // Check if current cell is in cursor / selection.
+
+      // Check if current cell under in cursor / selection. This override all the
+      // above style.
       bool in_selection = false;
       bool in_cursor    = false;
       for (const Cursor& cursor : document->cursors.Get()) {
@@ -243,39 +306,42 @@ void DocPane::Draw(DrawBuffer buff, Coord pos, Size area) {
         if (selection.start <= index && index < selection.end) {
           in_selection = true;
         }
-        if (in_selection && in_cursor) break;
       }
-
       if (in_cursor && cursor_blink_show) fg = color_cursor_fg,  bg = color_cursor_bg;
       else if (in_selection) bg = color_sel;
 
-      // Handle tab character.
-      bool istab = (c == '\t');
-      if (isspace(c) || c == '\0') c = ' ';
 
+      // If the line starts at the middle of a tab character or after the end of
+      // line draw the rest of the tab (newline will be handled as well).
+      if (col_delta > 0) {
+        while (col_delta--) {
+          // If cursor in the character  we don't want to draw the cursor for
+          // the rest of the white spaces.
+          bg = (in_selection) ? color_sel : color_bg;
+          SET_CELL(buff, pos.col+x, pos.row+y, ' ', fg, bg, attrib);
+          x++;
+        }
+        index++;
+        continue; // Index updated to the next character, go back.
+      }
+
+
+      // Draw the character finally.
+      SET_CELL(buff, pos.col+x, pos.row+y, c, fg, bg, attrib);
+      x++;
+
+      // If it's a tab character we'll draw more white spaces.
       if (istab) {
-        // First cell we draw an indecator and draw cursor only in the first cell.
-        SET_CELL(buff, pos.col+x, pos.row+y, tab_indicator, color_tab_indicator, bg, attrib);
-        x++;
-
-        bg = (in_selection) ? color_sel : color_bg;
+        bg = (in_selection) ? color_sel : color_bg; // Don't draw cursor on all the cells.
         for (int _ = 0; _ < TABSIZE-1; _++) {
           SET_CELL(buff, pos.col+x, pos.row+y, ' ', fg, bg, attrib);
           x++;
         }
-
-      } else {
-
-        Style style = { .fg = fg, .bg = bg, .attrib = (uint8_t) attrib };
-        auto& highlights = document->syntax.GetHighlights();
-        if (highlights.size() > index) style = highlights[index];
-        if (in_cursor) style.fg = color_cursor_fg, style.bg = color_cursor_bg;
-        // or'ing the bellow attrib for diagnostic underline.
-        SET_CELL(buff, pos.col+x, pos.row+y, c, style.fg, bg, style.attrib | attrib);
-        x++;
       }
 
-      // FIXME: This is temproary mess.
+
+      // FIXME: Move this mess to DrawDiagnostics().
+      // --------------------------------------------------------------------------
       // Draw diagnostic text.
       if (diagnos && index == document->cursors.GetPrimaryCursor().GetIndex()) {
         Color color = (diagnos->severity == 1) ? color_red : color_yellow;
@@ -291,8 +357,10 @@ void DocPane::Draw(DrawBuffer buff, Coord pos, Size area) {
         x = buff.width - width;
         DrawTextLine(buff, code_source.c_str(), x, 1, width, color, color_bg, 0, false);
       }
+      // --------------------------------------------------------------------------
 
       index++;
+
     } // End of drawing a character.
 
   } // End of drawing a line.
@@ -306,6 +374,7 @@ void DocPane::Draw(DrawBuffer buff, Coord pos, Size area) {
   int icon_count = sizeof icons / sizeof *icons;
   if (curr >= icon_count) curr = 0;
   SET_CELL(buff, 0, area.height-1, icons[curr++], color_text, color_bg, 0);
+
 }
 
 // FIXME: Move this, add color value.
@@ -340,7 +409,7 @@ static const int completion_kind_count = sizeof completion_kind_nerd_icon / size
 
 
 // FIXME: This method is not clean.
-void DocPane::DrawAutoCompletions(DrawBuffer buff) {
+void DocPane::DrawAutoCompletions(FrameBuffer buff) {
 
   std::vector<CompletionItem>* completion_items = nullptr;
   std::unique_lock<std::mutex> lock_completions = document->GetCompletionItems(&completion_items);
@@ -512,25 +581,3 @@ void DocPane::DrawAutoCompletions(DrawBuffer buff) {
 }
 
 
-void DocPane::ResetCursorBlink() {
-  cursor_blink_show = true;
-  cursor_last_blink = GetElapsedTime();
-}
-
-
-void DocPane::EnsureCursorOnView() {
-
-  Coord coord = document->cursors.GetPrimaryCursor().GetCoord();
-
-  if (coord.col <= view_start.col) {
-    view_start.col = coord.col;
-  } else if (view_start.col + text_area.width <= coord.col) {
-    view_start.col = coord.col - text_area.width + 1;
-  }
-
-  if (coord.row <= view_start.row) {
-    view_start.row = coord.row;
-  } else if (view_start.row + text_area.height <= coord.row) {
-    view_start.row = coord.row - text_area.height + 1;
-  }
-}

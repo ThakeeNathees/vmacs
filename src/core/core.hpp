@@ -291,7 +291,7 @@ int Utf8Strlen(const char* str);
 
 // Draw a NULL terminated text (utf8) to the specified position and width.
 void DrawTextLine(
-    DrawBuffer buff,
+    FrameBuffer buff,
     const char* text,
     int x,
     int y,

@@ -36,7 +36,7 @@ bool Raylib::Cleanup() {
 }
 
 
-DrawBuffer Raylib::GetDrawBuffer() {
+FrameBuffer Raylib::GetDrawBuffer() {
 
   int char_width = font.recs[0].width;
   int char_height = font.recs[0].height;

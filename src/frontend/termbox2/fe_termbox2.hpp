@@ -18,11 +18,11 @@ public:
   virtual bool Cleanup() override;
   virtual std::vector<Event> GetEvents() override;
 
-  virtual DrawBuffer GetDrawBuffer() override;
+  virtual FrameBuffer GetDrawBuffer() override;
   virtual void Display(uint32_t clear_color) override;
 
 private:
-  DrawBuffer draw_buffer;
+  FrameBuffer draw_buffer;
   std::vector<Cell> cells;
 };
 

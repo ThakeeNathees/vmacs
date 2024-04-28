@@ -77,7 +77,18 @@ public:
 
   Coord IndexToCoord(int index) const;
   int CoordToIndex(Coord coord) const;
-  int ColumnToIndex(int column, int line_num);
+
+  //FIXME: Move the bellow two methods to document class.
+  //
+  // If we're in a tab or the line ends before the column we cannot actually
+  // reach the given column (since it's the middle of the tab or line ended)
+  //
+  // The col_delta argument will be set to the number of columns we
+  // went back to match the index if the above scnario happened.
+  int ColumnToIndex(int column, int line_num, int* col_delta = NULL);
+
+  // Returns the visual column number from the index.
+  int IndexToColumn(int index);
 
   // If the index is not nullptr, it'll write the index if the coord is valid.
   bool IsValidIndex(int index) const;
@@ -143,7 +154,7 @@ private:
   // coord.col: the character index from the line start index.
   // column:    visible column index in the grid since tag is ~4 space long we
   //            include that in the column number.
-  int column  = 0;        
+  int column  = 0;
 
   /*
    * If the cursor has a selection this will be the start index. If selection

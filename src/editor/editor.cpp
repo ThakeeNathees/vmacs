@@ -117,7 +117,7 @@ int Editor::MainLoop() {
 
     // FIXME: This needs to be re-factored and cleaned up.
     // Draw to the front end buffer.
-    DrawBuffer buff = frontend->GetDrawBuffer();
+    FrameBuffer buff = frontend->GetDrawBuffer();
 
     // uint8_t color_bg = 0x272829;
     Color color_bg = Global::GetCurrentTheme()->GetStyleOr("ui.background", {.fg=0, .bg=0xffffff, .attrib=0}).bg;

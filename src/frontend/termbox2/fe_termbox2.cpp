@@ -29,7 +29,7 @@ bool Termbox2::Cleanup() {
 
 
 
-DrawBuffer Termbox2::GetDrawBuffer() {
+FrameBuffer Termbox2::GetDrawBuffer() {
 
   int width = tb_width();
   int height = tb_height();
