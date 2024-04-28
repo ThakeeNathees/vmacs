@@ -148,7 +148,7 @@ MultiCursor History::CommitInsertText(const MultiCursor& cursors_, const std::st
 
     int next_index = cursor_index + text.size();
     cursor.SetIndex(next_index);
-    cursor.UpdateColumn();
+    cursor.UpdateIntendedColumn();
 
     // Move all the cursors after this one.
     for (int j = i + 1; j < (int)curslist.size(); j++) {
@@ -228,7 +228,7 @@ MultiCursor History::CommitRemoveText(const MultiCursor& cursors_, int direction
 
       cursor.SetIndex(selection.start);
       cursor.ClearSelection();
-      cursor.UpdateColumn();
+      cursor.UpdateIntendedColumn();
 
     } else {
 
@@ -260,7 +260,7 @@ MultiCursor History::CommitRemoveText(const MultiCursor& cursors_, int direction
         delta_next_cursor -= 1;
 
         cursor.SetIndex(index);
-        cursor.UpdateColumn();
+        cursor.UpdateIntendedColumn();
 
       }
     } // !HasSelection().

@@ -92,8 +92,8 @@ Coord Buffer::IndexToCoord(int index) const {
     const Slice& slice = slices[middle];
     if (slice.start <= index && index <= slice.end) {
       Coord coord;
-      coord.col = index - slice.start;
-      coord.row = middle;
+      coord.character = index - slice.start;
+      coord.line = middle;
       return coord;
 
     } else if (slice.end < index) {
@@ -109,42 +109,56 @@ Coord Buffer::IndexToCoord(int index) const {
 }
 
 
-int Buffer::CoordToIndex(Coord coord) const {
-  return lines.Get()[coord.row].start + coord.col;
+int Buffer::IndexToColumn(int index) const {
+  // tab_width will degrease for each character and if reached 0, will reset to
+  // the tabsize again.
+  int tab_width = TABSIZE_;
+  Slice line = GetLine(IndexToCoord(index).line);
+  int curr_column = 0;
+  for (int i = line.start; i < index; i++) {
+    if (At(i) == '\t') {
+      curr_column += tab_width;
+      tab_width = TABSIZE_;
+    } else {
+      curr_column++;
+      if (--tab_width == 0) tab_width = TABSIZE_;
+    }
+  }
+  return curr_column;
 }
 
 
-int Buffer::ColumnToIndex(int column, int line_num, int* col_delta) {
+int Buffer::CoordToIndex(Coord coord) const {
+  return lines.Get()[coord.line].start + coord.character;
+}
 
+int Buffer::ColumnToIndex(int column, int line_num, int* col_delta) const {
+  // tab_width will degrease for each character and if reached 0, will reset to
+  // the tabsize again.
+  int tab_width = TABSIZE_;
   Slice line = GetLine(line_num);
-
-  int curr_column = 0; // Column of the current character.
+  int curr_column = 0;
   for (int i = line.start; i <= line.end; i++) {
-    if (curr_column == column) {
-      if (col_delta) *col_delta = 0;
-      return i;
-    }
+    if (curr_column == column) { if (col_delta) *col_delta = 0; return i; }
     if (curr_column > column) {
-      if (col_delta) *col_delta = (curr_column - column);
+      ASSERT(column % TABSIZE_ != 0, OOPS);
+      if (col_delta) *col_delta = TABSIZE_ - (curr_column - column);
       return i-1;
     }
-    curr_column += (At(i) == '\t') ? TABSIZE : 1;
+
+    if (At(i) == '\t') {
+      curr_column += tab_width;
+      tab_width = TABSIZE_;
+    } else {
+      curr_column++;
+    if (--tab_width == 0) tab_width = TABSIZE_;
+    }
   }
 
   // The column is way beyond the end of the line so we just return the end of
   // the line index.
-  if (col_delta) *col_delta = (column - curr_column);
+  if (col_delta) *col_delta = column - curr_column;
   return line.end;
-}
-
-
-int Buffer::IndexToColumn(int index) {
-  Slice line = GetLine(IndexToCoord(index).row);
-  int column = 0;
-  for (int i = line.start; i < index; i++) {
-    column += (At(i) == '\t') ? TABSIZE : 1;
-  }
-  return column;
 }
 
 
@@ -154,12 +168,12 @@ bool Buffer::IsValidIndex(int index) const {
 
 
 bool Buffer::IsValidCoord(Coord coord, int* index) const {
-  if (coord.row < 0) return false;
-  if (coord.col < 0) return false;
-  if (coord.row >= lines.Get().size()) return false;
-  Slice line = GetLine(coord.row);
+  if (coord.line < 0) return false;
+  if (coord.character < 0) return false;
+  if (coord.line >= lines.Get().size()) return false;
+  Slice line = GetLine(coord.line);
   int line_len = line.end - line.start + 1;
-  if (coord.col >= line_len) return false;
+  if (coord.character >= line_len) return false;
   if (index) *index = CoordToIndex(coord);
   return true;
 }

@@ -167,8 +167,8 @@ void LspClient::DidChange(const Uri& uri, uint32_t version, const std::vector<Do
     content_changes.push_back({
       {
         "range", {
-          { "start", {{ "line", change.start.row }, { "character", change.start.col }}  },
-          { "end", {{ "line", change.end.row }, { "character", change.end.col }} },
+          { "start", {{ "line", change.start.line }, { "character", change.start.character }}  },
+          { "end", {{ "line", change.end.line }, { "character", change.end.character }} },
         },
       },
       { "text", change.text }
@@ -184,7 +184,7 @@ void LspClient::DidChange(const Uri& uri, uint32_t version, const std::vector<Do
 void LspClient::Completion(const Uri& uri, Coord position) {
   RequestId id = SendRequest("textDocument/completion", {
       { "textDocument", {{ "uri", uri }} },
-      { "position", {{ "line", position.row }, { "character", position.col }} },
+      { "position", {{ "line", position.line }, { "character", position.character }} },
   });
   ResponseContext ctx;
   ctx.type = ResponseType::RESP_COMPLETION;
@@ -199,7 +199,7 @@ void LspClient::Completion(const Uri& uri, Coord position) {
 void LspClient::SignatureHelp(const Uri& uri, Coord position) {
   RequestId id = SendRequest("textDocument/signatureHelp", {
       { "textDocument", {{ "uri", uri }} },
-      { "position", {{ "line", position.row }, { "character", position.col }} },
+      { "position", {{ "line", position.line }, { "character", position.character }} },
   });
   ResponseContext ctx;
   ctx.type = ResponseType::RESP_SIGNATURE_HELP;
@@ -335,10 +335,10 @@ void LspClient::HandleNotify(const std::string& method, const Json& params) {
 
       // TODO: Assuming "range" will always exists, fix this. Figure out a better
       // way to convert back and forth json to c++ types.
-      diagnostic.start.row = diag["range"]["start"]["line"].template get<int>();
-      diagnostic.start.col = diag["range"]["start"]["character"].template get<int>();
-      diagnostic.end.row   = diag["range"]["end"]["line"].template get<int>();
-      diagnostic.end.col   = diag["range"]["end"]["character"].template get<int>();
+      diagnostic.start.line      = diag["range"]["start"]["line"].template get<int>();
+      diagnostic.start.character = diag["range"]["start"]["character"].template get<int>();
+      diagnostic.end.line        = diag["range"]["end"]["line"].template get<int>();
+      diagnostic.end.character   = diag["range"]["end"]["character"].template get<int>();
       
       diagnostic.severity  = GET_INT_OR(diag, "severity", 3);
       diagnostic.code      = GET_STRING_OR(diag, "code", "");
@@ -517,14 +517,14 @@ bool LspClient::JsonToCompletionItem(CompletionItem* item, const Json& json) {
     const Json& range = json["range"];
 
     // TODO: Handle all the possible errors it might throw (create a common function as it's reusable).
-    start.row = range["start"]["line"].template get<int>();
-    start.col = range["start"]["character"].template get<int>();
-    end.row   = range["end"]["line"].template get<int>();
-    end.col   = range["end"]["character"].template get<int>();
+    start.line      = range["start"]["line"].template get<int>();
+    start.character = range["start"]["character"].template get<int>();
+    end.line        = range["end"]["line"].template get<int>();
+    end.character   = range["end"]["character"].template get<int>();
 
     text_edit.start = start;
     text_edit.end   = end;
-    text_edit.text = GET_STRING_OR(json, "newText", "");
+    text_edit.text  = GET_STRING_OR(json, "newText", "");
 
     return text_edit;
   };

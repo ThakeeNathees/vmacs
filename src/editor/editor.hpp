@@ -24,7 +24,7 @@ public:
 
   void HandleEvent(const Event& event);
   void Update();
-  void Draw(FrameBuffer buff, Coord pos, Size area);
+  void Draw(FrameBuffer buff, Position pos, Size area);
 
 
 private:
@@ -37,7 +37,7 @@ private:
 
   // The coordinate where we start drawing the buffer from, this will change
   // after h-scroll and v-scroll.
-  Coord view_start = {0, 0};
+  Position view_start = {0, 0};
 
   // We "cache" the draw area for the text needed in some method.
   Size text_area = {0, 0};
@@ -53,8 +53,8 @@ private:
   void ResetCursorBlink();
   void EnsureCursorOnView();
 
-  void DrawBuffer(FrameBuffer buff, Coord pos, Size area);
-  void DrawAutoCompletions(FrameBuffer buff);
+  void DrawBuffer(FrameBuffer buff, Position pos, Size area);
+  void DrawAutoCompletions(FrameBuffer buff, Position docpos); // FIXME: split and draw primitive.
 };
 
 

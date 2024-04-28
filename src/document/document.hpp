@@ -75,20 +75,13 @@ public:
   int GetLineCount() const;
   Slice GetLine(int index) const;
 
+  // Coord, column, index conversions. ColumnToIndex will take an optional col_delta
+  // which will be set to the number of column it's behind, we the provided column
+  // is at the middle of a tab.
   Coord IndexToCoord(int index) const;
+  int IndexToColumn(int index) const;
   int CoordToIndex(Coord coord) const;
-
-  //FIXME: Move the bellow two methods to document class.
-  //
-  // If we're in a tab or the line ends before the column we cannot actually
-  // reach the given column (since it's the middle of the tab or line ended)
-  //
-  // The col_delta argument will be set to the number of columns we
-  // went back to match the index if the above scnario happened.
-  int ColumnToIndex(int column, int line_num, int* col_delta = NULL);
-
-  // Returns the visual column number from the index.
-  int IndexToColumn(int index);
+  int ColumnToIndex(int column, int line_num, int* col_delta=NULL) const;
 
   // If the index is not nullptr, it'll write the index if the coord is valid.
   bool IsValidIndex(int index) const;
@@ -120,7 +113,8 @@ public:
 
   int GetIndex() const;
   Coord GetCoord() const;
-  int GetColumn() const;
+  int GetIntendedColumn() const;
+  int GetRealColumn() const;
   bool HasSelection() const;
   int GetSelectionStart() const;
   bool Equals(const Cursor& other) const;
@@ -136,12 +130,12 @@ public:
   Slice GetSelection() const;
 
   void SetIndex(int index);
-  void SetColumn(int column);
+  void SetIntendedColumn(int column);
   void SetSelectionStart(int index);
   void ClearSelection();
 
   // Adjust the column based on the current coordiante it's on now.
-  void UpdateColumn();
+  void UpdateIntendedColumn();
 
 private:
   Buffer* buffer = nullptr;  // A weak reference to the buffer it's in.
@@ -154,7 +148,8 @@ private:
   // coord.col: the character index from the line start index.
   // column:    visible column index in the grid since tag is ~4 space long we
   //            include that in the column number.
-  int column  = 0;
+  int intended_column = 0;
+  int real_column     = 0; // The actual column it's currently in.
 
   /*
    * If the cursor has a selection this will be the start index. If selection

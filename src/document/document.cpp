@@ -76,14 +76,14 @@ std::unique_lock<std::mutex> Document::GetDiagnosticAt(const Diagnostic** diagno
     for (Diagnostic& diag : diagnostics) {
 
       // Check if the coordinate comes before this diagnostic.
-      if ((coord.row < diag.start.row) ||
-          (coord.row == diag.start.row && coord.col < diag.start.col)) {
+      if ((coord.line < diag.start.line) ||
+          (coord.line == diag.start.line && coord.character < diag.start.character)) {
         continue;
       }
 
       // Check if the coordinate comes after this diagnostic.
-      if ((coord.row > diag.end.row) ||
-          (coord.row == diag.end.row && coord.col >= diag.end.col)) {
+      if ((coord.line > diag.end.line) ||
+          (coord.line == diag.end.line && coord.character >= diag.end.character)) {
         continue;
       }
 
@@ -239,7 +239,7 @@ void Document::EnterCharacter(char c) {
     // We have inserted a character so all the past completion item text_edit
     // range will be outdated by 1 character, update it here.
     for (auto& item : completion_items) {
-      item.text_edit.end.col += 1;
+      item.text_edit.end.character += 1;
     }
   }
 
@@ -300,7 +300,7 @@ void Document::CursorRight() {
       cursor.SetIndex(cursor.GetIndex() + 1);
     }
 
-    cursor.UpdateColumn();
+    cursor.UpdateIntendedColumn();
   }
   cursors.Changed();
   ClearCompletionItems();
@@ -318,7 +318,7 @@ void Document::CursorLeft() {
       cursor.SetIndex(cursor.GetIndex() - 1);
     }
 
-    cursor.UpdateColumn();
+    cursor.UpdateIntendedColumn();
   }
   cursors.Changed();
   ClearCompletionItems();
@@ -330,11 +330,11 @@ void Document::CursorUp() {
     cursor.ClearSelection();
     const Coord coord = cursor.GetCoord();
 
-    if (coord.row == 0) {
+    if (coord.line == 0) {
       cursor.SetIndex(0);
-      cursor.SetColumn(0);
+      cursor.SetIntendedColumn(0);
     } else {
-      const int index = buffer->ColumnToIndex(cursor.GetColumn(), coord.row-1);
+      const int index = buffer->ColumnToIndex(cursor.GetIntendedColumn(), coord.line-1);
       cursor.SetIndex(index);
     }
 
@@ -350,11 +350,11 @@ void Document::CursorDown() {
     const Coord coord = cursor.GetCoord();
     const int line_count = buffer->GetLineCount();
 
-    if (coord.row == buffer->GetLineCount() - 1) {
+    if (coord.line == buffer->GetLineCount() - 1) {
       cursor.SetIndex(buffer->GetLine(line_count-1).end);
-      cursor.UpdateColumn();
+      cursor.UpdateIntendedColumn();
     } else {
-      int index = buffer->ColumnToIndex(cursor.GetColumn(), coord.row+1);
+      int index = buffer->ColumnToIndex(cursor.GetIntendedColumn(), coord.line+1);
       cursor.SetIndex(index);
     }
 
@@ -368,7 +368,7 @@ void Document::CursorHome() {
   for (Cursor& cursor : cursors.Get()) {
     cursor.ClearSelection();
     const Coord coord = cursor.GetCoord();
-    const Slice& line = buffer->GetLine(coord.row);
+    const Slice& line = buffer->GetLine(coord.line);
 
     // "ptr" will be the index of first non whitespace character.
     int ptr = line.start, buffsize = buffer->GetSize();
@@ -376,13 +376,13 @@ void Document::CursorHome() {
       if (buffer->At(ptr) != ' ' && buffer->At(ptr) != '\t') break;
     }
 
-    if (coord.col == 0 || coord.col > ptr - line.start) {
+    if (coord.character == 0 || coord.character > ptr - line.start) {
       cursor.SetIndex(ptr);
     } else {
       cursor.SetIndex(line.start);
     }
 
-    cursor.UpdateColumn();
+    cursor.UpdateIntendedColumn();
   }
   cursors.Changed();
   ClearCompletionItems();
@@ -393,9 +393,9 @@ void Document::CursorEnd() {
   for (Cursor& cursor : cursors.Get()) {
     cursor.ClearSelection();
     Coord coord = cursor.GetCoord();
-    const Slice& line = buffer->GetLine(coord.row);
+    const Slice& line = buffer->GetLine(coord.line);
     cursor.SetIndex(line.end);
-    cursor.UpdateColumn();
+    cursor.UpdateIntendedColumn();
   }
   cursors.Changed();
   ClearCompletionItems();
@@ -414,7 +414,7 @@ void Document::SelectRight() {
       }
     }
 
-    cursor.UpdateColumn();
+    cursor.UpdateIntendedColumn();
   }
   cursors.Changed();
   ClearCompletionItems();
@@ -433,7 +433,7 @@ void Document::SelectLeft() {
       }
     }
 
-    cursor.UpdateColumn();
+    cursor.UpdateIntendedColumn();
   }
   cursors.Changed();
   ClearCompletionItems();
@@ -452,13 +452,13 @@ void Document::SelectUp() {
       cursor.SetSelectionStart(cursor_index);
     }
 
-    if (coord.row == 0) {
+    if (coord.line == 0) {
       cursor.SetIndex(0);
-      cursor.UpdateColumn();
+      cursor.UpdateIntendedColumn();
       continue;
     }
 
-    int index = buffer->ColumnToIndex(cursor.GetColumn(), coord.row-1);
+    int index = buffer->ColumnToIndex(cursor.GetIntendedColumn(), coord.line-1);
     cursor.SetIndex(index);
 
     if (cursor.GetSelectionStart() == cursor.GetIndex()) {
@@ -479,20 +479,20 @@ void Document::SelectDown() {
     int buffsz = buffer->GetSize();
 
     // Edge case, don't select anything just return.
-    if (coord.row == line_count - 1 && cursor_index == buffsz) continue;
+    if (coord.line == line_count - 1 && cursor_index == buffsz) continue;
 
     if (!cursor.HasSelection()) {
       cursor.SetSelectionStart(cursor_index);
     }
 
-    if (coord.row == line_count - 1) {
+    if (coord.line == line_count - 1) {
       Slice last_line = buffer->GetLine(line_count-1);
       cursor.SetIndex(last_line.end);
-      cursor.UpdateColumn();
+      cursor.UpdateIntendedColumn();
       continue;
     }
 
-    int index = buffer->ColumnToIndex(cursor.GetColumn(), coord.row+1);
+    int index = buffer->ColumnToIndex(cursor.GetIntendedColumn(), coord.line+1);
     cursor.SetIndex(index);
 
     if (cursor.GetSelectionStart() == cursor.GetIndex()) {
@@ -508,7 +508,7 @@ void Document::SelectDown() {
 void Document::SelectHome() {
   for (Cursor& cursor : cursors.Get()) {
     const Coord coord = cursor.GetCoord();
-    const Slice& line = buffer->GetLine(coord.row);
+    const Slice& line = buffer->GetLine(coord.line);
     const int index = cursor.GetIndex();
 
     if (!cursor.HasSelection()) {
@@ -521,13 +521,13 @@ void Document::SelectHome() {
       if (buffer->At(ptr) != ' ' && buffer->At(ptr) != '\t') break;
     }
 
-    if (coord.col == 0 || coord.col > ptr - line.start) {
+    if (coord.character == 0 || coord.character > ptr - line.start) {
       cursor.SetIndex(ptr);
     } else {
       cursor.SetIndex(line.start);
     }
 
-    cursor.UpdateColumn();
+    cursor.UpdateIntendedColumn();
 
     if (cursor.GetSelectionStart() == cursor.GetIndex()) {
       cursor.ClearSelection();
@@ -541,9 +541,9 @@ void Document::SelectHome() {
 void Document::SelectEnd() {
   for (Cursor& cursor : cursors.Get()) {
     Coord coord = cursor.GetCoord();
-    Slice line = buffer->GetLine(coord.row);
+    Slice line = buffer->GetLine(coord.line);
 
-    if (coord.col == (line.end-line.start)) continue;
+    if (coord.character == (line.end-line.start)) continue;
 
     int cursor_index = cursor.GetIndex();
     if (!cursor.HasSelection()) {
@@ -551,7 +551,7 @@ void Document::SelectEnd() {
     }
 
     cursor.SetIndex(line.end);
-    cursor.UpdateColumn();
+    cursor.UpdateIntendedColumn();
 
     if (cursor.GetSelectionStart() == cursor.GetIndex()) {
       cursor.ClearSelection();

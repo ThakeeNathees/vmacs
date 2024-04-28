@@ -92,10 +92,18 @@ typedef std::string String;
 typedef std::string_view StringView;
 
 
+// The coordinate inside a buffer, we can't use row, col since the tab character
+// span over multiple columns.
+typedef struct {
+  int line;
+  int character;
+} Coord;
+
+
 typedef struct {
   int row;
   int col;
-} Coord;
+} Position;
 
 
 typedef struct {
@@ -256,7 +264,7 @@ public:
 
 
 // TODO: Define a Config class.
-#define TABSIZE 4
+#define TABSIZE_ 4
 
 
 unsigned constexpr ConstHash(char const* input) {

@@ -177,7 +177,7 @@ void DocPane::EnsureCursorOnView() {
   // Note that the col of Coord is not the view column, and cursor.GetColumn()
   // will return the column it wants go to and not the column it actually is.
   const Cursor& cursor = document->cursors.GetPrimaryCursor();
-  int row = cursor.GetCoord().row;
+  int row = cursor.GetCoord().line;
   int col = document->buffer->IndexToColumn(cursor.GetIndex());
 
   if (col <= view_start.col) {
@@ -194,12 +194,22 @@ void DocPane::EnsureCursorOnView() {
 }
 
 
-void DocPane::Draw(FrameBuffer buff, Coord pos, Size area) {
+void DocPane::Draw(FrameBuffer buff, Position pos, Size area) {
   DrawBuffer(buff, pos, area);
+  DrawAutoCompletions(buff, pos);
+
+  // Draw a spinning indicator yell it's re-drawn.
+  // ⡿ ⣟ ⣯ ⣷ ⣾ ⣽ ⣻ ⢿
+  static int curr = 0;
+  int icons[] = { 0x287f, 0x28df, 0x28ef, 0x28f7, 0x28fe, 0x28fd, 0x28fb, 0x28bf };
+  int icon_count = sizeof icons / sizeof *icons;
+  if (curr >= icon_count) curr = 0;
+  SET_CELL(buff, 0, area.height-1, icons[curr++], 0xffffff, 0, 0); // FIXME:
+
 }
 
 
-void DocPane::DrawBuffer(FrameBuffer buff, Coord pos, Size area) {
+void DocPane::DrawBuffer(FrameBuffer buff, Position pos, Size area) {
   ASSERT(this->document != nullptr, OOPS);
 
   // Update our text area so we'll know about the viewing area when we're not
@@ -249,14 +259,12 @@ void DocPane::DrawBuffer(FrameBuffer buff, Coord pos, Size area) {
     // character or after the EOL of the current line. In that case we draw the
     // rest half of the tab character and start from the next character. we'll
     // use this variable to keep track of how many columns have trimmed.
+    //
+    // col_delta will be the number of spaces before the current view column,
+    // so we'll draw the rest of the spaces which is tabsize - col_delta;
     int col_delta = 0;
     int index = document->buffer->ColumnToIndex(view_start.col, line_index, &col_delta);
-    ASSERT(col_delta >= 0, OOPS);
-
-    // // FIXME(BUG): Use the ColumnToIndex bellow and consider tabs.
-    // // Index of the current character we're displaying.
-    // // int index = document->buffer->ColumnToIndex(view_start.col, line_index);
-    // int index = line.start + view_start.col;
+    if (col_delta > 0) col_delta = TABSIZE_ - col_delta;
 
     // x is the current relative x coordinate from pos we're drawing.
     int x = 0;
@@ -268,7 +276,6 @@ void DocPane::DrawBuffer(FrameBuffer buff, Coord pos, Size area) {
       Color fg   = color_text;
       Color bg   = color_bg;
       int attrib = 0;
-
 
       // Get teh syntax highlighting of the character. Note that the background
       // color is fetched from theme (not from syntax highlighter).
@@ -332,8 +339,10 @@ void DocPane::DrawBuffer(FrameBuffer buff, Coord pos, Size area) {
 
       // If it's a tab character we'll draw more white spaces.
       if (istab) {
+        int space_count = TABSIZE_ - document->buffer->IndexToColumn(index) % TABSIZE_;
+        space_count -= 1; // Since the tab character is drawn already above.
         bg = (in_selection) ? color_sel : color_bg; // Don't draw cursor on all the cells.
-        for (int _ = 0; _ < TABSIZE-1; _++) {
+        for (int _ = 0; _ < space_count; _++) {
           SET_CELL(buff, pos.col+x, pos.row+y, ' ', fg, bg, attrib);
           x++;
         }
@@ -364,16 +373,6 @@ void DocPane::DrawBuffer(FrameBuffer buff, Coord pos, Size area) {
     } // End of drawing a character.
 
   } // End of drawing a line.
-
-  DrawAutoCompletions(buff);
-
-  // Draw a spinning indicator yell it's re-drawn.
-  // ⡿ ⣟ ⣯ ⣷ ⣾ ⣽ ⣻ ⢿
-  static int curr = 0;
-  int icons[] = { 0x287f, 0x28df, 0x28ef, 0x28f7, 0x28fe, 0x28fd, 0x28fb, 0x28bf };
-  int icon_count = sizeof icons / sizeof *icons;
-  if (curr >= icon_count) curr = 0;
-  SET_CELL(buff, 0, area.height-1, icons[curr++], color_text, color_bg, 0);
 
 }
 
@@ -409,7 +408,7 @@ static const int completion_kind_count = sizeof completion_kind_nerd_icon / size
 
 
 // FIXME: This method is not clean.
-void DocPane::DrawAutoCompletions(FrameBuffer buff) {
+void DocPane::DrawAutoCompletions(FrameBuffer buff, Position docpos) {
 
   std::vector<CompletionItem>* completion_items = nullptr;
   std::unique_lock<std::mutex> lock_completions = document->GetCompletionItems(&completion_items);
@@ -448,15 +447,14 @@ void DocPane::DrawAutoCompletions(FrameBuffer buff) {
 
   // FIXME: The value is hardcoded (without a limit, the dropdown takes all the spaces).
   int count_items = MIN(20, completion_items->size());
-  int count_lines_above_cursor = cursor_coord.row - view_start.row;
-  int count_lines_bellow_cursor = view_start.row + text_area.height - cursor_coord.row - 1;
+  int count_lines_above_cursor = cursor_coord.line - view_start.row;
+  int count_lines_bellow_cursor = view_start.row + text_area.height - cursor_coord.line - 1;
 
   ASSERT(count_lines_above_cursor >= 0, OOPS);
   ASSERT(count_lines_bellow_cursor >= 0, OOPS);
 
   // Determine where we'll be drawgin the popup.
   bool drawing_bellow_cursor = true;
-  Coord coord; // Wil be used to store the current drawing position.
 
   if (count_items > count_lines_bellow_cursor) {
     drawing_bellow_cursor = (count_lines_bellow_cursor >= count_lines_above_cursor);
@@ -477,21 +475,24 @@ void DocPane::DrawAutoCompletions(FrameBuffer buff) {
     max_len = MAX(max_len, item_len);
   }
 
+
+  // ---------------------------------------------------------------------------
+
+  // Prepare the coord for drawing the completions.
   int popup_start_index = (BETWEEN(0, document->completion_start_index, document->buffer->GetSize()))
     ? document->completion_start_index
     : document->GetWordBeforeIndex(cursor_index);
-  const Coord popup_start = document->buffer->IndexToCoord(popup_start_index);
-  
+  Position popup_start;
+  popup_start.col = document->buffer->IndexToColumn(popup_start_index) - view_start.col;
+  popup_start.row = document->buffer->IndexToCoord(popup_start_index).line - view_start.row;
 
-  // Prepare the coord for drawing the completions.
-  coord = popup_start;
-  if (coord.row != cursor_coord.row) {
-    coord.row = cursor_coord.row;
-    coord.col = 0;
-  }
-  coord.row -= view_start.row;
-  coord.col -= view_start.col;
-  coord.row += (drawing_bellow_cursor) ? 1 : (-count_dispaynig_items);
+
+  // Current drawing position (relative to the docpos).
+  Position pos = {0, 0};
+
+  // Drawing the completion list.
+  pos = popup_start;
+  pos.row += (drawing_bellow_cursor) ? 1 : (-count_dispaynig_items);
 
   for (int i = 0; i < count_dispaynig_items; i++) {
     auto& item = (*completion_items)[i];
@@ -502,24 +503,28 @@ void DocPane::DrawAutoCompletions(FrameBuffer buff) {
 
     // FIXME: Draw a scroll bar.
     SET_CELL(
-        buff, coord.col, coord.row,
+        buff,
+        docpos.col + pos.col,
+        docpos.row + pos.row,
         completion_kind_nerd_icon[icon_index],
         popup_fg, bg, 0);
     SET_CELL(
-        buff, coord.col + 1, coord.row,
+        buff,
+        docpos.col + pos.col + 1,
+        docpos.row + pos.row,
         ' ',
         popup_fg, bg, 0);
     DrawTextLine(
         buff,
         item.label.c_str(),
-        coord.col + 2, // + becase we draw the icon above.
-        coord.row,
+        docpos.col + pos.col + 2, // + becase we draw the icon above.
+        docpos.row + pos.row,
         max_len,
         popup_fg,
         bg,
         0,
         true);
-    coord.row++;
+    pos.row++;
   }
 
   // TODO: Move the drawing of signature and completion list to it's own functions.
@@ -541,20 +546,16 @@ void DocPane::DrawAutoCompletions(FrameBuffer buff) {
   // TODO: Highlight current parameter and draw documentation about the parameter.
   // Prepare the coord for drawing the signature help.
   drawing_bellow_cursor = count_items == 0 || !drawing_bellow_cursor;
-  coord = popup_start;
-  if (coord.row != cursor_coord.row) {
-    coord.row = cursor_coord.row;
-    coord.col = 0;
-  }
-  coord.row -= view_start.row;
-  coord.col -= view_start.col;
-  coord.row += (drawing_bellow_cursor) ? 1 : -1;
+
+  // Prepare the coord for drawing the completions.
+  pos = popup_start;
+  pos.row += (drawing_bellow_cursor) ? 1 : -1;
 
   DrawTextLine(
       buff,
       si.label.c_str(),
-      coord.col,
-      coord.row,
+      docpos.col + pos.col,
+      docpos.row + pos.row,
       si.label.size(),
       popup_fg,
       popup_bg,
@@ -570,8 +571,8 @@ void DocPane::DrawAutoCompletions(FrameBuffer buff) {
   DrawTextLine(
       buff,
       param_label.c_str(),
-      coord.col + pi.label.start,
-      coord.row,
+      docpos.col + pos.col + pi.label.start,
+      docpos.row + pos.row,
       param_label.size(),
       param_active,
       popup_bg,

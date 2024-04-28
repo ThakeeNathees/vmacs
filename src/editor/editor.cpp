@@ -91,7 +91,7 @@ int Editor::MainLoop() {
   }
 
   // What a mess.
-  OpenDocument("/Users/thakeenathees/Desktop/thakee/repos/vmacs/src/document/buffer.cpp");
+  OpenDocument("/Users/thakeenathees/Desktop/thakee/repos/vmacs/build/main.cpp");
 
   // Async run event loop.
   std::thread event_loop([this]() { EventLoop(); });

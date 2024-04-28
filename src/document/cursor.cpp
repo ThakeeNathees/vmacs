@@ -24,8 +24,13 @@ Coord Cursor::GetCoord() const {
 }
 
 
-int Cursor::GetColumn() const {
-  return column;
+int Cursor::GetIntendedColumn() const {
+  return intended_column;
+}
+
+
+int Cursor::GetRealColumn() const {
+  return real_column;
 }
 
 
@@ -51,26 +56,22 @@ Slice Cursor::GetSelection() const {
 void Cursor::SetIndex(int index) {
   ASSERT(buffer != nullptr, OOPS);
   this->index = index;
-  this->coord = buffer->IndexToCoord(index); // Cache the coordinate.
+  coord = buffer->IndexToCoord(index); // Cache the coordinate.
+  real_column = buffer->IndexToColumn(index);
 }
 
 
-void Cursor::UpdateColumn() {
+void Cursor::UpdateIntendedColumn() {
   ASSERT(buffer != nullptr, OOPS);
-  Slice line = buffer->GetLine(coord.row);
-  ASSERT(0 <= coord.col && coord.col <= (line.end - line.start), OOPS);
-
-  int column = 0;
-  for (int i = line.start; i < index; i++) {
-    int c = buffer->At(i);
-    column += (c == '\t') ? TABSIZE : 1;
-  }
-  SetColumn(column);
+  Slice line = buffer->GetLine(coord.line);
+  ASSERT(0 <= coord.character && coord.character <= (line.end - line.start), OOPS);
+  int column = buffer->IndexToColumn(index);
+  SetIntendedColumn(column);
 }
 
 
-void Cursor::SetColumn(int column) {
-  this->column = column;
+void Cursor::SetIntendedColumn(int column) {
+  intended_column = column;
 }
 
 
@@ -86,7 +87,7 @@ void Cursor::ClearSelection() {
 
 bool Cursor::Equals(const Cursor& other) const {
   if (index != other.index) return false;
-  if (column != other.column) return false;
+  if (intended_column != other.intended_column) return false;
   if (HasSelection() != other.HasSelection()) return false;
   if (HasSelection() && selection_start != other.selection_start) return false;
   return true;
@@ -137,15 +138,15 @@ void MultiCursor::AddCursorDown() {
 
   // Coordinate of the last cursor.
   Coord coord = cursors[cursors.size() - 1].GetCoord();
-  if (coord.row == buffer->GetLineCount() - 1) return;
+  if (coord.line == buffer->GetLineCount() - 1) return;
 
-  int intended_col = cursors[0].GetColumn();
-  const Slice& next = buffer->GetLine(coord.row + 1);
-  int index = buffer->ColumnToIndex(intended_col, coord.row+1);
+  int intended_col = cursors[0].GetIntendedColumn();
+  const Slice& next = buffer->GetLine(coord.line + 1);
+  int index = buffer->ColumnToIndex(intended_col, coord.line+1);
   
   Cursor new_cursor(buffer);
   new_cursor.SetIndex(index);
-  new_cursor.UpdateColumn();
+  new_cursor.UpdateIntendedColumn();
   AddCursor(new_cursor);
 
   return;
@@ -163,15 +164,15 @@ void MultiCursor::AddCursorUp() {
 
   // Coordinate of the first cursor.
   Coord coord = cursors[0].GetCoord();
-  if (coord.row == 0) return;
+  if (coord.line == 0) return;
 
-  int intended_col = cursors[cursors.size() - 1].GetColumn();
-  const Slice& prev = buffer->GetLine(coord.row - 1);
-  int index = buffer->ColumnToIndex(intended_col, coord.row-1);
+  int intended_col = cursors[cursors.size() - 1].GetIntendedColumn();
+  const Slice& prev = buffer->GetLine(coord.line - 1);
+  int index = buffer->ColumnToIndex(intended_col, coord.line-1);
 
   Cursor new_cursor(buffer);
   new_cursor.SetIndex(index);
-  new_cursor.UpdateColumn();
+  new_cursor.UpdateIntendedColumn();
   AddCursor(new_cursor);
 
   return;
@@ -237,7 +238,7 @@ void MultiCursor::Changed() {
       if (s2.start < s1.end) { // Has collision.
         if (c1.GetIndex() == s1.end) {
           c1.SetIndex(s2.end);
-          c1.SetColumn(c2.GetColumn());
+          c1.SetIntendedColumn(c2.GetIntendedColumn());
           ASSERT(c1.GetSelectionStart() == s1.start, OOPS);
         } else {
           ASSERT(c1.GetIndex() == s1.start, OOPS);
