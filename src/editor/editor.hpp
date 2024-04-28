@@ -82,10 +82,10 @@ private:
   // Note that the bellow maps are "global" registry where, and if it's shared
   // and modified between multiple threads, they needs to be locked and unlocked.
   // properly (at the moment It's not doing that).
-  std::map<Uri, std::shared_ptr<Document>>                 documents;
-  std::map<std::string, std::shared_ptr<const Theme>>      themes;
-  std::map<LanguageId, std::shared_ptr<const Language>>    languages;
-  std::map<LspClientId, std::shared_ptr<const LspClient>>  lsp_clients;
+  std::map<std::string, std::shared_ptr<const Theme>>   themes;
+  std::map<LanguageId, std::shared_ptr<const Language>> languages;
+  std::map<Uri, std::shared_ptr<Document>>              documents;
+  std::map<LspClientId, std::shared_ptr<LspClient>>     lsp_clients;
 
   friend class Global;
 
@@ -94,6 +94,9 @@ private:
   void OnLspDiagnostics(const Uri&, uint32_t version, std::vector<Diagnostic>&&);
   void OnLspCompletion(const Uri&, bool is_incomplete, std::vector<CompletionItem>&&);
   void OnLspSignatureHelp(const Uri&, SignatureItems&&);
+
+  // Construct, configure, and register an lsp client.
+  void RegisterLspClient(const LspConfig& config);
 
   // TODO: These are subjected to change.
   std::shared_ptr<Document> OpenDocument(const std::string& path);

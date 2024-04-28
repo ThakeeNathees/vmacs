@@ -34,64 +34,38 @@ std::shared_ptr<Editor> Editor::Singleton() {
 
 // FIXME: This is temproary. Set current theme and get from there.
 const Theme* Global::GetCurrentTheme() {
-  return Editor::Singleton()->themes["dark_plus"].get();
+  return Editor::Singleton()->themes["catppuccin_frappe"].get();
 }
 
 
-// FIXME: move this to somewhere else.
-extern "C" const TSLanguage* tree_sitter_c(void);
-extern "C" const TSLanguage* tree_sitter_javascript(void);
-
 Editor::Editor() {
-
-
-  // FIXME: Implement a proper language loading system with support to load from
-  // dynamic linked library.
-  {
-    std::shared_ptr<Language> lang_c = std::make_shared<Language>();
-    lang_c->id = "c";
-    lang_c->data = tree_sitter_c();
-    uint32_t error_offset;
-    TSQueryError err;
-    const char* source =
-  #include "../resources/queries/c_highlight.scm.inl"
-      ;
-    TSQuery* query = ts_query_new(
-      lang_c->data,
-      source,
-      strlen(source),
-      &error_offset,
-      &err
-    );
-    lang_c->query_highlight = query;
-    languages["c"] = lang_c;
-  }
-
-  {
-    std::shared_ptr<Language> lang_cpp = std::make_shared<Language>();
-    lang_cpp->id = "cpp";
-    lang_cpp->data = tree_sitter_c();
-    uint32_t error_offset;
-    TSQueryError err;
-    const char* source =
-  #include "../resources/queries/c_highlight.scm.inl"
-      ;
-    TSQuery* query = ts_query_new(
-      lang_cpp->data,
-      source,
-      strlen(source),
-      &error_offset,
-      &err
-    );
-    lang_cpp->query_highlight = query;
-    languages["cpp"] = lang_cpp;
-  }
 
   // Load the themes.
   std::map<std::string, Json> theme_data = Platform::LoadThemes();
   for (auto& it : theme_data) {
     themes[it.first] = std::make_shared<Theme>(it.second);
   }
+
+  // Load languages.
+  for (const LanguageLoadResult& result : Platform::LoadLanguages()) {
+    std::shared_ptr<Language> lang = std::make_shared<Language>();
+    if (result.query_highlight != NULL) {
+      if (result.tree_sitter_loader) lang->data = result.tree_sitter_loader();
+      uint32_t error_offset; TSQueryError err; // TODO: check for errors.
+      TSQuery* query = ts_query_new(
+          lang->data, // Note that the loader should be called above.
+          result.query_highlight,
+          strlen(result.query_highlight),
+          &error_offset, &err);
+      lang->query_highlight = query;
+    }
+    languages[result.language_id] = lang;
+  }
+
+  // Register LSP clients. TODO(grep): load the config from RESLOAD.
+  LspConfig config;
+  config.client = "clangd";
+  RegisterLspClient(config);
 }
 
 
@@ -209,17 +183,20 @@ std::shared_ptr<Document> Editor::OpenDocument(const std::string& path) {
 
   std::shared_ptr<Buffer> buff = std::make_shared<Buffer>(text);
   std::shared_ptr<Document> document = std::make_shared<Document>(uri, buff);
+  documents[uri] = document;
 
   document->SetLanguage(languages["cpp"]);
-
-  LspConfig config;
-  config.server = "clangd";
-
-  documents[uri] = document;
   docpane.SetDocument(document);
+  document->SetLspClient(lsp_clients["clangd"]);
 
-  // FIXME: the document itself request for the client from the editor.
-  auto client = std::make_shared<LspClient>(config);
+  return document;
+}
+
+
+void Editor::RegisterLspClient(const LspConfig& config) {
+  std::shared_ptr<LspClient> client = std::make_shared<LspClient>(config);
+
+  // Register callbacks.
   client->cb_diagnostics = [this](const Uri& uri, uint32_t version, std::vector<Diagnostic>&& diagnostics) {
     this->OnLspDiagnostics(uri, version, std::move(diagnostics));
   };
@@ -229,11 +206,13 @@ std::shared_ptr<Document> Editor::OpenDocument(const std::string& path) {
   client->cb_signature_help = [this](const Uri& uri, SignatureItems&& items) {
     this->OnLspSignatureHelp(uri, std::move(items));
   };
-  lsp_clients["clangd"] = client;
-  client->StartServer(std::nullopt);
-  document->SetLspClient(client);
 
-  return document;
+  // Register the client.
+  lsp_clients[config.client] = client;
+
+  // FIXME(grep): We shouldn't start all the servers at the start. Move this to
+  // somewhere else.
+  client->StartServer(std::nullopt);
 }
 
 

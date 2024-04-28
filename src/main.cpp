@@ -33,14 +33,10 @@
 using Json = nlohmann::json;
 
 
-#include <filesystem>
-namespace fs = std::filesystem;
-
-
 void lsp_test() {
 
   LspConfig config;
-  config.server = "clangd";
+  config.client = "clangd";
 
   LspClient client(config);
   client.StartServer(std::nullopt);

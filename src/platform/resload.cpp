@@ -10,6 +10,13 @@
 #include "platform.hpp"
 
 #include "resources/themes.xmacro.inl"
+#include "resources/lang.xmacro.inl"
+
+#define X(id, q_highlight, loader) \
+  extern "C" const TSLanguage* loader(void);
+  LANGUAGE(X)
+#undef X
+
 
 std::map<std::string, Json> Platform::LoadThemes() {
 
@@ -22,24 +29,30 @@ std::map<std::string, Json> Platform::LoadThemes() {
       Json data = Json::parse(theme_source); \
       themes[theme_name] = std::move(data);  \
     } catch (std::exception) {}
-  THEMES(X)
+  THEMES(X);
   #undef X
-
-  // std::vector<std::string> dir_items;
-  // if (!ListDirectory(&dir_items, path)) return std::move(themes);
-
-  // for (const std::string& filename : dir_items) {
-  //   std::string text;
-  //   if (!EndsWith(filename, ".json")) continue;
-  //   if(!ReadFile(&text, path / filename)) continue; // Error reading file.
-  //   try {
-  //     Json data = Json::parse(text);
-  //     std::string theme_name = filename.substr(0, filename.find_last_of("."));
-  //     themes[theme_name] = std::move(data);
-  //   } catch (std::exception) {} // TODO: log the editor it's failed (invalid json).
-  // }
 
   return std::move(themes);
 }
 
+
+// TODO: Implement dynamic loading of ".so", ".dll" files in the runtime to
+// support custom langauges outside of what we ship.
+std::vector<LanguageLoadResult> Platform::LoadLanguages() {
+
+  std::vector<LanguageLoadResult> languages;
+
+  #define X(id, q_highlight, loader)       \
+  do {                                     \
+    LanguageLoadResult lang;               \
+    lang.language_id        = id;          \
+    lang.query_highlight    = q_highlight; \
+    lang.tree_sitter_loader = loader;      \
+    languages.push_back(lang);             \
+  } while (false);
+    LANGUAGE(X);
+  #undef X
+
+  return std::move(languages);
+}
 

@@ -9,7 +9,17 @@
 #pragma once
 
 #include "core/core.hpp"
+#include <tree_sitter/api.h>
 
+// The language parser loading function.
+typedef const TSLanguage* (*TreeSitterLoader)(void);
+
+// The will be the result after loading a language resource.
+struct LanguageLoadResult {
+  const char* language_id;
+  TreeSitterLoader tree_sitter_loader;
+  const char* query_highlight;
+};
 
 // IPC callback functions.
 typedef std::function<void(void* user_data, const char* buff, size_t length)> FuncStdoutCallback;
@@ -46,9 +56,12 @@ public:
   // Os independent but still we need this from the host system.
   // --------------------------------------------------------------------------
 
-  // Load all the themes in the themes config directory and return them as json
-  // object, that will be used to construct the Theme instance.
+  // Load all the themes in memory or from some config directory and return them
+  // as json object, that will be used to construct the Theme instance.
   static std::map<std::string, Json> LoadThemes();
+
+  // Load all the languages in memory or from some config directory.
+  static std::vector<LanguageLoadResult> LoadLanguages();
 
   // TODO: Implement error type for reading since it could be permission error
   // or invalid path or already in used etc.

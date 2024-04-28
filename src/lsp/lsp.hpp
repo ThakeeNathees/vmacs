@@ -161,8 +161,9 @@ typedef std::function<void(const Uri&, bool is_incomplete, std::vector<Completio
 typedef std::function<void(const Uri&, SignatureItems&&)> CallbackSignatureHelp;
 
 
+// Currently only the IPC method is supported.
 struct LspConfig {
-  std::string server; // Currently only the IPC method is supported.
+  LspClientId client; // Client of which server (ccls, clangd, jedi, etc).
 };
 
 
