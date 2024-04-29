@@ -252,6 +252,9 @@ private:
 class Global {
 public:
 
+  // Signale the editor to draw to the frame buffer since something is changed.
+  static void ReDraw();
+
   // Since the resources are loaded at the start of the application and only
   // released at the very end, it's safe to use the raw pointers.
   static const Theme* GetCurrentTheme();

@@ -32,6 +32,11 @@ std::shared_ptr<Editor> Editor::Singleton() {
 }
 
 
+void Global::ReDraw() {
+  Editor::Singleton()->redraw = true;
+}
+
+
 // FIXME: This is temproary. Set current theme and get from there.
 const Theme* Global::GetCurrentTheme() {
   return Editor::Singleton()->themes["catppuccin_frappe"].get();
@@ -70,12 +75,21 @@ Editor::Editor() {
 }
 
 
-Editor::~Editor() {
-}
+Editor::~Editor() { }
 
 
 void Editor::SetFrontEnd(std::unique_ptr<FrontEnd> frontend) {
   this->frontend = std::move(frontend);
+}
+
+
+uint8_t IEditor::RgbToXterm(uint32_t rgb) {
+  return ::RgbToXterm(rgb);
+}
+
+
+uint32_t IEditor::XtermToRgb(uint8_t xterm) {
+  return ::XtermToRgb(xterm);
 }
 
 
@@ -110,28 +124,19 @@ int Editor::MainLoop() {
     // Handle Events.
     while (!event_queue.Empty()) {
       docpane.HandleEvent(event_queue.Dequeue());
+      redraw = true;
     }
 
     // Update call.
     docpane.Update();
 
-    // FIXME: This needs to be re-factored and cleaned up.
-    // Draw to the front end buffer.
-    FrameBuffer buff = frontend->GetDrawBuffer();
-
-    // uint8_t color_bg = 0x272829;
-    Color color_bg = Global::GetCurrentTheme()->GetStyleOr("ui.background", {.fg=0, .bg=0xffffff, .attrib=0}).bg;
-
-    // Clean the buffer.
-    for (int i    = 0; i < buff.width*buff.height; i++) {
-      Cell& cell  = buff.cells[i];
-      cell.ch     = ' ';
-      cell.fg     = 0;
-      cell.bg     = color_bg;
-      cell.attrib = 0;
-    }
-    docpane.Draw(buff, {0,0}, {buff.width, buff.height});
-    frontend->Display(color_bg); // FIXME: background color for raylib.
+    // FIXME: Because of raylib we can't do this. The fron end should own the main
+    // loop and use the eidtor as a instance to run at each iteration.
+    //
+    // Draw call.
+    // if (redraw)
+      Draw();
+    redraw = false;
 
     // Wait till we reach the frame rate limit.
     int now = GetElapsedTime();
@@ -165,13 +170,25 @@ void Editor::EventLoop() {
 }
 
 
-uint8_t IEditor::RgbToXterm(uint32_t rgb) {
-  return ::RgbToXterm(rgb);
-}
+void Editor::Draw() {
+  // FIXME: This needs to be re-factored and cleaned up.
+  // Draw to the front end buffer.
+  FrameBuffer buff = frontend->GetDrawBuffer();
 
+  // uint8_t color_bg = 0x272829;
+  Color color_bg = Global::GetCurrentTheme()->GetStyleOr("ui.background", {.fg=0, .bg=0xffffff, .attrib=0}).bg;
 
-uint32_t IEditor::XtermToRgb(uint8_t xterm) {
-  return ::XtermToRgb(xterm);
+  // Clean the buffer.
+  for (int i    = 0; i < buff.width*buff.height; i++) {
+    Cell& cell  = buff.cells[i];
+    cell.ch     = ' ';
+    cell.fg     = 0;
+    cell.bg     = color_bg;
+    cell.attrib = 0;
+  }
+  docpane.Draw(buff, {0,0}, {buff.width, buff.height});
+  frontend->Display(color_bg); // FIXME: background color for raylib.
+
 }
 
 

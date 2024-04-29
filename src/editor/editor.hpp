@@ -76,6 +76,7 @@ private:
   DocPane docpane;
   std::unique_ptr<FrontEnd> frontend;
 
+  std::atomic<bool> redraw = true;
   std::atomic<bool> running = true;
   ThreadSafeQueue<Event> event_queue;
 
@@ -99,12 +100,14 @@ private:
   // Construct, configure, and register an lsp client.
   void RegisterLspClient(const LspConfig& config);
 
-  // TODO: These are subjected to change.
+  // FIXME: remove this mess.
   std::shared_ptr<Document> OpenDocument(const std::string& path);
 
   // blocking loop that collect event (blocking) from the front end and push it
   // to our event queue. Run this asyncronusly.
   void EventLoop();
+
+  void Draw(); // The draw call for each iteration.
 
 };
 

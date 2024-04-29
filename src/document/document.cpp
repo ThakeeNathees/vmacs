@@ -150,12 +150,11 @@ void Document::PushDiagnostics(uint32_t version, std::vector<Diagnostic>&& diagn
       this->diagnostics.clear();
     }
   }
+  Global::ReDraw();
 }
 
 
 void Document::PushCompletions(bool is_incomplete, std::vector<CompletionItem>&& items) {
-
-
   {
     // This will clear our current diagnostics and update with the new values.
     std::lock_guard<std::mutex> lock(mutex_completions);
@@ -174,6 +173,7 @@ void Document::PushCompletions(bool is_incomplete, std::vector<CompletionItem>&&
         });
 
   }
+  Global::ReDraw();
 }
 
 
@@ -182,6 +182,7 @@ void Document::PushSignatureHelp(SignatureItems&& items) {
     std::lock_guard<std::mutex> lock(mutex_signature_help);
     this->signatures_helps = items;
   }
+  Global::ReDraw();
 }
 
 

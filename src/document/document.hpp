@@ -442,8 +442,8 @@ public:
   // on suggestion or, just moved away from the current position.
   void ClearCompletionItems();
 
-  // If any language server send notification the editor will recieve it first
-  // and send to the corresponded document.
+  // Note that these methods are called from a different thread and we need to
+  // re-draw the frame.
   void PushDiagnostics(uint32_t version, std::vector<Diagnostic>&& diagnostics);
   void PushCompletions(bool is_incomplete, std::vector<CompletionItem>&& items);
   void PushSignatureHelp(SignatureItems&& items);
