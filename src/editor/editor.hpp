@@ -54,7 +54,13 @@ private:
   void EnsureCursorOnView();
 
   void DrawBuffer(FrameBuffer buff, Position pos, Size area);
-  void DrawAutoCompletions(FrameBuffer buff, Position docpos); // FIXME: split and draw primitive.
+  void DrawAutoCompletions(FrameBuffer buff, Position docpos);
+
+  // Check the given index is within selection or inside the cursor and sets the pointers.
+  // This is needed to set the background color of a cell and re-usable.
+  void CheckCellStatus(int index, bool* in_cursor, bool* in_selection);
+  void ComputeCompletionPosition();
+
 };
 
 

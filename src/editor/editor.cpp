@@ -188,7 +188,6 @@ void Editor::Draw() {
   }
   docpane.Draw(buff, {0,0}, {buff.width, buff.height});
   frontend->Display(color_bg); // FIXME: background color for raylib.
-
 }
 
 

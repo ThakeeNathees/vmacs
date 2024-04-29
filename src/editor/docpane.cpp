@@ -209,38 +209,49 @@ void DocPane::Draw(FrameBuffer buff, Position pos, Size area) {
 }
 
 
+void DocPane::CheckCellStatus(int index, bool* in_cursor, bool* in_selection) {
+  ASSERT(in_cursor != nullptr, OOPS);
+  ASSERT(in_selection != nullptr, OOPS);
+  *in_cursor = false;
+  *in_selection = false;
+  for (const Cursor& cursor : document->cursors.Get()) {
+    if (index == cursor.GetIndex()) *in_cursor = true;
+    Slice selection = cursor.GetSelection();
+    if (selection.start <= index && index < selection.end) {
+      *in_selection = true;
+    }
+  }
+}
+
+
 void DocPane::DrawBuffer(FrameBuffer buff, Position pos, Size area) {
   ASSERT(this->document != nullptr, OOPS);
 
-  // Update our text area so we'll know about the viewing area when we're not
-  // drawing, needed to ensure the cursors are on the view area, etc.
-  text_area = area;
-
-  const Theme* theme = Global::GetCurrentTheme();
-
   // FIXME: Move this to themes.
   // --------------------------------------------------------------------------
+  const Theme* theme = Global::GetCurrentTheme();
   Color color_red           = 0xff0000;
   Color color_yellow        = 0xcccc2d;
   Color color_black         = 0x000000;
   Color color_text          = 0xffffff;
   Color color_tab_indicator = 0x656966;
-
   const Style style_default = {.fg = 0, .bg = 0xffffff, .attrib = 0};
   Style style;
   #define GET_STYLE(style_name) \
     (theme->GetStyle(&style, style_name) ? style : style_default)
-
   Color color_cursor_fg     = GET_STYLE("ui.cursor.primary").fg;
   Color color_cursor_bg     = GET_STYLE("ui.cursor.primary").bg;
   Color color_sel           = GET_STYLE("ui.selection").bg;
   Color color_bg            = GET_STYLE("ui.background").bg;
-
   // FIXME: Move this somewhere general.
   // We draw an indicator for the tab character.
   // 0x2102 : '→'
   int tab_indicator = 0x2192;
   // --------------------------------------------------------------------------
+
+  // Update our text area so we'll know about the viewing area when we're not
+  // drawing, needed to ensure the cursors are on the view area, etc.
+  text_area = area;
 
   int line_count = document->buffer->GetLineCount(); // Total lines in the buffer.
   const std::vector<Style>& highlights = document->syntax.GetHighlights();
@@ -255,6 +266,9 @@ void DocPane::DrawBuffer(FrameBuffer buff, Position pos, Size area) {
     // Current line we're drawing.
     Slice line = document->buffer->GetLine(line_index);
 
+    // x is the current relative x coordinate from 'pos' we're drawing.
+    int x = 0;
+
     // If the current view_start column is either at at the middle of a tab
     // character or after the EOL of the current line. In that case we draw the
     // rest half of the tab character and start from the next character. we'll
@@ -264,11 +278,26 @@ void DocPane::DrawBuffer(FrameBuffer buff, Position pos, Size area) {
     // so we'll draw the rest of the spaces which is tabsize - col_delta;
     int col_delta = 0;
     int index = document->buffer->ColumnToIndex(view_start.col, line_index, &col_delta);
-    if (col_delta > 0) col_delta = TABSIZE_ - col_delta;
 
-    // x is the current relative x coordinate from pos we're drawing.
-    int x = 0;
+    if (col_delta > 0) {
+      col_delta = TABSIZE_ - col_delta;
+      bool in_cursor, in_selection;
+      CheckCellStatus(index, &in_cursor, &in_selection);
 
+      // If the line starts at the middle of a tab character or after the end of
+      // line draw the rest of the tab (newline will be handled as well).
+      while (col_delta--) {
+        // If cursor in the character  we don't want to draw the cursor for
+        // the rest of the white spaces.
+        int bg = (in_selection) ? color_sel : color_bg;
+        SET_CELL(buff, pos.col+x, pos.row+y, ' ', color_text, color_bg, 0);
+        x++;
+      }
+      index++;
+    }
+
+
+    // Iterate over the characters in the line and draw.
     while (x < area.width && index <= line.end) {
 
       // Current cell configuration.
@@ -303,34 +332,13 @@ void DocPane::DrawBuffer(FrameBuffer buff, Position pos, Size area) {
       if (diagnos != nullptr) attrib |= VMACS_CELL_UNDERLINE;
 
 
-      // Check if current cell under in cursor / selection. This override all the
-      // above style.
-      bool in_selection = false;
-      bool in_cursor    = false;
-      for (const Cursor& cursor : document->cursors.Get()) {
-        if (index == cursor.GetIndex()) in_cursor = true;
-        Slice selection = cursor.GetSelection();
-        if (selection.start <= index && index < selection.end) {
-          in_selection = true;
-        }
-      }
+      // Check if the current cell is under cursor or selection, this will override
+      // all the themes above.
+      bool in_cursor;
+      bool in_selection;
+      CheckCellStatus(index, &in_cursor, &in_selection);
       if (in_cursor && cursor_blink_show) fg = color_cursor_fg,  bg = color_cursor_bg;
       else if (in_selection) bg = color_sel;
-
-
-      // If the line starts at the middle of a tab character or after the end of
-      // line draw the rest of the tab (newline will be handled as well).
-      if (col_delta > 0) {
-        while (col_delta--) {
-          // If cursor in the character  we don't want to draw the cursor for
-          // the rest of the white spaces.
-          bg = (in_selection) ? color_sel : color_bg;
-          SET_CELL(buff, pos.col+x, pos.row+y, ' ', fg, bg, attrib);
-          x++;
-        }
-        index++;
-        continue; // Index updated to the next character, go back.
-      }
 
 
       // Draw the character finally.
@@ -376,6 +384,12 @@ void DocPane::DrawBuffer(FrameBuffer buff, Position pos, Size area) {
 
 }
 
+
+void DocPane::ComputeCompletionPosition() {
+
+}
+
+
 // FIXME: Move this, add color value.
 static const int completion_kind_nerd_icon[] = {
   0xea93, //  Text          
@@ -410,17 +424,7 @@ static const int completion_kind_count = sizeof completion_kind_nerd_icon / size
 // FIXME: This method is not clean.
 void DocPane::DrawAutoCompletions(FrameBuffer buff, Position docpos) {
 
-  std::vector<CompletionItem>* completion_items = nullptr;
-  std::unique_lock<std::mutex> lock_completions = document->GetCompletionItems(&completion_items);
-
-  SignatureItems* signature_helps;
-  std::unique_lock<std::mutex> lock_signature = document->GetSignatureHelp(&signature_helps);
-
-  ASSERT(completion_items != nullptr, OOPS);
-  ASSERT(signature_helps != nullptr, OOPS);
-  if (completion_items->size() == 0 && signature_helps->signatures.size() == 0) return;
-
-  // FIXME: Cleanup this mess.
+  // FIXME: Cleanup this mess.-------------------------------------------------
   const Theme* theme = Global::GetCurrentTheme();
   Style style;
   Style style_default = {.fg = 0, .bg = 0xffffff, .attrib = 0};
@@ -429,25 +433,33 @@ void DocPane::DrawAutoCompletions(FrameBuffer buff, Position docpos) {
   Color popup_fg     = GET_STYLE("ui.popup").fg;
   Color popup_bg     = GET_STYLE("ui.popup").bg;
   Color param_active = GET_STYLE("type").fg;
+  //---------------------------------------------------------------------------
 
-  // TODO: Currently we trigger completion every time a triggering character is
-  // pressed, so no need to filter the match ourself. like this:
-  //
-  //   word_under_cursor = document.GetWordUnderCursor();
-  //   for (completion_item : completion_items) {
-  //     if (!FuzzyMatch(word_under_cursor, completion_item.text)) {
-  //       completion_items.remove(completion_item);
-  //     }
-  //   }
-  //
+
+  // Get the completion items.
+  std::vector<CompletionItem>* completion_items = nullptr;
+  std::unique_lock<std::mutex> lock_completions = document->GetCompletionItems(&completion_items);
+  ASSERT(completion_items != nullptr, OOPS);
+
+  // Get signature help.
+  SignatureItems* signature_helps;
+  std::unique_lock<std::mutex> lock_signature = document->GetSignatureHelp(&signature_helps);
+  ASSERT(signature_helps != nullptr, OOPS);
+
+  if (completion_items->size() == 0 &&
+      signature_helps->signatures.size() == 0) return;
+
+  // ---------------------------------------------------------------------------
+  // Determine the size and the position to draw the list.
+  // ---------------------------------------------------------------------------
 
   // Cursor coordinate.
   Coord cursor_coord = document->cursors.GetPrimaryCursor().GetCoord();
   int cursor_index = document->cursors.GetPrimaryCursor().GetIndex();
 
   // FIXME: The value is hardcoded (without a limit, the dropdown takes all the spaces).
-  int count_items = MIN(20, completion_items->size());
-  int count_lines_above_cursor = cursor_coord.line - view_start.row;
+  int count_items               = MIN(20, completion_items->size());
+  int count_lines_above_cursor  = cursor_coord.line - view_start.row;
   int count_lines_bellow_cursor = view_start.row + text_area.height - cursor_coord.line - 1;
 
   ASSERT(count_lines_above_cursor >= 0, OOPS);
@@ -475,9 +487,6 @@ void DocPane::DrawAutoCompletions(FrameBuffer buff, Position docpos) {
     max_len = MAX(max_len, item_len);
   }
 
-
-  // ---------------------------------------------------------------------------
-
   // Prepare the coord for drawing the completions.
   int popup_start_index = (BETWEEN(0, document->completion_start_index, document->buffer->GetSize()))
     ? document->completion_start_index
@@ -486,11 +495,13 @@ void DocPane::DrawAutoCompletions(FrameBuffer buff, Position docpos) {
   popup_start.col = document->buffer->IndexToColumn(popup_start_index) - view_start.col;
   popup_start.row = document->buffer->IndexToCoord(popup_start_index).line - view_start.row;
 
-
   // Current drawing position (relative to the docpos).
   Position pos = {0, 0};
 
-  // Drawing the completion list.
+  // ---------------------------------------------------------------------------
+  // Drawing auto completion list.
+  // ---------------------------------------------------------------------------
+
   pos = popup_start;
   pos.row += (drawing_bellow_cursor) ? 1 : (-count_dispaynig_items);
 
@@ -498,10 +509,11 @@ void DocPane::DrawAutoCompletions(FrameBuffer buff, Position docpos) {
     auto& item = (*completion_items)[i];
     int icon_index = CLAMP(0, (int)item.kind-1, completion_kind_count);
 
-    // Highlight selected item.
+    // Highlight selected item. TODO: background color.
     Color bg = (i == document->completion_selected) ? 0xff0000 : popup_bg;
 
-    // FIXME: Draw a scroll bar.
+    // TODO: Draw a scroll bar.
+    // FIXME: The layout is hardcoded.
     SET_CELL(
         buff,
         docpos.col + pos.col,
@@ -527,7 +539,6 @@ void DocPane::DrawAutoCompletions(FrameBuffer buff, Position docpos) {
     pos.row++;
   }
 
-  // TODO: Move the drawing of signature and completion list to it's own functions.
   // --------------------------------------------------------------------------
   // Drawing the signature help.
   // --------------------------------------------------------------------------
@@ -580,5 +591,4 @@ void DocPane::DrawAutoCompletions(FrameBuffer buff, Position docpos) {
       true);
 
 }
-
 

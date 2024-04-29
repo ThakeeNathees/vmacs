@@ -228,9 +228,11 @@ void tree_sitter_test() {
 // The goal should be all pack together in as a single binary but also supports
 // loading resources from file (mainly theme and treesitter language).
 //
-// THE DRAW FUNCTIONS ARE JUST UGLY AND TEMPROARY ---- FIXXXXXX.
-//
 // Now:
+//
+//
+// Pending:
+//   Global config (tabsize), dropdown icons, dropdown list max count. lsp config.
 //
 //
 //   structure:
@@ -271,20 +273,12 @@ void tree_sitter_test() {
 //   drawing popup needs to be reviewed since if it goes out of the window, we just trim it but it needs to be pushed inside. (better draw primitives required)
 //   signature help will hide pressing space after comma.
 //
-//
-// Cleanups:
-//   color values for themes and parsing theme json are unstable (can throw if invalid)
-//   and not structured.
-//
-//
 //  Cleanup things:
-//    make docpane takes document as a parameter when constucted.
 //    Registry of language server, and language => lsp mapping in the Editor:
 //      { "clangd" : LspClient(), "pyright" : LspClient(), ...  }
 //      { "c" : "clangd", "c++": "clangd",  "python" : "pyright", etc. }
 //    Theme manager...
 //    Global Configs.
-//    Draw if needed, set framerate as a config.
 //
 //
 // Unfinished, working things:
@@ -297,13 +291,11 @@ void tree_sitter_test() {
 //
 // Pending:
 //
-// Alt+shift+arrow not detected by termbox: Add this entry:
-// {"\x1b[1;10B",   TB_KEY_ARROW_DOWN,  TB_MOD_ALT | TB_MOD_SHIFT },
-//
 //   keybinding with logical like micro: (&, |, ',') (comman run sequence).
 //     <tab> : "cycle_completion_list | insert_tab"
 //     <S-tab> : "cycle_completion_list_reversed | insert_tab"
 //
+//   Main loop should be handled by the front end (so raylib can draw forever and termbox2 don't have to). and FE will set the FPS.
 //   editor send events and ask draw in a structured manner.
 //   M-c rename to A-c (M doesn't make sence, even in Eamcs)
 //   proper draw system. (request client for buffer and fill only if it needs to re-draw).
