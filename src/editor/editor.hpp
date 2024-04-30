@@ -31,8 +31,9 @@ private:
   static std::shared_ptr<Editor> singleton;
 
   // FIXME(mess):
-  DocPane docpane;
-  FindPane findpane;
+  // DocPane docpane;
+  // FindPane findpane;
+  RootPane root;
 
   std::unique_ptr<FrontEnd> frontend;
 
@@ -40,10 +41,9 @@ private:
   std::atomic<bool> running = true;
   ThreadSafeQueue<Event> event_queue;
 
-  // TODO:
-  // Note that the bellow maps are "global" registry where, and if it's shared
-  // and modified between multiple threads, they needs to be locked and unlocked.
-  // properly (at the moment It's not doing that).
+  // TODO: Note that the bellow maps are "global" registry where, and if it's
+  // shared and modified between multiple threads, they needs to be locked and
+  // unlocked. properly (at the moment It's not doing that).
   std::map<std::string, std::shared_ptr<const Theme>>   themes;
   std::map<LanguageId, std::shared_ptr<const Language>> languages;
   std::map<Uri, std::shared_ptr<Document>>              documents;
@@ -59,9 +59,6 @@ private:
 
   // Construct, configure, and register an lsp client.
   void RegisterLspClient(const LspConfig& config);
-
-  // FIXME: remove this mess.
-  std::shared_ptr<Document> OpenDocument(const std::string& path);
 
   // blocking loop that collect event (blocking) from the front end and push it
   // to our event queue. Run this asyncronusly.

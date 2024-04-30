@@ -407,6 +407,7 @@ private:
 class Document : public HistoryListener, public BufferListener {
 
 public:
+  Document(); // Create with an empty buffer.
   Document(const Uri& uri, std::shared_ptr<Buffer> buffer);
   ~Document();
 
@@ -506,6 +507,8 @@ private:
   std::shared_ptr<const Language> language;
   Syntax syntax;
 
+  // TODO: Maybe implement a string wrapper as uri type.
+  //
   // Uri is simply "file://" + "the/file/path/in/the/disk".
   //
   // If the file is a new buffer the uri will be empty and the editor will ask

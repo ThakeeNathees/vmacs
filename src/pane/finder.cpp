@@ -58,7 +58,7 @@ int FilesFinder::GetTotalItemsCount() {
 }
 
 
-void FilesFinder::InputChanged(std::string input_text) {
+void FilesFinder::InputChanged(const std::string& input_text) {
   if (input_text.empty()) {
     {
       std::lock_guard<std::mutex> lock_r(mutex_results);
@@ -66,13 +66,17 @@ void FilesFinder::InputChanged(std::string input_text) {
       filters = results; // Copy all the values from results.
     }
   } else {
-      TriggerFuzzyFilter(input_text);
-    }
+    TriggerFuzzyFilter(input_text);
   }
+}
 
 
-// FIXME: These methods should buffer the pending input if it's now ends with
-// a new line otherwise we'll get a broken path (see lsp/client.cpp) for reference.
+void FilesFinder::SelectedItem(const std::string& item) {
+
+}
+
+
+// FIXME: The logic can be reused.
 //
 // FIXME: Make sure the buff only contains printable ascii/utf8 values otherwise
 // it'll messup the ui drawing of those text.
@@ -81,15 +85,26 @@ void FilesFinder::StdoutCallbackResults(void* data, const char* buff, size_t len
   {
     std::lock_guard<std::mutex> lock(self->mutex_results);
     const char* end = buff;
+
     while (length--) {
       if (*end == '\n') {
-        size_t len = (end-buff);
+        size_t len = (end-buff); // This will skip the '\n' character, +1 if needed.
         if (len != 0) {
-          self->results.push_back(std::string(buff, len));
+          if (!self->buff_results.empty()) {
+            self->results.push_back(self->buff_results + std::string(buff, len));
+            self->buff_results.clear();
+          } else {
+            self->results.push_back(std::string(buff, len));
+          }
         }
         buff = end+1;
       }
       end++;
+    }
+
+    if (buff != end) {
+      ASSERT(*end == '\0', OOPS);
+      self->buff_results += std::string(buff, (end-buff));
     }
   }
 }
@@ -105,11 +120,20 @@ void FilesFinder::StdoutCallbackFilter(void* data, const char* buff, size_t leng
       if (*end == '\n') {
         size_t len = (end-buff);
         if (len != 0) {
-          self->filters.push_back(std::string(buff, len));
+          if (!self->buff_filter.empty()) {
+            self->filters.push_back(self->buff_filter + std::string(buff, len));
+            self->buff_filter.clear();
+          } else {
+            self->filters.push_back(std::string(buff, len));
+          }
         }
         buff = end+1;
       }
       end++;
+    }
+    if (buff != end) {
+      ASSERT(*end == '\0', OOPS);
+      self->buff_filter += std::string(buff, (end-buff));
     }
   }
   self->ItemsChanged();

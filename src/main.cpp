@@ -386,7 +386,6 @@ int main(int argc, char** argv) {
 
   std::unique_ptr<FrontEnd> fe;
 
-  // fe = std::make_unique<Termbox2>();
   if (argc == 2) fe = std::make_unique<Termbox2>();
   else           fe = std::make_unique<Raylib>();
 

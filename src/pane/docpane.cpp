@@ -11,47 +11,51 @@
 
 DocPane::DocPane() {
 
+  this->document = std::make_shared<Document>();
+
   // FIXME: This mess needs to be re-implemented better.
-  RegisterAction("cursor_up", [&] { if (this->document == nullptr) return; this->document->CursorUp();       EnsureCursorOnView(); ResetCursorBlink(); });
-  RegisterAction("cursor_down", [&] { if (this->document == nullptr) return; this->document->CursorDown();     EnsureCursorOnView(); ResetCursorBlink(); });
-  RegisterAction("cursor_left", [&] { if (this->document == nullptr) return; this->document->CursorLeft();     EnsureCursorOnView(); ResetCursorBlink(); });
-  RegisterAction("cursor_right", [&] { if (this->document == nullptr) return; this->document->CursorRight();    EnsureCursorOnView(); ResetCursorBlink(); });
-  RegisterAction("cursor_end", [&] { if (this->document == nullptr) return; this->document->CursorEnd();      EnsureCursorOnView(); ResetCursorBlink(); });
-  RegisterAction("cursor_home", [&] { if (this->document == nullptr) return; this->document->CursorHome();     EnsureCursorOnView(); ResetCursorBlink(); });
-  RegisterAction("select_right", [&] { if (this->document == nullptr) return; this->document->SelectRight();    EnsureCursorOnView(); ResetCursorBlink(); });
-  RegisterAction("select_left", [&] { if (this->document == nullptr) return; this->document->SelectLeft();     EnsureCursorOnView(); ResetCursorBlink(); });
-  RegisterAction("select_up", [&] { if (this->document == nullptr) return; this->document->SelectUp();       EnsureCursorOnView(); ResetCursorBlink(); });
-  RegisterAction("select_down", [&] { if (this->document == nullptr) return; this->document->SelectDown();     EnsureCursorOnView(); ResetCursorBlink(); });
-  RegisterAction("select_home", [&] { if (this->document == nullptr) return; this->document->SelectHome();     EnsureCursorOnView(); ResetCursorBlink(); });
-  RegisterAction("select_end", [&] { if (this->document == nullptr) return; this->document->SelectEnd();      EnsureCursorOnView(); ResetCursorBlink(); });
+  RegisterAction("cursor_up", [&] { this->document->CursorUp();       EnsureCursorOnView(); ResetCursorBlink(); return true; });
+  RegisterAction("cursor_down", [&] { this->document->CursorDown();     EnsureCursorOnView(); ResetCursorBlink(); return true; });
+  RegisterAction("cursor_left", [&] { this->document->CursorLeft();     EnsureCursorOnView(); ResetCursorBlink(); return true; });
+  RegisterAction("cursor_right", [&] { this->document->CursorRight();    EnsureCursorOnView(); ResetCursorBlink(); return true; });
+  RegisterAction("cursor_end", [&] { this->document->CursorEnd();      EnsureCursorOnView(); ResetCursorBlink(); return true; });
+  RegisterAction("cursor_home", [&] { this->document->CursorHome();     EnsureCursorOnView(); ResetCursorBlink(); return true; });
+  RegisterAction("select_right", [&] { this->document->SelectRight();    EnsureCursorOnView(); ResetCursorBlink(); return true; });
+  RegisterAction("select_left", [&] { this->document->SelectLeft();     EnsureCursorOnView(); ResetCursorBlink(); return true; });
+  RegisterAction("select_up", [&] { this->document->SelectUp();       EnsureCursorOnView(); ResetCursorBlink(); return true; });
+  RegisterAction("select_down", [&] { this->document->SelectDown();     EnsureCursorOnView(); ResetCursorBlink(); return true; });
+  RegisterAction("select_home", [&] { this->document->SelectHome();     EnsureCursorOnView(); ResetCursorBlink(); return true; });
+  RegisterAction("select_end", [&] { this->document->SelectEnd();      EnsureCursorOnView(); ResetCursorBlink(); return true; });
 
-  RegisterAction("add_cursor_down", [&] { if (this->document == nullptr) return; this->document->AddCursorDown(); EnsureCursorOnView(); ResetCursorBlink(); });
-  RegisterAction("add_cursor_up", [&] { if (this->document == nullptr) return; this->document->AddCursorUp();   EnsureCursorOnView(); ResetCursorBlink(); });
+  RegisterAction("add_cursor_down", [&] { this->document->AddCursorDown(); EnsureCursorOnView(); ResetCursorBlink(); return true; });
+  RegisterAction("add_cursor_up", [&] { this->document->AddCursorUp();   EnsureCursorOnView(); ResetCursorBlink(); return true; });
 
-  RegisterAction("insert_space", [&] { if (this->document == nullptr) return; this->document->EnterCharacter(' ');  EnsureCursorOnView(); ResetCursorBlink(); });
-  RegisterAction("insert_newline", [&] { if (this->document == nullptr) return; this->document->EnterCharacter('\n'); EnsureCursorOnView(); ResetCursorBlink(); });
-  RegisterAction("insert_tab", [&] { if (this->document == nullptr) return; this->document->EnterCharacter('\t'); EnsureCursorOnView(); ResetCursorBlink(); });
+  RegisterAction("insert_space", [&] { this->document->EnterCharacter(' ');  EnsureCursorOnView(); ResetCursorBlink(); return true; });
+  RegisterAction("insert_newline", [&] { this->document->EnterCharacter('\n'); EnsureCursorOnView(); ResetCursorBlink(); return true; });
+  RegisterAction("insert_tab", [&] { this->document->EnterCharacter('\t'); EnsureCursorOnView(); ResetCursorBlink(); return true; });
 
-  RegisterAction("backspace", [&] { if (this->document == nullptr) return; this->document->Backspace();      EnsureCursorOnView(); ResetCursorBlink(); });
-  RegisterAction("undo", [&] { if (this->document == nullptr) return; this->document->Undo();           EnsureCursorOnView(); ResetCursorBlink(); });
-  RegisterAction("redo", [&] { if (this->document == nullptr) return; this->document->Redo();           EnsureCursorOnView(); ResetCursorBlink(); });
+  RegisterAction("backspace", [&] { this->document->Backspace();      EnsureCursorOnView(); ResetCursorBlink(); return true; });
+  RegisterAction("undo", [&] { this->document->Undo();           EnsureCursorOnView(); ResetCursorBlink(); return true; });
+  RegisterAction("redo", [&] { this->document->Redo();           EnsureCursorOnView(); ResetCursorBlink(); return true; });
 
-  RegisterAction("trigger_completion", [&] { if (this->document == nullptr) return; this->document->TriggerCompletion(); EnsureCursorOnView(); ResetCursorBlink(); });
+  RegisterAction("trigger_completion", [&] { this->document->TriggerCompletion(); EnsureCursorOnView(); ResetCursorBlink(); return true; });
 
   // Fixme: TEMP command:
-  RegisterAction("clear_completion", [&] { if (this->document == nullptr) return; this->document->ClearCompletionItems(); EnsureCursorOnView(); ResetCursorBlink(); });
+  RegisterAction("clear_completion", [&] { this->document->ClearCompletionItems(); EnsureCursorOnView(); ResetCursorBlink(); return true; });
   
   RegisterAction("cycle_completion_list", [&] {
-    if (this->document == nullptr) return;
     this->document->CycleCompletionList();
     this->document->SelectCompletionItem();
-    EnsureCursorOnView(); ResetCursorBlink(); });
+    EnsureCursorOnView(); ResetCursorBlink();
+    return true;
+    });
 
   RegisterAction("cycle_completion_list_reversed", [&] {
-    if (this->document == nullptr) return;
     this->document->CycleCompletionListReversed();
     this->document->SelectCompletionItem();
-    EnsureCursorOnView(); ResetCursorBlink(); });
+    EnsureCursorOnView(); ResetCursorBlink();
+    return true;
+    });
 
   // ---------------------------------------------------------------------------
 
@@ -88,18 +92,16 @@ DocPane::DocPane() {
 }
 
 
-void DocPane::HandleEvent(const Event& event) {
-  if (this->document == nullptr) return;
-
-  if (!TryEvent(event)) {
-    if (event.type == Event::Type::KEY && event.key.unicode != 0) {
-      char c = (char) event.key.unicode;
-      document->EnterCharacter(c);
-      EnsureCursorOnView();
-      ResetCursorBlink();
-    }
+bool DocPane::HandleEvent(const Event& event) {
+  if (TryEvent(event)) return true;
+  if (event.type == Event::Type::KEY && event.key.unicode != 0) {
+    char c = (char) event.key.unicode;
+    document->EnterCharacter(c);
+    EnsureCursorOnView();
+    ResetCursorBlink();
+    return true;
   }
-
+  return false;
 }
 
 

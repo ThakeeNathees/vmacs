@@ -18,7 +18,8 @@ class Pane {
 public:
   virtual ~Pane() = default;
 
-  virtual void HandleEvent(const Event& event) = 0; 
+  // The handler should return true if the event is consumed by the pane.
+  virtual bool HandleEvent(const Event& event) = 0;
   virtual void Update() = 0;
   virtual void Draw(FrameBuffer buff, Position pos, Size area) = 0;
 
@@ -35,6 +36,24 @@ private:
 };
 
 
+// The pane which is at the root level of the window. This will be the first
+// Pane that get the event from the Editor and propegate to the child panes.
+class RootPane : public Pane {
+public:
+  RootPane();
+
+  bool HandleEvent(const Event& event) override;
+  void Update() override;
+  void Draw(FrameBuffer buff, Position pos, Size area) override;
+
+private:
+  // TODO: Implement a proper tree like structure for splits.
+  std::vector<std::unique_ptr<Pane>> child_panes;
+  std::unique_ptr<Pane> popup_pane;
+  Pane* focused = nullptr; // Points to either a child_pane or popup_pane;
+};
+
+
 // BufferPane is the Pane that handles events and display the undeling buffer
 // it's more of a text editor with number line and scroll bar etc.
 class DocPane : public Pane {
@@ -44,7 +63,7 @@ public:
 
   void SetDocument(std::shared_ptr<Document> document);
 
-  void HandleEvent(const Event& event) override;
+  bool HandleEvent(const Event& event) override;
   void Update() override;
   void Draw(FrameBuffer buff, Position pos, Size area) override;
 
@@ -85,7 +104,7 @@ class FindPane : public Pane {
 public:
   FindPane(std::unique_ptr<Finder> finder);
 
-  void HandleEvent(const Event& event) override;
+  bool HandleEvent(const Event& event) override;
   void Update() override;
   void Draw(FrameBuffer buff, Position pos, Size area) override;
 

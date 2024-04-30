@@ -486,9 +486,9 @@ void LspClient::ParseAndHandleResponse(LspClient* self, std::string_view json_st
 #else
     // FIXME: cleanup this mess.
     // printf(" [lsp-client] %s\n", content.dump(2).c_str());
-    FILE* f = fopen("./build/lsp.log", "a");
-    fprintf(f, "%s\n", content.dump(2).c_str());
-    fclose(f);
+    // FILE* f = fopen("./build/lsp.log", "a");
+    // fprintf(f, "%s\n", content.dump(2).c_str());
+    // fclose(f);
 #endif
 
     self->HandleServerContent(content);
@@ -600,9 +600,9 @@ void LspClient::StderrCallback(void* user_data, const char* buff, size_t length)
   printf("%*s", (int) length, buff);
 #else
   // FIXME: cleanup this mess.
-  FILE* f = fopen("./build/lsp.log", "a");
-  fprintf(f, "%*s", (int) length, buff);
-  fclose(f);
+  // FILE* f = fopen("./build/lsp.log", "a");
+  // fprintf(f, "%*s", (int) length, buff);
+  // fclose(f);
 #endif
 }
 

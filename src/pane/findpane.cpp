@@ -8,6 +8,7 @@
 
 #include "pane.hpp"
 
+// FIXME(grep) The finder might not have the requirnment installed, handle it.
 
 FindPane::FindPane(std::unique_ptr<Finder> finder_): finder(std::move(finder_)) {
 
@@ -17,10 +18,10 @@ FindPane::FindPane(std::unique_ptr<Finder> finder_): finder(std::move(finder_)) 
     this->OnFilteredItemsChanged();
   });
 
-  RegisterAction("cursor_right", [&] { if (cursor_index < input_text.size()) cursor_index++; });
-  RegisterAction("cursor_left", [&] { if (cursor_index > 0) cursor_index--; });
-  RegisterAction("cursor_home", [&] { cursor_index = 0; });
-  RegisterAction("cursor_end", [&] { cursor_index = input_text.size(); });
+  RegisterAction("cursor_right", [&] { if (cursor_index < input_text.size()) cursor_index++; return true; });
+  RegisterAction("cursor_left", [&] { if (cursor_index > 0) cursor_index--; return true; });
+  RegisterAction("cursor_home", [&] { cursor_index = 0; return true; });
+  RegisterAction("cursor_end", [&] { cursor_index = input_text.size(); return true; });
   RegisterAction("backspace", [&] {
     if (cursor_index > 0) {
       input_text.erase(cursor_index-1, 1);
@@ -31,9 +32,10 @@ FindPane::FindPane(std::unique_ptr<Finder> finder_): finder(std::move(finder_)) 
       view_start_index = 0;
       selected_index = -1;
     }
+    return true;
   });
-  RegisterAction("cycle_selection", [&] { this->CycleItems(); });
-  RegisterAction("cycle_selection_reversed", [&] { this->CycleItemsReversed(); });
+  RegisterAction("cycle_selection", [&] { this->CycleItems(); return true; });
+  RegisterAction("cycle_selection_reversed", [&] { this->CycleItemsReversed(); return true; });
 
   RegisterBinding("*", "<right>", "cursor_right");
   RegisterBinding("*", "<left>",  "cursor_left");
@@ -48,15 +50,16 @@ FindPane::FindPane(std::unique_ptr<Finder> finder_): finder(std::move(finder_)) 
 }
 
 
-void FindPane::HandleEvent(const Event& event) {
-  if (!TryEvent(event)) {
-    if (event.type == Event::Type::KEY && event.key.unicode != 0) {
-      char c = (char) event.key.unicode;
-      input_text.insert(cursor_index, std::string(1, event.key.unicode));
-      cursor_index++;
-      finder->InputChanged(input_text);
-    }
+bool FindPane::HandleEvent(const Event& event) {
+  if (TryEvent(event)) return true;
+  if (event.type == Event::Type::KEY && event.key.unicode != 0) {
+    char c = (char) event.key.unicode;
+    input_text.insert(cursor_index, std::string(1, event.key.unicode));
+    cursor_index++;
+    finder->InputChanged(input_text);
+    return true;
   }
+  return false;
 }
 
 
@@ -179,6 +182,8 @@ void FindPane::Draw(FrameBuffer buff, Position pos_windows, Size area) {
   int y_offset = y+3; // +3: top_bar, input, split.
   int w_effect = w-4; // -4: left_bar, right_bar, 2*spacing.
 
+  // TODO: If the line is too long, draw the tail only.
+  //
   // TODO: handle if the "returned" list is nullptr this may not be assered since
   // the user plugins can also return this and we don't want to crash on it.
   if (input_text.empty()) {

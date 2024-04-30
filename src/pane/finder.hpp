@@ -28,7 +28,8 @@ public:
   virtual int GetFilteredItemsCount() = 0;
   virtual int GetTotalItemsCount() = 0;
 
-  virtual void InputChanged(std::string input_text) = 0;
+  virtual void InputChanged(const std::string& input_text) = 0;
+  virtual void SelectedItem(const std::string& item) = 0;
 
   void RegisterItemsChangeListener(CallbackFinderItemsChanged cb);
   void ItemsChanged();
@@ -48,7 +49,8 @@ public:
   int GetFilteredItemsCount() override;
   int GetTotalItemsCount() override;
 
-  void InputChanged(std::string input_text) override;
+  void InputChanged(const std::string& input_text) override;
+  void SelectedItem(const std::string& item) override;
 
 private:
   std::unique_ptr<IPC> ipc_results;
@@ -58,6 +60,11 @@ private:
   std::unique_ptr<IPC> ipc_filter;
   std::mutex mutex_filters;
   std::vector<std::string> filters;
+
+  // IF any input is not ending with a new line, we'll set to the bellow buffer
+  // and join with the start of the next stdout input.
+  std::string buff_results;
+  std::string buff_filter;
 
 private:
 
@@ -71,7 +78,4 @@ private:
   void TriggerFuzzyFilter(const std::string& input_text);
 
 };
-
-
-
 

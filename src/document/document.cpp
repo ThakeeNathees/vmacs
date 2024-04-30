@@ -11,6 +11,9 @@
 #include "document.hpp"
 
 
+Document::Document() : buffer(std::make_shared<Buffer>()), history(buffer) {}
+
+
 Document::Document(const Uri& uri, std::shared_ptr<Buffer> buffer)
   : uri(uri), buffer(buffer), cursors(buffer.get()), history(buffer)
 {

@@ -18,61 +18,6 @@
 
 // FIXME: Maybe create another file for pane (pane.cpp).
 
-void Pane::RegisterAction(const std::string& action_name, FuncAction action) {
-  actions[action_name] = action;
-}
-
-
-void Pane::RegisterBinding(const std::string& mode, const std::string& key_combination, const std::string& action_name) {
-  std::vector<event_t> events;
-
-  if (!ParseKeyBindingString(events, key_combination.c_str())) {
-    // TODO: Report error to user.
-    return;
-  }
-
-  auto it = actions.find(action_name);
-  if (it == actions.end()) {
-    // TODO: Error(""); // Report to user.
-    return;
-  }
-
-  keytree.RegisterBinding(mode, events, it->second);
-  events.clear();
-}
-
-
-void Pane::SetMode(const std::string& mode) {
-  keytree.SetMode(mode);
-}
-
-
-bool Pane::TryEvent(const Event& event) {
-  bool more = false;
-
-  FuncAction action = keytree.ConsumeEvent(EncodeKeyEvent(event.key), &more);
-  // if (action && more) { } // TODO: Timeout and perform action.
-
-  if (action) {
-    action();
-    keytree.ResetCursor();
-    return true;
-  }
-
-  // Don't do anything, just wait for the next keystroke and perform on it.
-  if (more) return true;
-
-  // Sequence is not registered, reset and listen from start. We'll be sending
-  // true and treat this event to reset the cursor.
-  if (!keytree.IsCursorRoot()) {
-    keytree.ResetCursor();
-    return true;
-  }
-
-  return false;
-}
-
-
 // Static singleton definition goes here.
 std::shared_ptr<Editor> Editor::singleton = nullptr;
 
@@ -102,7 +47,7 @@ const Theme* Global::GetCurrentTheme() {
 
 
 // FIXME: This is not how we do it.
-Editor::Editor() : findpane(std::make_unique<FilesFinder>()) {
+Editor::Editor() {
 
   // Load the themes.
   std::map<std::string, Json> theme_data = Platform::LoadThemes();
@@ -164,7 +109,7 @@ int Editor::MainLoop() {
   }
 
   // What a mess.
-  OpenDocument("/Users/thakeenathees/Desktop/thakee/repos/vmacs/build/main.cpp");
+  // OpenDocument("/Users/thakeenathees/Desktop/thakee/repos/vmacs/build/main.cpp");
 
   // Async run event loop.
   std::thread event_loop([this]() { EventLoop(); });
@@ -183,14 +128,12 @@ int Editor::MainLoop() {
     // Handle Events.
     while (!event_queue.Empty()) {
       Event e = event_queue.Dequeue();
-      docpane.HandleEvent(e);
-      findpane.HandleEvent(e);
+      root.HandleEvent(e);
       redraw = true;
     }
 
     // Update call.
-    docpane.Update();
-    findpane.Update();
+    root.Update();
 
     // FIXME: Because of raylib we can't do this. The fron end should own the main
     // loop and use the eidtor as a instance to run at each iteration.
@@ -236,55 +179,30 @@ void Editor::Draw() {
   // FIXME: This needs to be re-factored and cleaned up.
   // Draw to the front end buffer.
   FrameBuffer buff = frontend->GetDrawBuffer();
-
-  // uint8_t color_bg = 0x272829;
   Color color_bg = Global::GetCurrentTheme()->GetStyleOr("ui.background", {.fg=0, .bg=0xffffff, .attrib=0}).bg;
-
-  // Clean the buffer.
-  for (int i    = 0; i < buff.width*buff.height; i++) {
-    Cell& cell  = buff.cells[i];
-    cell.ch     = ' ';
-    cell.fg     = 0;
-    cell.bg     = color_bg;
-    cell.attrib = 0;
-  }
-
-  Position pos = {0, 0};
-  Size size = {buff.width, buff.height};
-  docpane.Draw(buff, pos, size);
-  findpane.Draw(buff, pos, size);
-
+  root.Draw(buff, {0, 0}, {buff.width, buff.height});
   frontend->Display(color_bg); // FIXME: background color for raylib.
-
-  // Draw a spinning indicator yell it's re-drawn.
-  // ⡿ ⣟ ⣯ ⣷ ⣾ ⣽ ⣻ ⢿
-  static int curr = 0;
-  int icons[] = { 0x287f, 0x28df, 0x28ef, 0x28f7, 0x28fe, 0x28fd, 0x28fb, 0x28bf };
-  int icon_count = sizeof icons / sizeof *icons;
-  if (curr >= icon_count) curr = 0;
-  SET_CELL(buff, 0, buff.height-1, icons[curr++], 0xffffff, 0, 0); // FIXME:
-
 }
 
 
 // FIXME: Re implement this mess.
-std::shared_ptr<Document> Editor::OpenDocument(const std::string& path) {
+// std::shared_ptr<Document> Editor::OpenDocument(const std::string& path) {
 
-  Uri uri = std::string("file://") + path;
-  std::string text;
-  ASSERT(Platform::ReadFile(&text, path), "My ugly code");
+//   Uri uri = std::string("file://") + path;
+//   std::string text;
+//   ASSERT(Platform::ReadFile(&text, path), "My ugly code");
 
-  std::shared_ptr<Buffer> buff = std::make_shared<Buffer>(text);
-  std::shared_ptr<Document> document = std::make_shared<Document>(uri, buff);
-  documents[uri] = document;
+//   std::shared_ptr<Buffer> buff = std::make_shared<Buffer>(text);
+//   std::shared_ptr<Document> document = std::make_shared<Document>(uri, buff);
+//   documents[uri] = document;
 
-  document->SetLanguage(languages["cpp"]);
-  docpane.SetDocument(document);
+//   document->SetLanguage(languages["cpp"]);
+//   docpane.SetDocument(document);
 
-  document->SetLspClient(lsp_clients["clangd"]);
+//   document->SetLspClient(lsp_clients["clangd"]);
 
-  return document;
-}
+//   return document;
+// }
 
 
 void Editor::RegisterLspClient(const LspConfig& config) {
