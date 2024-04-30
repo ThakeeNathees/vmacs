@@ -8,6 +8,7 @@
 
 #include "core/core.hpp"
 #include "platform//platform.hpp"
+#include "pane/finder.hpp"
 #include "editor.hpp"
 
 #include <chrono>
@@ -96,11 +97,12 @@ void Global::ReDraw() {
 
 // FIXME: This is temproary. Set current theme and get from there.
 const Theme* Global::GetCurrentTheme() {
-  return Editor::Singleton()->themes["catppuccin_frappe"].get();
+  return Editor::Singleton()->themes["dracula_at_night"].get();
 }
 
 
-Editor::Editor() {
+// FIXME: This is not how we do it.
+Editor::Editor() : findpane(std::make_unique<FilesFinder>()) {
 
   // Load the themes.
   std::map<std::string, Json> theme_data = Platform::LoadThemes();

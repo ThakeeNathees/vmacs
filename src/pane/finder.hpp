@@ -1,0 +1,77 @@
+//
+// .--.--.--------.-----.----.-----. vmacs text editor and more.
+// |  |  |        |  _  |  __|__ --| version 0.1.0
+//  \___/|__|__|__|__.__|____|_____| https://github.com/thakeenathees/vmacs
+//
+// Copyright (c) 2024 Thakee Nathees
+// Licenced under: MIT
+
+#pragma once
+
+#include "core/core.hpp"
+#include "platform/platform.hpp"
+
+typedef std::function<void()> CallbackFinderItemsChanged;
+
+
+// An abstract type which will be used as the "backend" for the FindPane to provide
+// the filter items, preview and a selection action.
+class Finder {
+public:
+  virtual ~Finder() = default;
+
+  virtual void Initialize() = 0;
+
+  virtual std::unique_lock<std::mutex> GetFilteredItems(const std::vector<std::string>** ret) = 0;
+  virtual std::unique_lock<std::mutex> GetTotalItems(const std::vector<std::string>** ret) = 0;
+
+  virtual int GetFilteredItemsCount() = 0;
+  virtual int GetTotalItemsCount() = 0;
+
+  virtual void InputChanged(std::string input_text) = 0;
+
+  void RegisterItemsChangeListener(CallbackFinderItemsChanged cb);
+  void ItemsChanged();
+
+private:
+  CallbackFinderItemsChanged cb_item_changed;
+};
+
+
+
+class FilesFinder : public Finder {
+public:
+  void Initialize() override;
+
+  std::unique_lock<std::mutex> GetFilteredItems(const std::vector<std::string>** ret) override;
+  std::unique_lock<std::mutex> GetTotalItems(const std::vector<std::string>** ret) override;
+  int GetFilteredItemsCount() override;
+  int GetTotalItemsCount() override;
+
+  void InputChanged(std::string input_text) override;
+
+private:
+  std::unique_ptr<IPC> ipc_results;
+  std::mutex mutex_results;
+  std::vector<std::string> results;
+
+  std::unique_ptr<IPC> ipc_filter;
+  std::mutex mutex_filters;
+  std::vector<std::string> filters;
+
+private:
+
+  // FIXME: These methods should buffer the pending input if it's now ends with
+  // a new line otherwise we'll get a broken path (see lsp/client.cpp) for reference.
+  //
+  // FIXME: Make sure the buff only contains printable ascii/utf8 values otherwise
+  // it'll messup the ui drawing of those text.
+  static void StdoutCallbackResults(void* data, const char* buff, size_t length);
+  static void StdoutCallbackFilter(void* data, const char* buff, size_t length);
+  void TriggerFuzzyFilter(const std::string& input_text);
+
+};
+
+
+
+

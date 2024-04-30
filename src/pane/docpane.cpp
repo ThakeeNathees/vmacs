@@ -6,8 +6,7 @@
 // Copyright (c) 2024 Thakee Nathees
 // Licenced under: MIT
 
-#include "core/core.hpp"
-#include "editor.hpp"
+#include "pane.hpp"
 
 
 DocPane::DocPane() {

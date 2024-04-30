@@ -243,11 +243,14 @@ void tree_sitter_test() {
 // loading resources from file (mainly theme and treesitter language).
 //
 // Now:
+//   open empty, search for a file with file picker (BUG: file picker buffer unfinished input), open and edit.
+//   Add another language server client and test. show errors and ask inputs.
 //
 //
 // Pending:
 //   Global config (tabsize), dropdown icons, dropdown list max count. lsp config.
 //   Better draw diagnostics.
+//   remove global thread stop and handle locally.
 //
 //
 //   structure:
@@ -263,11 +266,11 @@ void tree_sitter_test() {
 //   mouse support.
 //   load configs.
 //   status line
+//
 //   prompt line + autocompletion (if them auto update).
 //   number line + diagnos gutter.
 //   scrollbar
 //   macro.
-//   picker (file, rgrep, diagnos, buffer, symbols(treesitter) )
 //   open/close files.
 //   splits and tabs.
 //   copy paste clipboard.
@@ -302,6 +305,10 @@ void tree_sitter_test() {
 //   proper keybinding and loading that from config.
 //   auto completion -> scroll if we cycle and add a scroll bar depends on better drawing code. (not current temp).
 //   IPC instead of "sh" as the file, use correct file with va_args (variadic parameters);
+//   finder (picker):
+//     (file, rgrep, diagnos, buffer, symbols(treesitter))
+//     preview.
+//     actoin selection.
 //
 // Pending:
 //   <S-tab> is not bindable (but should be. "\x1b[Z")
@@ -329,6 +336,7 @@ void tree_sitter_test() {
 //   Can't bind to 12j, d10|, ... with numbers.
 //
 // Code quality:
+//   Position and Coord names are alike (change Position -> Coord, Coord-> BuffPos)
 //   Write a clang-formater and apply through all the source.
 //   change all DrawBuffer parameter as reference than value.
 //   remove all the trailing white spaces all around the source.
