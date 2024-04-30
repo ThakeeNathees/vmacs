@@ -16,11 +16,24 @@
 class Pane {
 
 public:
+  virtual ~Pane() = default;
+
   virtual void HandleEvent(const Event& event) = 0; 
   virtual void Update() = 0;
   virtual void Draw(FrameBuffer buff, Position pos, Size area) = 0;
 
-  virtual ~Pane() = default;
+  void RegisterAction(const std::string& action_name, FuncAction action);
+  void RegisterBinding(const std::string& mode, const std::string& key_combination, const std::string& action_name);
+  void SetMode(const std::string& mode);
+
+  // Try to execute the event with the bindings, if success returns true.
+  bool TryEvent(const Event& event);
+
+protected:
+  // TODO: make these private and generalize.
+  KeyTree keytree;
+  std::unordered_map<String, FuncAction> actions;
+
 };
 
 
@@ -41,10 +54,6 @@ public:
 private:
   // The document we're editing on this pane.
   std::shared_ptr<Document> document;
-
-  // TODO: The bindings are not belong here (temp).
-  KeyTree keytree;
-  std::unordered_map<String, FuncAction> actions;
 
   // The coordinate where we start drawing the buffer from, this will change
   // after h-scroll and v-scroll.
@@ -95,17 +104,32 @@ private:
   int cursor_index = 0;
   std::string input_text; // The text that was inputted.
 
+  // The index of the selected item in the filtered list. By default it'll be
+  // 0 if there is anything in the filter list.
+  int selected_index   = -1;
+  int view_start_index = 0; // The index at which the filters will be drawn.
+  int selection_height = 0; // The height of the view area, needed to ensure the
+                            // selection is on the view.
+
 private:
+  // FIXME: These methods should buffer the pending input if it's now ends with
+  // a new line otherwise we'll get a broken path (see lsp/client.cpp) for reference.
+  //
+  // FIXME: Make sure the buff only contains printable ascii/utf8 values otherwise
+  // it'll messup the ui drawing of those text.
   static void StdoutCallbackResults(void* data, const char* buff, size_t length);
   static void StdoutCallbackFilter(void* data, const char* buff, size_t length);
 
   void TriggerFuzzyFilter();
 
-  // Note that these methods are only called from the Draw function and before
+  void EnsureSelectionOnView();
+  void CycleItems();
+  void CycleItemsReversed();
+
+  // Note that this method is only called from the Draw function and before
   // calling it, the required mutexes needs to be locked. Since these functions
   // Don't call the mutexes. (Designed this way so I don't lock on the same mutex
   // twise or Don't want to borrow unique_lock and make the code unreadable).
-  void DrawResults(FrameBuffer buff, int x, int y, int w, int h);
   void DrawFilter(FrameBuffer buff, int x, int y, int w, int h);
 };
 

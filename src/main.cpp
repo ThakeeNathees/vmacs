@@ -251,7 +251,6 @@ void tree_sitter_test() {
 //
 //
 //   structure:
-//     keybinding move.
 //     config move.
 //     theme: getting values and proper, dynamic changeing (listener);
 //   cleanup what ever we have and try to complete: before adding more things.
@@ -305,10 +304,13 @@ void tree_sitter_test() {
 //   IPC instead of "sh" as the file, use correct file with va_args (variadic parameters);
 //
 // Pending:
+//   <S-tab> is not bindable (but should be. "\x1b[Z")
 //
 //   keybinding with logical like micro: (&, |, ',') (comman run sequence).
 //     <tab> : "cycle_completion_list | insert_tab"
 //     <S-tab> : "cycle_completion_list_reversed | insert_tab"
+//
+//   Need to check if fzf/rg exists in the system and report (implement fallback tools).
 //
 //   Main loop should be handled by the front end (so raylib can draw forever and termbox2 don't have to). and FE will set the FPS.
 //   editor send events and ask draw in a structured manner.
@@ -327,6 +329,7 @@ void tree_sitter_test() {
 //   Can't bind to 12j, d10|, ... with numbers.
 //
 // Code quality:
+//   Write a clang-formater and apply through all the source.
 //   change all DrawBuffer parameter as reference than value.
 //   remove all the trailing white spaces all around the source.
 //   fprintf in the lsp client.
