@@ -127,8 +127,12 @@ int Editor::MainLoop() {
 
     // Handle Events.
     while (!event_queue.Empty()) {
-      Event e = event_queue.Dequeue();
-      root.HandleEvent(e);
+      Event event = event_queue.Dequeue();
+      // FIXME: Handle the CLOSE event properly.
+      if (event.type == Event::Type::CLOSE) {
+        running = false;
+      }
+      root.HandleEvent(event);
       redraw = true;
     }
 
@@ -155,20 +159,15 @@ int Editor::MainLoop() {
 
   frontend->Cleanup();
 
-  global_thread_stop = true;
   event_loop.join();
   return 0;
 }
 
 
 void Editor::EventLoop() {
-  while (running.load() && !global_thread_stop.load()) {
+  while (running) {
     const std::vector<Event>& events = frontend->GetEvents();
     for (const Event& event : events) {
-      // FIXME: Handle the CLOSE event properly.
-      if (event.type == Event::Type::CLOSE) {
-        running = false;
-      }
       event_queue.Enqueue(event);
     }
   }

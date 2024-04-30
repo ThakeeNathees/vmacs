@@ -75,7 +75,7 @@ void FindPane::EnsureSelectionOnView() {
     view_start_index = 0;
   } else {
     if (selected_index < view_start_index) {
-      view_start_index = selected_index;
+      view_start_index = MAX(0, selected_index); // selected_index can be -1.
     } else if (selected_index >= view_start_index + selection_height) {
       view_start_index = selected_index - (selection_height - 1);
     }
@@ -177,10 +177,15 @@ void FindPane::Draw(FrameBuffer buff, Position pos_windows, Size area) {
   // Draw the split line.
   DrawHorizontalLine(buff, x+1, y+2, w-2, fg, bg);
 
+  // Draw the filtered items.
+
   // The filter/result draw pos, area.
   int x_offset = x+2; // +2: left_bar, spacing.
   int y_offset = y+3; // +3: top_bar, input, split.
   int w_effect = w-4; // -4: left_bar, right_bar, 2*spacing.
+
+  // Cache the selection height.
+  selection_height = h - 4; // -4: top_bar, input, split, bottom_bar.
 
   // TODO: If the line is too long, draw the tail only.
   //
@@ -189,15 +194,13 @@ void FindPane::Draw(FrameBuffer buff, Position pos_windows, Size area) {
   if (input_text.empty()) {
     const std::vector<std::string>* total = nullptr;
     std::unique_lock<std::mutex> lock_t = finder->GetTotalItems(&total);
-    int h_effect = MIN(h - 4, total_count); // -4: top_bar, input, split, bottom_bar.
+    int h_effect = MIN(selection_height, total_count);
     DrawItems(buff, x_offset, y_offset, w_effect, h_effect, total);
-    selection_height = h_effect; // Cache the selection height.
   } else {
     const std::vector<std::string>* filtered = nullptr;
     std::unique_lock<std::mutex> lock_f = finder->GetFilteredItems(&filtered);
-    int h_effect = MIN(h - 4, filtered_count); // -4: top_bar, input, split, bottom_bar.
+    int h_effect = MIN(selection_height, filtered_count); // -4: top_bar, input, split, bottom_bar.
     DrawItems(buff, x_offset, y_offset, w_effect, h_effect, filtered);
-    selection_height = h_effect; // Cache the selection height.
   }
 
 }
@@ -209,6 +212,7 @@ void FindPane::DrawItems(FrameBuffer buff, int x, int y, int w, int h, const std
   Color bg = Global::GetCurrentTheme()->GetStyleOr("ui.background", {.fg = 0xff0000, .bg = 0xff0000, .attrib = 0}).bg;
   // --------------------------------------------------------------------------
   for (int i = 0; i < h; i++) {
+    ASSERT(view_start_index + i < items->size(), OOPS);
     const std::string& item = (*items)[view_start_index + i];
     Color bg_ = (view_start_index + i == selected_index) ? 0xff0000 : bg;
     DrawTextLine(buff, item.c_str(), x, y+i, w, fg, bg_, 0, true);

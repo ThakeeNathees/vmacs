@@ -69,8 +69,8 @@ public:
 
   int GetSize() const;
   int At(int index) const; // Returns the codepoint at the index.
-  StringView GetSubString(int index, int count) const;
-  const String& GetData() const;
+  std::string_view GetSubString(int index, int count) const;
+  const std::string& GetData() const;
 
   int GetLineCount() const;
   Slice GetLine(int index) const;
@@ -88,7 +88,7 @@ public:
   bool IsValidCoord(Coord coord, int* index) const;
 
   // Methods that modify the buffer.
-  void InsertText(int index, const String& text);
+  void InsertText(int index, const std::string& text);
   void RemoveText(int index, int count);
 
   // Buffer listener methods.
@@ -96,7 +96,7 @@ public:
   void UnRegisterListener(BufferListener* listener);
 
 private:
-  String data;
+  std::string data;
   Lines lines;
   std::vector<BufferListener*> listeners;
 
@@ -219,9 +219,9 @@ private:
  */
 
 struct Change {
-  int index;   // The index where the change happened.
-  bool added;  // If true a text was added otherwise removed.
-  String text; // The added/removed text.
+  int index;        // The index where the change happened.
+  bool added;       // If true a text was added otherwise removed.
+  std::string text; // The added/removed text.
 };
 
 

@@ -133,8 +133,6 @@ void lsp_test() {
   // Prevent the client from destroy before we got response from server.
   { std::string s; std::cin >> s; }
 
-  // Otherwise it'll wait forever.
-  global_thread_stop = true;
 }
 
 

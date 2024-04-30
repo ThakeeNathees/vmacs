@@ -278,10 +278,10 @@ void LspClient::SendServerContent(const Json& content) {
     // Wait in a thread till the server is initialized.
     threads.emplace_back([this, data](){
       std::unique_lock<std::mutex> lock(mutex_server_initialized);
-      while (!is_server_initialized && !stop_all_threads && !global_thread_stop) {
+      while (!is_server_initialized && !stop_all_threads) {
         cond_server_initialized.wait(lock);
       }
-      if (stop_all_threads || global_thread_stop) return;
+      if (stop_all_threads) return;
       if (ipc) ipc->WriteToStdin(data);
     });
     }
@@ -483,12 +483,6 @@ void LspClient::ParseAndHandleResponse(LspClient* self, std::string_view json_st
     Json content = Json::parse(json_string);
 #ifdef DUMP_TO_TERM
     printf("%s\n", content.dump(2).c_str());
-#else
-    // FIXME: cleanup this mess.
-    // printf(" [lsp-client] %s\n", content.dump(2).c_str());
-    // FILE* f = fopen("./build/lsp.log", "a");
-    // fprintf(f, "%s\n", content.dump(2).c_str());
-    // fclose(f);
 #endif
 
     self->HandleServerContent(content);
@@ -598,11 +592,6 @@ void LspClient::StderrCallback(void* user_data, const char* buff, size_t length)
   // printf(" [lsp-stderr] %*s\n", (int) length, buff);
 #ifdef DUMP_TO_TERM
   printf("%*s", (int) length, buff);
-#else
-  // FIXME: cleanup this mess.
-  // FILE* f = fopen("./build/lsp.log", "a");
-  // fprintf(f, "%*s", (int) length, buff);
-  // fclose(f);
 #endif
 }
 

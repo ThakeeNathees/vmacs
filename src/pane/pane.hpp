@@ -32,7 +32,7 @@ public:
 
 private:
   KeyTree keytree;
-  std::unordered_map<String, FuncAction> actions;
+  std::unordered_map<std::string, FuncAction> actions;
 };
 
 

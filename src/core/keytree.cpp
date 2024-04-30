@@ -9,10 +9,6 @@
 #include "core.hpp"
 
 
-// The global thread stop indicator.
-std::atomic<bool> global_thread_stop = false;
-
-
 KeyTree::KeyTree() {
   root = std::make_unique<KeyTreeNode>();
   ResetCursor();

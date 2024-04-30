@@ -33,8 +33,105 @@
 #include <nlohmann/json.hpp>
 using Json = nlohmann::json;
 
-// Commonly used macros and utility C things.
-#include "common.h"
+#include "thread_safe_queue.hpp"
+
+
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+#define MAX(a, b) (((a) > (b)) ? (a) : (b))
+
+#define BETWEEN(a, b, c) ((a) <= (b) && (b) <= (c))
+
+#define CLAMP(a, b, c) \
+  (b) < (a)            \
+  ? (a)                \
+  : ((b) > (c)         \
+     ? (c)             \
+     : (b))
+
+
+#ifndef __has_builtin
+  #define __has_builtin(x) 0
+#endif
+
+#define NO_OP do {} while (false)
+
+// CONCAT_LINE(X) will result evaluvated X<__LINE__>.
+#define __CONCAT_LINE_INTERNAL_R(a, b) a ## b
+#define __CONCAT_LINE_INTERNAL_F(a, b) __CONCAT_LINE_INTERNAL_R(a, b)
+#define CONCAT_LINE(X) __CONCAT_LINE_INTERNAL_F(X, __LINE__)
+
+
+// The internal assertion macro, this will print error and break regardless of
+// the build target (debug or release). Use ASSERT() for debug assertion and
+// use __ASSERT() for TODOs.
+#define __ASSERT(condition, message)                                 \
+  do {                                                               \
+    if (!(condition)) {                                              \
+      fprintf(stderr, "Assertion failed: %s\n\tat %s() (%s:%i)\n"    \
+                      "\tcondition: %s",                             \
+        message, __func__, __FILE__, __LINE__, #condition);          \
+      DEBUG_BREAK();                                                 \
+      abort();                                                       \
+    }                                                                \
+  } while (false)
+
+
+// Using __ASSERT() for make it crash in release binary too.
+#define TODO __ASSERT(false, "TODO: It hasn't implemented yet.")
+#define OOPS "Oops a bug!! report please."
+
+
+#ifdef DEBUG
+
+#ifdef _MSC_VER
+  #define DEBUG_BREAK() __debugbreak()
+#else
+  #define DEBUG_BREAK() __builtin_trap()
+#endif
+
+// This will terminate the compilation if the [condition] is false, because of
+// char _assertion_failure_<__LINE__>[-1] evaluated.
+#define STATIC_ASSERT(condition) \
+  static char CONCAT_LINE(_assertion_failure_)[2*!!(condition) - 1]
+
+#define ASSERT(condition, message) __ASSERT(condition, message)
+
+#define ASSERT_INDEX(index, size) \
+  ASSERT(index >= 0 && index < size, "Index out of bounds.")
+
+#define UNREACHABLE()                                                \
+  do {                                                               \
+    fprintf(stderr, "Execution reached an unreachable path\n"        \
+      "\tat %s() (%s:%i)\n", __func__, __FILE__, __LINE__);          \
+    DEBUG_BREAK();                                                   \
+    abort();                                                         \
+  } while (false)
+
+#else // #ifdef DEBUG
+
+
+#define STATIC_ASSERT(condition) NO_OP
+
+#define DEBUG_BREAK() NO_OP
+#define ASSERT(condition, message) NO_OP
+#define ASSERT_INDEX(index, size) NO_OP
+
+#if defined(_MSC_VER)
+  #define UNREACHABLE() __assume(0)
+#elif (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 5))
+  #define UNREACHABLE() __builtin_unreachable()
+#elif defined(__EMSCRIPTEN__) || defined(__clang__)
+  #if __has_builtin(__builtin_unreachable)
+    #define UNREACHABLE() __builtin_unreachable()
+  #else
+    #define UNREACHABLE() NO_OP
+  #endif
+#else
+  #define UNREACHABLE() NO_OP
+#endif
+
+#endif // #ifdef DEBUG
+
 
 // This will mark a class non-copiable by deleting the copy constructor and
 // copy assignment.
@@ -61,10 +158,6 @@ using Json = nlohmann::json;
 // compact form where the ctrl/alt/shift are set as bits in the integer.
 typedef uint32_t event_t;
 
-// Not sure this is a good idea but, if this set to true, we signal all the
-// threads to stop what they're doing and join.
-extern std::atomic<bool> global_thread_stop;
-
 // TODO:
 // This is incomplete as there are resize events and mouse events. Also I
 // need to re-consider that in key events, only unicode or keycode exists at a
@@ -83,13 +176,6 @@ extern std::atomic<bool> global_thread_stop;
 #define KEY_CODE(code, ascii, ctrl, alt, shift) \
   Event::Keycode::code | \
   (ctrl?0x400:0) | (alt?0x800:0) | (shift?0x1000:0) | ((ascii & 0xff) << 13)
-
-
-// The string type used by the buffer type defined in case if we want to change
-// it in the future and implement our own string system which support first
-// class utf8 handling.
-typedef std::string String;
-typedef std::string_view StringView;
 
 
 // The coordinate inside a buffer, we can't use row, col since the tab character
@@ -180,41 +266,6 @@ private:
 };
 
 
-template <class T>
-class ThreadSafeQueue {
-
-public:
-  void Enqueue(const T& t) {
-    std::lock_guard<std::mutex>lock(mutex);
-    queue.push(t);
-    cond.notify_one();
-  }
-
-
-  T Dequeue() {
-    std::unique_lock<std::mutex> lock(mutex);
-    while (queue.empty()) {
-      cond.wait(lock);
-    }
-    T value = queue.front();
-    queue.pop();
-    return value;
-  }
-
-
-  bool Empty() const {
-    std::lock_guard<std::mutex> lock(mutex);
-    return queue.empty();
-  }
-
-
-private:
-  std::queue<T> queue;
-  mutable std::mutex mutex;
-  std::condition_variable cond;
-};
-
-
 class Theme {
 
 public:
@@ -285,8 +336,8 @@ int GetElapsedTime();
 
 bool IsCharName(int c); // Returns the given codepoint [a-zA-Z0-9_].
 bool IsCharWhitespace(int c);
-bool EndsWith(StringView str, StringView suffix);
-bool StartsWith(StringView str, StringView suffix);
+bool EndsWith(std::string_view str, std::string_view suffix);
+bool StartsWith(std::string_view str, std::string_view suffix);
 
 uint8_t RgbToXterm(uint32_t rgb);
 uint32_t XtermToRgb(uint8_t xterm);
