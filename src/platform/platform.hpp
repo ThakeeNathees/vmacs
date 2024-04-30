@@ -101,7 +101,10 @@ public:
 
   // Note that this method isn't supposed to be called multiple times. Create a
   // new IPC instance if you want to listen to another process.
-  virtual void StartListening() = 0;
+  virtual void Run() = 0;
+
+  // This will signale the child process to stop listening for stdin and complete
+  // the process if nothing else to display.
   virtual void StopListening() = 0;
 
   virtual void WriteToStdin(const std::string& data) = 0;

@@ -13,18 +13,29 @@
 #include "document/document.hpp"
 
 
+class Pane {
+
+public:
+  virtual void HandleEvent(const Event& event) = 0; 
+  virtual void Update() = 0;
+  virtual void Draw(FrameBuffer buff, Position pos, Size area) = 0;
+
+  virtual ~Pane() = default;
+};
+
+
 // BufferPane is the Pane that handles events and display the undeling buffer
 // it's more of a text editor with number line and scroll bar etc.
-class DocPane {
+class DocPane : public Pane {
 
 public:
   DocPane();
 
   void SetDocument(std::shared_ptr<Document> document);
 
-  void HandleEvent(const Event& event);
-  void Update();
-  void Draw(FrameBuffer buff, Position pos, Size area);
+  void HandleEvent(const Event& event) override;
+  void Update() override;
+  void Draw(FrameBuffer buff, Position pos, Size area) override;
 
 
 private:
@@ -59,8 +70,43 @@ private:
   // Check the given index is within selection or inside the cursor and sets the pointers.
   // This is needed to set the background color of a cell and re-usable.
   void CheckCellStatus(int index, bool* in_cursor, bool* in_selection);
-  void ComputeCompletionPosition();
+};
 
+
+class FindPane : public Pane {
+
+public:
+  FindPane();
+
+  void HandleEvent(const Event& event) override;
+  void Update() override;
+  void Draw(FrameBuffer buff, Position pos, Size area) override;
+
+private:
+  std::unique_ptr<IPC> ipc;
+  std::mutex mutex_results;
+  std::vector<std::string> results;
+
+  std::unique_ptr<IPC> ipc_filter;
+  std::mutex mutex_filters;
+  std::vector<std::string> filters;
+
+  // The cursor inside the search bar.
+  int cursor_index = 0;
+  std::string input_text; // The text that was inputted.
+
+private:
+  static void StdoutCallbackResults(void* data, const char* buff, size_t length);
+  static void StdoutCallbackFilter(void* data, const char* buff, size_t length);
+
+  void TriggerFuzzyFilter();
+
+  // Note that these methods are only called from the Draw function and before
+  // calling it, the required mutexes needs to be locked. Since these functions
+  // Don't call the mutexes. (Designed this way so I don't lock on the same mutex
+  // twise or Don't want to borrow unique_lock and make the code unreadable).
+  void DrawResults(FrameBuffer buff, int x, int y, int w, int h);
+  void DrawFilter(FrameBuffer buff, int x, int y, int w, int h);
 };
 
 
@@ -79,7 +125,10 @@ private:
 
   static std::shared_ptr<Editor> singleton;
 
+  // FIXME(mess):
   DocPane docpane;
+  FindPane findpane;
+
   std::unique_ptr<FrontEnd> frontend;
 
   std::atomic<bool> redraw = true;

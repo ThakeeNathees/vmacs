@@ -105,11 +105,6 @@ DocPane::DocPane() {
 }
 
 
-void DocPane::SetDocument(std::shared_ptr<Document> document) {
-  this->document = document;
-}
-
-
 void DocPane::HandleEvent(const Event& event) {
   if (this->document == nullptr) return;
 
@@ -166,6 +161,11 @@ void DocPane::Update() {
 }
 
 
+void DocPane::SetDocument(std::shared_ptr<Document> document) {
+  this->document = document;
+}
+
+
 void DocPane::ResetCursorBlink() {
   cursor_blink_show = true;
   cursor_last_blink = GetElapsedTime();
@@ -197,15 +197,6 @@ void DocPane::EnsureCursorOnView() {
 void DocPane::Draw(FrameBuffer buff, Position pos, Size area) {
   DrawBuffer(buff, pos, area);
   DrawAutoCompletions(buff, pos);
-
-  // Draw a spinning indicator yell it's re-drawn.
-  // ⡿ ⣟ ⣯ ⣷ ⣾ ⣽ ⣻ ⢿
-  static int curr = 0;
-  int icons[] = { 0x287f, 0x28df, 0x28ef, 0x28f7, 0x28fe, 0x28fd, 0x28fb, 0x28bf };
-  int icon_count = sizeof icons / sizeof *icons;
-  if (curr >= icon_count) curr = 0;
-  SET_CELL(buff, 0, area.height-1, icons[curr++], 0xffffff, 0, 0); // FIXME:
-
 }
 
 
@@ -381,11 +372,6 @@ void DocPane::DrawBuffer(FrameBuffer buff, Position pos, Size area) {
     } // End of drawing a character.
 
   } // End of drawing a line.
-
-}
-
-
-void DocPane::ComputeCompletionPosition() {
 
 }
 
@@ -589,6 +575,5 @@ void DocPane::DrawAutoCompletions(FrameBuffer buff, Position docpos) {
       popup_bg,
       0,
       true);
-
 }
 

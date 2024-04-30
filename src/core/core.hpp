@@ -314,6 +314,11 @@ void DrawTextLine(
                      // only the text is drawn with the given bg.
 
 
+void DrawRectangleFill(FrameBuffer buff, int x, int y, int width, int height, Color bg);
+void DrawRectangleLine(FrameBuffer buff, int x, int y, int width, int height, Color fg, Color bg, bool fill=false);
+void DrawHorizontalLine(FrameBuffer buff, int x, int y, int width, Color fg, Color bg);
+
+
 // On a successfull parse, it'll return true and push all the keys are parsed
 // from that string.
 //

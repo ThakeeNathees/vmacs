@@ -75,6 +75,6 @@ bool SpawnProcess(
     int* fdread_out,    // Return file descriptor for stdout.
     int* fdread_err);   // Return file descriptor for stderr.
 
-bool ShellExec(exec_options_t opt, pid_t* pid);
+bool ShellExec(exec_options_t opt, pid_t* pid, std::atomic<bool>& loop_stop);
 
 #endif // defined(__unix__) || defined(__APPLE__)

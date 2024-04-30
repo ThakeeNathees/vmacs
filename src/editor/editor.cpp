@@ -123,12 +123,15 @@ int Editor::MainLoop() {
 
     // Handle Events.
     while (!event_queue.Empty()) {
-      docpane.HandleEvent(event_queue.Dequeue());
+      Event e = event_queue.Dequeue();
+      docpane.HandleEvent(e);
+      findpane.HandleEvent(e);
       redraw = true;
     }
 
     // Update call.
     docpane.Update();
+    findpane.Update();
 
     // FIXME: Because of raylib we can't do this. The fron end should own the main
     // loop and use the eidtor as a instance to run at each iteration.
@@ -186,8 +189,22 @@ void Editor::Draw() {
     cell.bg     = color_bg;
     cell.attrib = 0;
   }
-  docpane.Draw(buff, {0,0}, {buff.width, buff.height});
+
+  Position pos = {0, 0};
+  Size size = {buff.width, buff.height};
+  docpane.Draw(buff, pos, size);
+  findpane.Draw(buff, pos, size);
+
   frontend->Display(color_bg); // FIXME: background color for raylib.
+
+  // Draw a spinning indicator yell it's re-drawn.
+  // ⡿ ⣟ ⣯ ⣷ ⣾ ⣽ ⣻ ⢿
+  static int curr = 0;
+  int icons[] = { 0x287f, 0x28df, 0x28ef, 0x28f7, 0x28fe, 0x28fd, 0x28fb, 0x28bf };
+  int icon_count = sizeof icons / sizeof *icons;
+  if (curr >= icon_count) curr = 0;
+  SET_CELL(buff, 0, buff.height-1, icons[curr++], 0xffffff, 0, 0); // FIXME:
+
 }
 
 
@@ -204,6 +221,7 @@ std::shared_ptr<Document> Editor::OpenDocument(const std::string& path) {
 
   document->SetLanguage(languages["cpp"]);
   docpane.SetDocument(document);
+
   document->SetLspClient(lsp_clients["clangd"]);
 
   return document;

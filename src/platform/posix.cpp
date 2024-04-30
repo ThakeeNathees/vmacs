@@ -84,7 +84,7 @@ bool SpawnProcess(const char* file, char* const argv[], pid_t* pid, int* fdwrite
 
 
 // Return false if it failed to spawn a child process.
-bool ShellExec(exec_options_t opt, pid_t* pid) {
+bool ShellExec(exec_options_t opt, pid_t* pid, std::atomic<bool>& loop_stop) {
 
   // Set of file descriptors waiting for listening.
   fd_set fds_waiting_for_read;
@@ -116,7 +116,7 @@ bool ShellExec(exec_options_t opt, pid_t* pid) {
     char buff[READ_BUFF_SIZE];
 
     // If we're exiting don't run this anymore.
-    if (global_thread_stop.load()) break;
+    if (loop_stop.load()) break;
 
     // Write to the child process. This is non blocking.
     if (fdwrite_in >= 0 && writing_in) {
@@ -124,6 +124,12 @@ bool ShellExec(exec_options_t opt, pid_t* pid) {
       if (write_count < 0) {
         exit_type = EXIT_TYPE_FAILURE;
         goto l_loop_end;
+      }
+
+      // If no more data to write, close the pipe to send EOF to the child.
+      if (!writing_in) {
+        close(fdwrite_in);
+        fdwrite_in = -1;
       }
     }
 
@@ -240,15 +246,18 @@ public:
     execopt.file        = this->opt.file.c_str();
     execopt.argv        = argv;
     execopt.timeout_sec = this->opt.timeout_sec;
-    execopt.cb_stdin    = (opt.sending_inputs)  ? IpcPosix::StdinCallback  : NULL;
+    execopt.cb_stdin    = (opt.sending_inputs) ? IpcPosix::StdinCallback : NULL;
     execopt.cb_stdout   = IpcPosix::StdoutCallback;
     execopt.cb_stderr   = IpcPosix::StderrCallback;
     execopt.cb_exit     = IpcPosix::ExitCallback;
+
+    pending_inputs = opt.sending_inputs;
   }
 
 
   ~IpcPosix() {
     if (argv != nullptr) free(argv);
+    loop_stop = true;
     pending_inputs = false;
     if (server_io_thread.joinable()) {
       server_io_thread.join();
@@ -257,9 +266,9 @@ public:
 
 
   // Note that this method isn't supposed to be called multiple times.
-  void StartListening() override {
+  void Run() override {
     server_io_thread = std::thread([this] () {
-      ShellExec(execopt, &pid);
+      ShellExec(execopt, &pid, loop_stop);
     });
   }
 
@@ -272,14 +281,14 @@ public:
   void WriteToStdin(const std::string& data) override {
     ASSERT(opt.sending_inputs, "Trying to send stdin to child process\n"
         "Did you forget to set opt.sending_inputs to true?");
-    queue_to_server.Enqueue(data);
+    queue_to_stdin.Enqueue(data);
   }
 
 
 private:
-  // Buffer all the write to server request in this queue and we dispatch them
+  // Buffer all the write to stdin request in this queue and we dispatch them
   // in the stdin callback.
-  ThreadSafeQueue<std::string> queue_to_server;
+  ThreadSafeQueue<std::string> queue_to_stdin;
 
   // This manually needs to be cleaned up as it will be mallocd.
   char** argv = nullptr;
@@ -287,25 +296,22 @@ private:
   exec_options_t execopt;
   pid_t pid;
 
-  std::atomic<bool> pending_inputs = true;
+  std::atomic<bool> pending_inputs = false;
+  std::atomic<bool> loop_stop = false;
   std::thread server_io_thread;
 
 private:
   static int StdinCallback(void* user_data, int fd, bool* pending) {
     IpcPosix* self = (IpcPosix*) user_data;
 
-    // Don't call this at the end of this function since the queue can be filled
-    // at the middle of the write bellow so we check if it's empty here.
-    *pending = (self->pending_inputs || !self->queue_to_server.Empty());
-
     int count = 0;
-    while (!self->queue_to_server.Empty()) {
-      std::string data = self->queue_to_server.Dequeue();
+    while (!self->queue_to_stdin.Empty()) {
+      std::string data = self->queue_to_stdin.Dequeue();
 
       // TODO: Handle if count is != data.size();
       if (data.size() > 0) {
         int wc = write(fd, data.c_str(), data.size());
-        if (wc < 0) {
+        if (wc < 0) { // Something went wrong.
           *pending = false;
           return wc;
         }
@@ -313,6 +319,7 @@ private:
       }
     }
 
+    *pending = (self->pending_inputs || !self->queue_to_stdin.Empty());
     return count;
   }
 

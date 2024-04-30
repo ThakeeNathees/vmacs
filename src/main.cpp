@@ -38,12 +38,20 @@ void fzf_things_test() {
   IPC::IpcOptions opt;
   opt.timeout_sec = 3;
 
-  opt.file = "sh";
-  // opt.argv = {  "-c", "fd | fzf --filter edit" };
-  opt.argv = {  "-c", "find . -type f | fzf --filter buffer" };
+  // opt.file = "sh";
+  // // opt.argv = {  "-c", "fd | fzf --filter edit" };
+  // opt.argv = {  "-c", "find . -type f | fzf --filter buffer" };
 
+  // opt.file = "sh";
+  // opt.argv = {  "-c", "rg editor" };
+
+  // opt.argv = {  "-c", "find . -type f | fzf --filter buffer" };
   // opt.file = "grep";
   // opt.argv = {  "-rn", "editor" };
+
+  opt.file = "fzf";
+  opt.argv = {  "--read0", "--filter", "hello" };
+  opt.sending_inputs = true;
 
   opt.stdout_cb = [] (void*, const char* buff, size_t len) {
     printf("out: %*s\n", (int)len, buff);
@@ -58,10 +66,16 @@ void fzf_things_test() {
     printf("exitted.\n");
   };
 
-  // opt.stdout_cb =
   auto ipc = IPC::New(opt);
-  ipc->StartListening();
+  ipc->WriteToStdin("hello1\n");
+  ipc->WriteToStdin("hello2\n");
+  ipc->WriteToStdin(std::string("hello3\n\0", 8));
+  ipc->StopListening();
+  ipc->Run();
 
+  // printf(">> ");
+  // std::string s;
+  // std::cin >> s;
   while (!done);
 }
 
@@ -233,6 +247,7 @@ void tree_sitter_test() {
 //
 // Pending:
 //   Global config (tabsize), dropdown icons, dropdown list max count. lsp config.
+//   Better draw diagnostics.
 //
 //
 //   structure:

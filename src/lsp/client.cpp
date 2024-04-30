@@ -103,7 +103,7 @@ LspClient::~LspClient() {
 
 
 void LspClient::StartServer(std::optional<Uri> root_uri) {
-  ipc->StartListening();
+  ipc->Run();
   // TODO: configure params.
   SendRequest("initialize", Json::object());
 }
