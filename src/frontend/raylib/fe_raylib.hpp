@@ -25,7 +25,7 @@ public:
   virtual void Display(Color clear_color) override;
 
 private:
-  int font_size = 60;
+  int font_size = 30;
   Font font;
 
   FrameBuffer draw_buffer;

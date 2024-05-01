@@ -472,7 +472,7 @@ int main(int argc, char** argv) {
 
   Editor* e = (Editor*) editor.get();
 
-#if 1
+#if 0
   Path path("/Users/thakeenathees/Desktop/thakee/repos/vmacs/build/main.cpp");
   std::shared_ptr<Document> doc = e->OpenDocument(path);
   ASSERT(doc != nullptr, OOPS);

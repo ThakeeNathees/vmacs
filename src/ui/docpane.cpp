@@ -16,70 +16,9 @@ KeyTree DocPane::keytree;
 DocPane::DocPane() : DocPane(std::make_shared<Document>()) {}
 
 
-DocPane::DocPane(std::shared_ptr<Document> document): Pane(&keytree) {
-  this->document = document;
-
-  KeyTree& t = keytree;
-  t.RegisterAction("cursor_up", (FuncAction) DocPane::Action_CursorUp);
-
-  // FIXME: This mess needs to be re-implemented better.
-  t.RegisterAction("cursor_up", (FuncAction) DocPane::Action_CursorUp);
-  t.RegisterAction("cursor_down", (FuncAction) DocPane::Action_CursorDown);
-  t.RegisterAction("cursor_left", (FuncAction) DocPane::Action_CursorLeft);
-  t.RegisterAction("cursor_right", (FuncAction) DocPane::Action_CursorRight);
-  t.RegisterAction("cursor_end", (FuncAction) DocPane::Action_CursorEnd);
-  t.RegisterAction("cursor_home", (FuncAction) DocPane::Action_CursorHome);
-  t.RegisterAction("select_right", (FuncAction) DocPane::Action_SelectRight);
-  t.RegisterAction("select_left", (FuncAction) DocPane::Action_SelectLeft);
-  t.RegisterAction("select_up", (FuncAction) DocPane::Action_SelectUp);
-  t.RegisterAction("select_down", (FuncAction) DocPane::Action_SelectDown);
-  t.RegisterAction("select_home", (FuncAction) DocPane::Action_SelectHome);
-  t.RegisterAction("select_end", (FuncAction) DocPane::Action_SelectEnd);
-  t.RegisterAction("add_cursor_down", (FuncAction) DocPane::Action_AddCursor_down);
-  t.RegisterAction("add_cursor_up", (FuncAction) DocPane::Action_AddCursor_up);
-  t.RegisterAction("insert_space", (FuncAction) DocPane::Action_InsertSpace);
-  t.RegisterAction("insert_newline", (FuncAction) DocPane::Action_InsertNewline);
-  t.RegisterAction("insert_tab", (FuncAction) DocPane::Action_InsertTab);
-  t.RegisterAction("backspace", (FuncAction) DocPane::Action_Backspace);
-  t.RegisterAction("undo", (FuncAction) DocPane::Action_Undo);
-  t.RegisterAction("redo", (FuncAction) DocPane::Action_Redo);
-  t.RegisterAction("trigger_completion", (FuncAction) DocPane::Action_TriggerCompletion);
-  t.RegisterAction("clear_completion", (FuncAction) DocPane::Action_ClearCompletion);
-  t.RegisterAction("cycle_completion_list", (FuncAction) DocPane::Action_CycleCompletionList);
-  t.RegisterAction("cycle_completion_list_reversed", (FuncAction) DocPane::Action_CycleCompletionListReversed);
-
-  // ---------------------------------------------------------------------------
-
-  t.RegisterBinding("*", "<up>",        "cursor_up");
-  t.RegisterBinding("*", "<down>",      "cursor_down");
-  t.RegisterBinding("*", "<left>",      "cursor_left");
-  t.RegisterBinding("*", "<right>",     "cursor_right");
-  t.RegisterBinding("*", "<home>",      "cursor_home");
-  t.RegisterBinding("*", "<end>",       "cursor_end");
-  t.RegisterBinding("*", "<S-right>",   "select_right");
-  t.RegisterBinding("*", "<S-left>",    "select_left");
-  t.RegisterBinding("*", "<S-up>",      "select_up");
-  t.RegisterBinding("*", "<S-down>",    "select_down");
-  t.RegisterBinding("*", "<S-home>",    "select_home");
-  t.RegisterBinding("*", "<S-end>",     "select_end");
-
-  t.RegisterBinding("*", "<M-down>",    "add_cursor_down");
-  t.RegisterBinding("*", "<M-up>",      "add_cursor_up");
-
-  t.RegisterBinding("*", "<space>",     "insert_space");
-  t.RegisterBinding("*", "<enter>",     "insert_newline");
-  t.RegisterBinding("*", "<tab>",       "insert_tab");
-  t.RegisterBinding("*", "<backspace>", "backspace");
-  t.RegisterBinding("*", "<C-z>",       "undo");
-  t.RegisterBinding("*", "<C-y>",       "redo");
-
-  t.RegisterBinding("*", "<C-x><C-k>",  "trigger_completion");
-  t.RegisterBinding("*", "<C-n>",       "cycle_completion_list");
-  t.RegisterBinding("*", "<C-p>",       "cycle_completion_list_reversed");
-  t.RegisterBinding("*", "<esc>",       "clear_completion");
-
-  SetMode("*");
-
+DocPane::DocPane(std::shared_ptr<Document> document)
+  : Pane(&keytree), document(document) {
+  SetMode("*"); // FIXME:
 }
 
 

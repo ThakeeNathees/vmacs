@@ -21,26 +21,7 @@ FindPane::FindPane(std::unique_ptr<Finder> finder_)
     this->OnFilteredItemsChanged();
   });
 
-  KeyTree& t = keytree;
-
-  t.RegisterAction("cursor_right", (FuncAction) FindPane::Action_CursorRight);
-  t.RegisterAction("cursor_left", (FuncAction) FindPane::Action_CursorLeft);
-  t.RegisterAction("cursor_home", (FuncAction) FindPane::Action_CursorHome);
-  t.RegisterAction("cursor_end", (FuncAction) FindPane::Action_CursorEnd);
-  t.RegisterAction("backspace", (FuncAction) FindPane::Action_Backspace);
-  t.RegisterAction("cycle_selection", (FuncAction) FindPane::Action_CycleSelection);
-  t.RegisterAction("cycle_selection_reversed", (FuncAction) FindPane::Action_CycleSelectionReversed);
-
-  t.RegisterBinding("*", "<right>", "cursor_right");
-  t.RegisterBinding("*", "<left>",  "cursor_left");
-  t.RegisterBinding("*", "<home>",  "cursor_home");
-  t.RegisterBinding("*", "<end>",  "cursor_home");
-  t.RegisterBinding("*", "<backspace>",  "backspace");
-  t.RegisterBinding("*", "<C-n>",  "cycle_selection");
-  t.RegisterBinding("*", "<C-p>",  "cycle_selection_reversed");
-  t.RegisterBinding("*", "<tab>",  "cycle_selection");
-  t.RegisterBinding("*", "<S-tab>", "cycle_selection_reversed");
-
+  // FIXME: Initial mode.
   SetMode("*");
 }
 
@@ -207,7 +188,7 @@ void FindPane::DrawItems(FrameBuffer buff, int x, int y, int w, int h, const std
   Color bg = Global::GetCurrentTheme()->GetStyleOr("ui.background", {.fg = 0xff0000, .bg = 0xff0000, .attrib = 0}).bg;
   // --------------------------------------------------------------------------
   for (int i = 0; i < h; i++) {
-    ASSERT(view_start_index + i < items->size(), OOPS);
+    if  (view_start_index + i >= items->size()) return; // Out of bound.
     const std::string& item = (*items)[view_start_index + i];
     Color bg_ = (view_start_index + i == selected_index) ? 0xff0000 : bg;
     DrawTextLine(buff, item.c_str(), x, y+i, w, fg, bg_, 0, true);
@@ -222,8 +203,8 @@ bool FindPane::Action_CursorRight(FindPane* self) { if (self->cursor_index < sel
 bool FindPane::Action_CursorLeft(FindPane* self) { if (self->cursor_index > 0) self->cursor_index--; return true; }
 bool FindPane::Action_CursorHome(FindPane* self) { self->cursor_index = 0; return true; }
 bool FindPane::Action_CursorEnd(FindPane* self) { self->cursor_index = self->input_text.size(); return true; }
-bool FindPane::Action_CycleSelection(FindPane* self) { self->CycleItemsReversed(); return true; }
-bool FindPane::Action_CycleSelectionReversed(FindPane* self) { self->CycleItems(); return true; }
+bool FindPane::Action_CycleSelection(FindPane* self) { self->CycleItems(); return true; }
+bool FindPane::Action_CycleSelectionReversed(FindPane* self) { self->CycleItemsReversed(); return true; }
 bool FindPane::Action_Backspace(FindPane* self) {
   if (self->cursor_index > 0) {
     self->input_text.erase(self->cursor_index-1, 1);
