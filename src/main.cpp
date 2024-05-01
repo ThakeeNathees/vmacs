@@ -21,7 +21,7 @@
 #include "core/core.hpp"
 #include "platform/platform.hpp"
 
-#include "lsp/lsp.hpp"
+#include "lsp/client.hpp"
 
 #include "frontend/raylib/fe_raylib.hpp"
 #include "frontend/termbox2/fe_termbox2.hpp"

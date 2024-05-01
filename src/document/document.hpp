@@ -9,7 +9,7 @@
 #pragma once
 
 #include "core/core.hpp"
-#include "lsp/lsp.hpp"
+#include "lsp/client.hpp"
 #include <tree_sitter/api.h>
 
 

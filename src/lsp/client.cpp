@@ -6,7 +6,7 @@
 // Copyright (c) 2024 Thakee Nathees
 // Licenced under: MIT
 
-#include "lsp.hpp"
+#include "client.hpp"
 
 #include <future>
 
