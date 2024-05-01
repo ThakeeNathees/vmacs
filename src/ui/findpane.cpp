@@ -6,7 +6,7 @@
 // Copyright (c) 2024 Thakee Nathees
 // Licenced under: MIT
 
-#include "pane.hpp"
+#include "ui.hpp"
 
 // FIXME(grep) The finder might not have the requirnment installed, handle it.
 

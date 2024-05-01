@@ -22,6 +22,7 @@
 #include "platform/platform.hpp"
 
 #include "lsp/client.hpp"
+#include "ui/ui.hpp"
 
 #include "frontend/raylib/fe_raylib.hpp"
 #include "frontend/termbox2/fe_termbox2.hpp"
@@ -244,6 +245,8 @@ void tree_sitter_test() {
 //   open empty, search for a file with file picker (BUG: file picker buffer unfinished input), open and edit.
 //   Add another language server client and test. show errors and ask inputs.
 //
+//   Path type in Platform doesn't normalize/"absolutifly" the path.
+//
 //
 // Pending:
 //   Global config (tabsize), dropdown icons, dropdown list max count. lsp config.
@@ -389,6 +392,25 @@ int main(int argc, char** argv) {
 
   std::shared_ptr<IEditor> editor = IEditor::Singleton();
   editor->SetFrontEnd(std::move(fe));
+
+  Editor* e = (Editor*) editor.get();
+
+#if 0
+  Path path("/Users/thakeenathees/Desktop/thakee/repos/vmacs/build/main.cpp");
+  std::shared_ptr<Document> doc = e->OpenDocument(path);
+  ASSERT(doc != nullptr, OOPS);
+  std::shared_ptr<const Language> lang = e->GetLanguage("cpp");
+  ASSERT(lang != nullptr, OOPS);
+  std::shared_ptr<LspClient> client = e->GetLspClient("clangd");
+  ASSERT(client != nullptr, OOPS);
+  doc->SetLanguage(lang);
+  doc->SetLspClient(client);
+  std::unique_ptr<Pane> p = std::make_unique<DocPane>(doc);
+#else
+  std::unique_ptr<Pane> p = std::make_unique<FindPane>(std::make_unique<FilesFinder>());
+#endif
+
+  e->SetRootPane(std::move(p));
 
   editor->MainLoop();
   return 0;

@@ -7,8 +7,7 @@
 // Licenced under: MIT
 
 #include "core/core.hpp"
-#include "platform//platform.hpp"
-#include "pane/finder.hpp"
+#include "platform/platform.hpp"
 #include "editor.hpp"
 
 #include <chrono>
@@ -87,6 +86,11 @@ void Editor::SetFrontEnd(std::unique_ptr<FrontEnd> frontend) {
 }
 
 
+void Editor::SetRootPane(std::unique_ptr<Pane> root_pane) {
+  this->root_pane = std::move(root_pane);
+}
+
+
 uint8_t IEditor::RgbToXterm(uint32_t rgb) {
   return ::RgbToXterm(rgb);
 }
@@ -102,6 +106,8 @@ int Editor::MainLoop() {
 
   ASSERT(frontend != nullptr, "No frontend is available. Did you forgot to "
                               "call IEditor::SetFrontEnd() ?");
+
+  ASSERT(root_pane != nullptr, "Root pane is nullptr. Did you forget to set one?");
 
   if (!frontend->Initialize()) {
     fprintf(stdout, "Editor initialize failed.\n");
@@ -132,12 +138,12 @@ int Editor::MainLoop() {
       if (event.type == Event::Type::CLOSE) {
         running = false;
       }
-      root.HandleEvent(event);
+      root_pane->HandleEvent(event);
       redraw = true;
     }
 
     // Update call.
-    root.Update();
+    root_pane->Update();
 
     // FIXME: Because of raylib we can't do this. The fron end should own the main
     // loop and use the eidtor as a instance to run at each iteration.
@@ -179,29 +185,49 @@ void Editor::Draw() {
   // Draw to the front end buffer.
   FrameBuffer buff = frontend->GetDrawBuffer();
   Color color_bg = Global::GetCurrentTheme()->GetStyleOr("ui.background", {.fg=0, .bg=0xffffff, .attrib=0}).bg;
-  root.Draw(buff, {0, 0}, {buff.width, buff.height});
+
+  // Clear the background.
+  for (int i = 0; i < buff.width * buff.height; i++) {
+    buff.cells[i] = {.ch = ' ', .fg = 0, .bg = color_bg, .attrib=0};
+  }
+
+  root_pane->Draw(buff, {0, 0}, {buff.width, buff.height});
   frontend->Display(color_bg); // FIXME: background color for raylib.
 }
 
 
-// FIXME: Re implement this mess.
-// std::shared_ptr<Document> Editor::OpenDocument(const std::string& path) {
+// FIXME: Properly re-implement this method.
+std::shared_ptr<Document> Editor::OpenDocument(const Path& path) {
 
-//   Uri uri = std::string("file://") + path;
-//   std::string text;
-//   ASSERT(Platform::ReadFile(&text, path), "My ugly code");
+  Uri uri = path.Uri();
 
-//   std::shared_ptr<Buffer> buff = std::make_shared<Buffer>(text);
-//   std::shared_ptr<Document> document = std::make_shared<Document>(uri, buff);
-//   documents[uri] = document;
+  // If the document is already opened, just return it.
+  auto it = documents.find(uri);
+  if (it != documents.end()) return it->second;
 
-//   document->SetLanguage(languages["cpp"]);
-//   docpane.SetDocument(document);
+  std::string text;
+  if (!Platform::ReadFile(&text, path)) return nullptr;
 
-//   document->SetLspClient(lsp_clients["clangd"]);
+  std::shared_ptr<Buffer> buff = std::make_shared<Buffer>(text);
+  std::shared_ptr<Document> document = std::make_shared<Document>(uri, buff);
+  documents[uri] = document;
 
-//   return document;
-// }
+  return document;
+}
+
+
+std::shared_ptr<const Language> Editor::GetLanguage(const LanguageId& id) const {
+  auto it = languages.find(id);
+  if (it == languages.end()) return nullptr;
+  return it->second;
+}
+
+
+std::shared_ptr<LspClient> Editor::GetLspClient(const LspClientId& id) const {
+  auto it = lsp_clients.find(id);
+  if (it == lsp_clients.end()) return nullptr;
+  return it->second;
+}
 
 
 void Editor::RegisterLspClient(const LspConfig& config) {

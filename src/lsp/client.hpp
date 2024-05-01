@@ -10,6 +10,7 @@
 #pragma once
 
 #include "types.hpp"
+#include "platform/platform.hpp"
 
 #include <nlohmann/json.hpp>
 using Json = nlohmann::json;
@@ -26,7 +27,6 @@ typedef uint32_t RequestId;
 typedef std::string LanguageId;  // c, cpp, python, js, etc.
 typedef std::string LspClientId; // clangd, ccls, pyright, etc.
 
-typedef std::string Uri;
 typedef std::function<void(const Uri&, uint32_t version, std::vector<Diagnostic>&&)> CallbackDiagnostic;
 typedef std::function<void(const Uri&, bool is_incomplete, std::vector<CompletionItem>&&)> CallbackCompletion;
 typedef std::function<void(const Uri&, SignatureItems&&)> CallbackSignatureHelp;

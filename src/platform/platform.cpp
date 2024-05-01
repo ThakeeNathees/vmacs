@@ -16,12 +16,18 @@ namespace fs = std::filesystem;
 
 
 Path::Path(std::string path) {
+  // TODO: The path could be relative, normalize it first before storing.
   this->path = path;
 }
 
 
 const std::string& Path::Get() const {
   return path;
+}
+
+
+std::string Path::Uri() const {
+  return std::string("file://") + path;
 }
 
 

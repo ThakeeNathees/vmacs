@@ -6,12 +6,14 @@
 // Copyright (c) 2024 Thakee Nathees
 // Licenced under: MIT
 
-#include "pane.hpp"
+#include "ui.hpp"
 
 
-DocPane::DocPane() {
+DocPane::DocPane() : DocPane(std::make_shared<Document>()) {}
 
-  this->document = std::make_shared<Document>();
+
+DocPane::DocPane(std::shared_ptr<Document> document) {
+  this->document = document;
 
   // FIXME: This mess needs to be re-implemented better.
   RegisterAction("cursor_up", [&] { this->document->CursorUp();       EnsureCursorOnView(); ResetCursorBlink(); return true; });
@@ -114,11 +116,6 @@ void DocPane::Update() {
       cursor_blink_show = !cursor_blink_show;
     }
   }
-}
-
-
-void DocPane::SetDocument(std::shared_ptr<Document> document) {
-  this->document = document;
 }
 
 
@@ -285,7 +282,7 @@ void DocPane::DrawBuffer(FrameBuffer buff, Position pos, Size area) {
       bool in_selection;
       CheckCellStatus(index, &in_cursor, &in_selection);
       if (in_cursor && cursor_blink_show) fg = color_cursor_fg,  bg = color_cursor_bg;
-      else if (in_selection) bg = color_sel;
+      else if (in_selection) fg = bg, bg = color_sel;
 
 
       // Draw the character finally.

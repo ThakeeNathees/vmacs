@@ -414,6 +414,7 @@ public:
   // Getters.
   LanguageId GetLanguageId() const;
   bool IsReadOnly() const;
+  const Uri& GetUri() const;
 
   // Through parameter "returns" Diagnostics* at the given index if has any,
   // otherwise it won't change the given pointer.

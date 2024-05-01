@@ -25,6 +25,8 @@ struct LanguageLoadResult {
 typedef std::function<void(void* user_data, const char* buff, size_t length)> FuncStdoutCallback;
 typedef std::function<void(void* user_data, int exit_code)> FuncExitCallback;
 
+typedef std::string Uri;
+
 
 class Path {
 
@@ -33,6 +35,8 @@ public:
   Path(std::string path);
 
   const std::string& Get() const;
+  Uri Uri() const;
+
   Path operator /(const std::string& inner) const;
 
 private:

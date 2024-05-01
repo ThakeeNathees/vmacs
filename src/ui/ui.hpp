@@ -10,48 +10,8 @@
 
 #include "core/core.hpp"
 #include "document/document.hpp"
+#include "editor/editor.hpp"
 #include "finder.hpp"
-
-
-class Pane {
-
-public:
-  virtual ~Pane() = default;
-
-  // The handler should return true if the event is consumed by the pane.
-  virtual bool HandleEvent(const Event& event) = 0;
-  virtual void Update() = 0;
-  virtual void Draw(FrameBuffer buff, Position pos, Size area) = 0;
-
-  void RegisterAction(const std::string& action_name, FuncAction action);
-  void RegisterBinding(const std::string& mode, const std::string& key_combination, const std::string& action_name);
-  void SetMode(const std::string& mode);
-
-  // Try to execute the event with the bindings, if success returns true.
-  bool TryEvent(const Event& event);
-
-private:
-  KeyTree keytree;
-  std::unordered_map<std::string, FuncAction> actions;
-};
-
-
-// The pane which is at the root level of the window. This will be the first
-// Pane that get the event from the Editor and propegate to the child panes.
-class RootPane : public Pane {
-public:
-  RootPane();
-
-  bool HandleEvent(const Event& event) override;
-  void Update() override;
-  void Draw(FrameBuffer buff, Position pos, Size area) override;
-
-private:
-  // TODO: Implement a proper tree like structure for splits.
-  std::vector<std::unique_ptr<Pane>> child_panes;
-  std::unique_ptr<Pane> popup_pane;
-  Pane* focused = nullptr; // Points to either a child_pane or popup_pane;
-};
 
 
 // BufferPane is the Pane that handles events and display the undeling buffer
@@ -60,8 +20,7 @@ class DocPane : public Pane {
 
 public:
   DocPane();
-
-  void SetDocument(std::shared_ptr<Document> document);
+  DocPane(std::shared_ptr<Document> document);
 
   bool HandleEvent(const Event& event) override;
   void Update() override;

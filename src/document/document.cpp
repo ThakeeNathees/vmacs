@@ -38,6 +38,11 @@ bool Document::IsReadOnly() const {
 }
 
 
+const Uri& Document::GetUri() const {
+  return uri;
+}
+
+
 void Document::SetReadOnly(bool readonly) {
   this->readonly = readonly;
 }

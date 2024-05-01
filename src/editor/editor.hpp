@@ -12,9 +12,20 @@
 #include "lsp/client.hpp"
 #include "document/document.hpp"
 
-#include "pane/pane.hpp"
+
+class Pane : public EventListener {
+
+public:
+  virtual ~Pane() = default;
+
+  // The handler should return true if the event is consumed by the pane.
+  virtual bool HandleEvent(const Event& event) = 0;
+  virtual void Update() = 0;
+  virtual void Draw(FrameBuffer buff, Position pos, Size area) = 0;
+};
 
 
+// FIXME: Re-write this class and the interface.
 class Editor : public IEditor {
 
 public:
@@ -23,20 +34,22 @@ public:
 
   static std::shared_ptr<Editor> Singleton();
 
-  void SetFrontEnd(std::unique_ptr<FrontEnd> frontend) override;
   int MainLoop() override;
+
+  void SetFrontEnd(std::unique_ptr<FrontEnd> frontend) override;
+  void SetRootPane(std::unique_ptr<Pane> root_pane);
+
+  std::shared_ptr<Document> OpenDocument(const Path& path);
+  std::shared_ptr<const Language> GetLanguage(const LanguageId& id) const;
+  std::shared_ptr<LspClient> GetLspClient(const LspClientId& id) const;
 
 private:
 
   static std::shared_ptr<Editor> singleton;
 
-  // FIXME(mess):
-  // DocPane docpane;
-  // FindPane findpane;
-  RootPane root;
+  std::unique_ptr<Pane> root_pane;
 
   std::unique_ptr<FrontEnd> frontend;
-
   std::atomic<bool> redraw = true;
   std::atomic<bool> running = true;
   ThreadSafeQueue<Event> event_queue;

@@ -266,6 +266,23 @@ private:
 };
 
 
+// A common base class for elements that can be bind events to action and listent
+// to certain events or combination of events.
+class EventListener {
+public:
+  void RegisterAction(const std::string& action_name, FuncAction action);
+  void RegisterBinding(const std::string& mode, const std::string& key_combination, const std::string& action_name);
+  void SetMode(const std::string& mode);
+
+  // Try to execute the event with the bindings, if success returns true.
+  bool TryEvent(const Event& event);
+
+private:
+  KeyTree keytree;
+  std::unordered_map<std::string, FuncAction> actions;
+};
+
+
 class Theme {
 
 public:
