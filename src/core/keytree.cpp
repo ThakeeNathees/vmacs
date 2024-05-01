@@ -10,60 +10,132 @@
 
 
 KeyTree::KeyTree() {
-  root = std::make_unique<KeyTreeNode>();
+  root = std::make_unique<Node>();
+}
+
+
+void KeyTree::RegisterAction(const std::string& action_name, FuncAction action) {
+  actions[action_name] = action;
+}
+
+
+void KeyTree::RegisterBinding(const std::string& mode, const std::string& key_combination, const std::string& action_name) {
+  std::vector<event_t> events;
+
+  if (!ParseKeyBindingString(events, key_combination.c_str())) {
+    // TODO: Report error to user.
+    return;
+  }
+
+  auto it = actions.find(action_name);
+  if (it == actions.end()) {
+    // TODO: Error(""); // Report to user.
+    return;
+  }
+
+  Node* curr = root.get();
+  for (event_t event : events) {
+    if (curr->children.find(event) == curr->children.end()) {
+      curr->children[event] = std::make_unique<Node>();
+    }
+    curr = curr->children[event].get();
+  }
+  curr->actions[mode] = it->second;
+}
+
+
+// ----------------------------------------------------------------------------
+// KeyTreeCursor.
+// ----------------------------------------------------------------------------
+
+
+KeyTreeCursor::KeyTreeCursor(const KeyTree* tree) : tree(tree) {
   ResetCursor();
 }
 
 
-void KeyTree::ResetCursor() {
-  cursor.node = root.get();
-  cursor.recorded_events.clear();
+void KeyTreeCursor::ResetCursor() {
+  ASSERT(tree != nullptr, OOPS);
+  node = tree->root.get();
+  recorded_events.clear();
 }
 
 
-bool KeyTree::IsCursorRoot() const {
-  return cursor.node == root.get();
+bool KeyTreeCursor::IsCursorRoot() const {
+  ASSERT(tree != nullptr, OOPS);
+  return node == tree->root.get();
 }
 
 
-void KeyTree::SetMode(const std::string& mode) {
+void KeyTreeCursor::SetMode(const std::string& mode) {
   this->mode = mode;
   ResetCursor();
 }
 
 
-void KeyTree::RegisterBinding(std::string mode, const std::vector<event_t>& events, FuncAction action) {
-  KeyTreeNode* curr = root.get();
-  for (event_t event : events) {
-    if (curr->children.find(event) == curr->children.end()) {
-      curr->children[event] = std::make_unique<KeyTreeNode>();
-    }
-    curr = curr->children[event].get();
-  }
-  curr->actions[mode] = action;
-}
+FuncAction KeyTreeCursor::ConsumeEvent(event_t event, bool* more) {
+  ASSERT(tree != nullptr, OOPS);
 
-
-FuncAction KeyTree::ConsumeEvent(event_t event, bool* more) {
-
-  ASSERT(cursor.node != nullptr, OOPS);
   FuncAction action = nullptr;
-
-  auto it_node = cursor.node->children.find(event);
-  if (it_node == cursor.node->children.end()) {
+  auto it_node = node->children.find(event);
+  if (it_node == node->children.end()) {
     if (more) *more = false;
     return nullptr;
   }
 
-  cursor.node = it_node->second.get();
-  ASSERT(cursor.node != nullptr, OOPS);
+  node = it_node->second.get();
+  ASSERT(node != nullptr, OOPS);
 
-  cursor.recorded_events.push_back(event);
-  auto it_action = cursor.node->actions.find(mode);
-  if (it_action != cursor.node->actions.end()) {
+  recorded_events.push_back(event);
+  auto it_action = node->actions.find(mode);
+  if (it_action != node->actions.end()) {
     action = it_action->second;
   }
-  if (more) *more = cursor.node->children.size() != 0;
+  if (more) *more = node->children.size() != 0;
   return action;
+}
+
+
+bool KeyTreeCursor::TryEvent(const Event& event) {
+  bool more = false;
+
+  FuncAction action = ConsumeEvent(EncodeKeyEvent(event.key), &more);
+  // if (action && more) { } // TODO: Timeout and perform action.
+
+  if (action) {
+    action();
+    ResetCursor();
+    return true;
+  }
+
+  // Don't do anything, just wait for the next keystroke and perform on it.
+  if (more) return true;
+
+  // Sequence is not registered, reset and listen from start. We'll be sending
+  // true and treat this event to reset the cursor.
+  if (!IsCursorRoot()) {
+    ResetCursor();
+    return true;
+  }
+
+  return false;
+}
+
+
+// ----------------------------------------------------------------------------
+// Event handler.
+// ----------------------------------------------------------------------------
+
+EventHandler::EventHandler(const KeyTree* keytree)
+  : keytree(keytree), cursor(keytree) { }
+
+
+bool EventHandler::HandleEvent(const Event& event) {
+  return cursor.TryEvent(event);
+}
+
+
+void EventHandler::SetMode(const std::string& mode) {
+  cursor.SetMode(mode);
 }
 

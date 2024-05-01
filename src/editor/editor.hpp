@@ -13,13 +13,15 @@
 #include "document/document.hpp"
 
 
-class Pane : public EventListener {
+// Note that since Pane is a subtype of event handler. And HandleEvent() is
+// already defined.
+class Pane : public EventHandler {
 
 public:
+  Pane(const KeyTree* keytree); // The static key tree registry of the child class.
   virtual ~Pane() = default;
 
   // The handler should return true if the event is consumed by the pane.
-  virtual bool HandleEvent(const Event& event) = 0;
   virtual void Update() = 0;
   virtual void Draw(FrameBuffer buff, Position pos, Size area) = 0;
 };

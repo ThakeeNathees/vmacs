@@ -8,9 +8,12 @@
 
 #include "ui.hpp"
 
+KeyTree FindPane::keytree;
+
 // FIXME(grep) The finder might not have the requirnment installed, handle it.
 
-FindPane::FindPane(std::unique_ptr<Finder> finder_): finder(std::move(finder_)) {
+FindPane::FindPane(std::unique_ptr<Finder> finder_)
+  : Pane(&keytree), finder(std::move(finder_)) {
 
   // Initialize the finder.
   finder->Initialize();
@@ -18,11 +21,13 @@ FindPane::FindPane(std::unique_ptr<Finder> finder_): finder(std::move(finder_)) 
     this->OnFilteredItemsChanged();
   });
 
-  RegisterAction("cursor_right", [&] { if (cursor_index < input_text.size()) cursor_index++; return true; });
-  RegisterAction("cursor_left", [&] { if (cursor_index > 0) cursor_index--; return true; });
-  RegisterAction("cursor_home", [&] { cursor_index = 0; return true; });
-  RegisterAction("cursor_end", [&] { cursor_index = input_text.size(); return true; });
-  RegisterAction("backspace", [&] {
+  KeyTree& t = keytree;
+
+  t.RegisterAction("cursor_right", [&] { if (cursor_index < input_text.size()) cursor_index++; return true; });
+  t.RegisterAction("cursor_left", [&] { if (cursor_index > 0) cursor_index--; return true; });
+  t.RegisterAction("cursor_home", [&] { cursor_index = 0; return true; });
+  t.RegisterAction("cursor_end", [&] { cursor_index = input_text.size(); return true; });
+  t.RegisterAction("backspace", [&] {
     if (cursor_index > 0) {
       input_text.erase(cursor_index-1, 1);
       cursor_index--;
@@ -34,24 +39,25 @@ FindPane::FindPane(std::unique_ptr<Finder> finder_): finder(std::move(finder_)) 
     }
     return true;
   });
-  RegisterAction("cycle_selection", [&] { this->CycleItems(); return true; });
-  RegisterAction("cycle_selection_reversed", [&] { this->CycleItemsReversed(); return true; });
+  t.RegisterAction("cycle_selection", [&] { this->CycleItems(); return true; });
+  t.RegisterAction("cycle_selection_reversed", [&] { this->CycleItemsReversed(); return true; });
 
-  RegisterBinding("*", "<right>", "cursor_right");
-  RegisterBinding("*", "<left>",  "cursor_left");
-  RegisterBinding("*", "<home>",  "cursor_home");
-  RegisterBinding("*", "<end>",  "cursor_home");
-  RegisterBinding("*", "<backspace>",  "backspace");
-  RegisterBinding("*", "<C-n>",  "cycle_selection");
-  RegisterBinding("*", "<C-p>",  "cycle_selection_reversed");
-  RegisterBinding("*", "<tab>",  "cycle_selection");
-  RegisterBinding("*", "<S-tab>", "cycle_selection_reversed");
+  t.RegisterBinding("*", "<right>", "cursor_right");
+  t.RegisterBinding("*", "<left>",  "cursor_left");
+  t.RegisterBinding("*", "<home>",  "cursor_home");
+  t.RegisterBinding("*", "<end>",  "cursor_home");
+  t.RegisterBinding("*", "<backspace>",  "backspace");
+  t.RegisterBinding("*", "<C-n>",  "cycle_selection");
+  t.RegisterBinding("*", "<C-p>",  "cycle_selection_reversed");
+  t.RegisterBinding("*", "<tab>",  "cycle_selection");
+  t.RegisterBinding("*", "<S-tab>", "cycle_selection_reversed");
+
   SetMode("*");
 }
 
 
 bool FindPane::HandleEvent(const Event& event) {
-  if (TryEvent(event)) return true;
+  if (EventHandler::HandleEvent(event)) return true;
   if (event.type == Event::Type::KEY && event.key.unicode != 0) {
     char c = (char) event.key.unicode;
     input_text.insert(cursor_index, std::string(1, event.key.unicode));

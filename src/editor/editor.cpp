@@ -45,6 +45,9 @@ const Theme* Global::GetCurrentTheme() {
 }
 
 
+Pane::Pane(const KeyTree* keytree) : EventHandler(keytree) {}
+
+
 // FIXME: This is not how we do it.
 Editor::Editor() {
 

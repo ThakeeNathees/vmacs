@@ -36,6 +36,11 @@ using Json = nlohmann::json;
 #include "thread_safe_queue.hpp"
 
 
+// -----------------------------------------------------------------------------
+// Common macros and typedefs.
+// -----------------------------------------------------------------------------
+
+
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
@@ -213,41 +218,63 @@ struct Style {
   uint8_t attrib;
 };
 
+// -----------------------------------------------------------------------------
+// KeyTree.
+// -----------------------------------------------------------------------------
 
-// The tree acts like a Trie for Events to handle sequence events. contains a
-// cursor to keep track of where we're at the key combination.
+// The tree acts like a Trie for Events to handle sequence events.
 class KeyTree {
+public:
 
   // A Node in the KeyTree (trie). Contains a map of child nodes and a map of
   // actions mapped from mode. The action for a specific key combination can
   // change depend on the mode it's in.
-  struct KeyTreeNode {
-    std::map<event_t, std::unique_ptr<KeyTreeNode>> children;
+  struct Node {
+    std::map<event_t, std::unique_ptr<Node>> children;
     std::map<std::string, FuncAction> actions;
   };
 
-
-  // KeyTreeCursor will keep track of where we're in while processing a key
-  // combination.
-  struct KeyTreeCursor {
-    KeyTreeNode* node; // Node we're currenly in initially the root.
-    std::vector<event_t> recorded_events; // Previous events which leads here.
-  };
-
-public:
   KeyTree();
 
-  // It'll change the mode and clear the cursor back to root.
+  // Before calling register binding, the action must be registered with the given name.
+  void RegisterAction(const std::string& action_name, FuncAction action);
+  void RegisterBinding(const std::string& mode, const std::string& key_combination, const std::string& action_name);
+
+private:
+  // A registry of actions associated with it's name.
+  std::unordered_map<std::string, FuncAction> actions;
+  std::unique_ptr<Node> root; // Root node of the tree.
+
+  // Cursor can access private things so I don't have to have public getter and
+  // setter for others.
+  friend class KeyTreeCursor;
+};
+
+
+// KeyTreeCursor is a statefull object that'll keep track of where we're in
+// while processing a key combination.
+class KeyTreeCursor {
+public:
+  KeyTreeCursor(const KeyTree* tree);
   void SetMode(const std::string& mode);
 
+  // Try to execute the event with the bindings, if success returns true.
+  bool TryEvent(const Event& event);
+
+private:
+  const KeyTree* tree = nullptr; // The tree we're traversing.
+  std::string mode;              // Current mode we're in.
+  KeyTree::Node* node;           // Node we're currenly in initially the root.
+
+  std::vector<event_t> recorded_events; // Previous events which leads here.
+
+private:
   // Clear all the tracks of cursor and set back to the root node.
   void ResetCursor();
 
   // Returns true if the cursor is at the root node and not listening to any key
   // sequences at the moment.
   bool IsCursorRoot() const;
-
-  void RegisterBinding(std::string, const std::vector<event_t>& events, FuncAction action);
 
   // When an event is encountered we feed that event to the keytree here to
   // update it's internal cursor, this will return the action for this event
@@ -258,30 +285,32 @@ public:
   // what to do about the returned action and what to do with the reset of the
   // sequence (e.g. use a timeout).
   FuncAction ConsumeEvent(event_t event, bool* more);
+};
+
+
+// An abstract definition of classes that can register events to key tree and
+// execute with keytreecursor.
+class EventHandler {
+public:
+  EventHandler(const KeyTree* keytree);
+  virtual ~EventHandler() = default;
+
+  // It'll try execute the event with the cursor and return the result.
+  virtual bool HandleEvent(const Event& event);
+
+  void SetMode(const std::string& mode);
 
 private:
-  std::string mode; // Current mode we're in.
-  std::unique_ptr<KeyTreeNode> root;
+  // This supposed to be the static key tree registry of the class of this
+  // isntance. Will be initialized at the constructor.
+  const KeyTree* keytree = nullptr;
   KeyTreeCursor cursor;
 };
 
 
-// A common base class for elements that can be bind events to action and listent
-// to certain events or combination of events.
-class EventListener {
-public:
-  void RegisterAction(const std::string& action_name, FuncAction action);
-  void RegisterBinding(const std::string& mode, const std::string& key_combination, const std::string& action_name);
-  void SetMode(const std::string& mode);
-
-  // Try to execute the event with the bindings, if success returns true.
-  bool TryEvent(const Event& event);
-
-private:
-  KeyTree keytree;
-  std::unordered_map<std::string, FuncAction> actions;
-};
-
+// -----------------------------------------------------------------------------
+// Theme.
+// -----------------------------------------------------------------------------
 
 class Theme {
 

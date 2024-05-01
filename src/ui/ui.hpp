@@ -26,8 +26,9 @@ public:
   void Update() override;
   void Draw(FrameBuffer buff, Position pos, Size area) override;
 
-
 private:
+  static KeyTree keytree;
+
   // The document we're editing on this pane.
   std::shared_ptr<Document> document;
 
@@ -68,6 +69,8 @@ public:
   void Draw(FrameBuffer buff, Position pos, Size area) override;
 
 private:
+  static KeyTree keytree;
+
   std::unique_ptr<Finder> finder;
 
   // The cursor inside the search bar.
