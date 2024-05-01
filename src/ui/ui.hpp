@@ -13,6 +13,9 @@
 #include "editor/editor.hpp"
 #include "finder.hpp"
 
+// -----------------------------------------------------------------------------
+// Document Pane.
+// -----------------------------------------------------------------------------
 
 // BufferPane is the Pane that handles events and display the undeling buffer
 // it's more of a text editor with number line and scroll bar etc.
@@ -27,8 +30,6 @@ public:
   void Draw(FrameBuffer buff, Position pos, Size area) override;
 
 private:
-  static KeyTree keytree;
-
   // The document we're editing on this pane.
   std::shared_ptr<Document> document;
 
@@ -56,7 +57,39 @@ private:
   // Check the given index is within selection or inside the cursor and sets the pointers.
   // This is needed to set the background color of a cell and re-usable.
   void CheckCellStatus(int index, bool* in_cursor, bool* in_selection);
+
+public: // Actions.
+  static KeyTree keytree;
+  static bool Action_CursorUp(DocPane* self);
+  static bool Action_CursorDown(DocPane* self);
+  static bool Action_CursorLeft(DocPane* self);
+  static bool Action_CursorRight(DocPane* self);
+  static bool Action_CursorEnd(DocPane* self);
+  static bool Action_CursorHome(DocPane* self);
+  static bool Action_SelectRight(DocPane* self);
+  static bool Action_SelectLeft(DocPane* self);
+  static bool Action_SelectUp(DocPane* self);
+  static bool Action_SelectDown(DocPane* self);
+  static bool Action_SelectHome(DocPane* self);
+  static bool Action_SelectEnd(DocPane* self);
+  static bool Action_AddCursor_down(DocPane* self);
+  static bool Action_AddCursor_up(DocPane* self);
+  static bool Action_InsertSpace(DocPane* self);
+  static bool Action_InsertNewline(DocPane* self);
+  static bool Action_InsertTab(DocPane* self);
+  static bool Action_Backspace(DocPane* self);
+  static bool Action_Undo(DocPane* self);
+  static bool Action_Redo(DocPane* self);
+  static bool Action_TriggerCompletion(DocPane* self);
+  static bool Action_ClearCompletion(DocPane* self);
+  static bool Action_CycleCompletionList(DocPane* self);
+  static bool Action_CycleCompletionListReversed(DocPane* self);
 };
+
+
+// -----------------------------------------------------------------------------
+// Find Pane.
+// -----------------------------------------------------------------------------
 
 
 class FindPane : public Pane {
@@ -69,8 +102,6 @@ public:
   void Draw(FrameBuffer buff, Position pos, Size area) override;
 
 private:
-  static KeyTree keytree;
-
   std::unique_ptr<Finder> finder;
 
   // The cursor inside the search bar.
@@ -95,6 +126,17 @@ private:
   void DrawItems(FrameBuffer buff,
                  int x, int y, int w, int h,
                  const std::vector<std::string>* items);
+
+public: // Actions.
+  static KeyTree keytree;
+  static bool Action_CursorRight(FindPane* self);
+  static bool Action_CursorLeft(FindPane* self);
+  static bool Action_CursorHome(FindPane* self);
+  static bool Action_CursorEnd(FindPane* self);
+  static bool Action_Backspace(FindPane* self);
+  static bool Action_CycleSelection(FindPane* self);
+  static bool Action_CycleSelectionReversed(FindPane* self);
+
 };
 
 

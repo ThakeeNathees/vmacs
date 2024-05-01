@@ -222,6 +222,13 @@ struct Style {
 // KeyTree.
 // -----------------------------------------------------------------------------
 
+// Actions are functions which are "bindable" to keys, and associated with a
+// key/key combination that invoke the action. The function should return true
+// when the event is consumed and no need to propegate to the other listeners.
+class EventHandler;
+typedef bool (*FuncAction)(EventHandler*);
+
+
 // The tree acts like a Trie for Events to handle sequence events.
 class KeyTree {
 public:
@@ -259,7 +266,7 @@ public:
   void SetMode(const std::string& mode);
 
   // Try to execute the event with the bindings, if success returns true.
-  bool TryEvent(const Event& event);
+  bool TryEvent(EventHandler* handler, const Event& event);
 
 private:
   const KeyTree* tree = nullptr; // The tree we're traversing.

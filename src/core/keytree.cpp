@@ -96,14 +96,14 @@ FuncAction KeyTreeCursor::ConsumeEvent(event_t event, bool* more) {
 }
 
 
-bool KeyTreeCursor::TryEvent(const Event& event) {
+bool KeyTreeCursor::TryEvent(EventHandler* handler, const Event& event) {
   bool more = false;
 
   FuncAction action = ConsumeEvent(EncodeKeyEvent(event.key), &more);
   // if (action && more) { } // TODO: Timeout and perform action.
 
   if (action) {
-    action();
+    action(handler);
     ResetCursor();
     return true;
   }
@@ -131,7 +131,7 @@ EventHandler::EventHandler(const KeyTree* keytree)
 
 
 bool EventHandler::HandleEvent(const Event& event) {
-  return cursor.TryEvent(event);
+  return cursor.TryEvent(this, event);
 }
 
 

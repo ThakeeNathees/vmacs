@@ -23,24 +23,13 @@ FindPane::FindPane(std::unique_ptr<Finder> finder_)
 
   KeyTree& t = keytree;
 
-  t.RegisterAction("cursor_right", [&] { if (cursor_index < input_text.size()) cursor_index++; return true; });
-  t.RegisterAction("cursor_left", [&] { if (cursor_index > 0) cursor_index--; return true; });
-  t.RegisterAction("cursor_home", [&] { cursor_index = 0; return true; });
-  t.RegisterAction("cursor_end", [&] { cursor_index = input_text.size(); return true; });
-  t.RegisterAction("backspace", [&] {
-    if (cursor_index > 0) {
-      input_text.erase(cursor_index-1, 1);
-      cursor_index--;
-
-      // If the input changed, the selection become invalid and we'll set to -1.
-      finder->InputChanged(this->input_text);
-      view_start_index = 0;
-      selected_index = -1;
-    }
-    return true;
-  });
-  t.RegisterAction("cycle_selection", [&] { this->CycleItems(); return true; });
-  t.RegisterAction("cycle_selection_reversed", [&] { this->CycleItemsReversed(); return true; });
+  t.RegisterAction("cursor_right", (FuncAction) FindPane::Action_CursorRight);
+  t.RegisterAction("cursor_left", (FuncAction) FindPane::Action_CursorLeft);
+  t.RegisterAction("cursor_home", (FuncAction) FindPane::Action_CursorHome);
+  t.RegisterAction("cursor_end", (FuncAction) FindPane::Action_CursorEnd);
+  t.RegisterAction("backspace", (FuncAction) FindPane::Action_Backspace);
+  t.RegisterAction("cycle_selection", (FuncAction) FindPane::Action_CycleSelection);
+  t.RegisterAction("cycle_selection_reversed", (FuncAction) FindPane::Action_CycleSelectionReversed);
 
   t.RegisterBinding("*", "<right>", "cursor_right");
   t.RegisterBinding("*", "<left>",  "cursor_left");
@@ -223,5 +212,27 @@ void FindPane::DrawItems(FrameBuffer buff, int x, int y, int w, int h, const std
     Color bg_ = (view_start_index + i == selected_index) ? 0xff0000 : bg;
     DrawTextLine(buff, item.c_str(), x, y+i, w, fg, bg_, 0, true);
   }
+}
+
+// -----------------------------------------------------------------------------
+// Actions.
+// -----------------------------------------------------------------------------
+
+bool FindPane::Action_CursorRight(FindPane* self) { if (self->cursor_index < self->input_text.size()) self->cursor_index++; return true; }
+bool FindPane::Action_CursorLeft(FindPane* self) { if (self->cursor_index > 0) self->cursor_index--; return true; }
+bool FindPane::Action_CursorHome(FindPane* self) { self->cursor_index = 0; return true; }
+bool FindPane::Action_CursorEnd(FindPane* self) { self->cursor_index = self->input_text.size(); return true; }
+bool FindPane::Action_CycleSelection(FindPane* self) { self->CycleItemsReversed(); return true; }
+bool FindPane::Action_CycleSelectionReversed(FindPane* self) { self->CycleItems(); return true; }
+bool FindPane::Action_Backspace(FindPane* self) {
+  if (self->cursor_index > 0) {
+    self->input_text.erase(self->cursor_index-1, 1);
+    self->cursor_index--;
+    // If the input changed, the selection become invalid and we'll set to -1.
+    self->finder->InputChanged(self->input_text);
+    self->view_start_index = 0;
+    self->selected_index = -1;
+  }
+  return true;
 }
 

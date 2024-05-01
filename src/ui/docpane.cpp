@@ -20,49 +20,33 @@ DocPane::DocPane(std::shared_ptr<Document> document): Pane(&keytree) {
   this->document = document;
 
   KeyTree& t = keytree;
+  t.RegisterAction("cursor_up", (FuncAction) DocPane::Action_CursorUp);
+
   // FIXME: This mess needs to be re-implemented better.
-  t.RegisterAction("cursor_up", [&] { this->document->CursorUp();       EnsureCursorOnView(); ResetCursorBlink(); return true; });
-  t.RegisterAction("cursor_down", [&] { this->document->CursorDown();     EnsureCursorOnView(); ResetCursorBlink(); return true; });
-  t.RegisterAction("cursor_left", [&] { this->document->CursorLeft();     EnsureCursorOnView(); ResetCursorBlink(); return true; });
-  t.RegisterAction("cursor_right", [&] { this->document->CursorRight();    EnsureCursorOnView(); ResetCursorBlink(); return true; });
-  t.RegisterAction("cursor_end", [&] { this->document->CursorEnd();      EnsureCursorOnView(); ResetCursorBlink(); return true; });
-  t.RegisterAction("cursor_home", [&] { this->document->CursorHome();     EnsureCursorOnView(); ResetCursorBlink(); return true; });
-  t.RegisterAction("select_right", [&] { this->document->SelectRight();    EnsureCursorOnView(); ResetCursorBlink(); return true; });
-  t.RegisterAction("select_left", [&] { this->document->SelectLeft();     EnsureCursorOnView(); ResetCursorBlink(); return true; });
-  t.RegisterAction("select_up", [&] { this->document->SelectUp();       EnsureCursorOnView(); ResetCursorBlink(); return true; });
-  t.RegisterAction("select_down", [&] { this->document->SelectDown();     EnsureCursorOnView(); ResetCursorBlink(); return true; });
-  t.RegisterAction("select_home", [&] { this->document->SelectHome();     EnsureCursorOnView(); ResetCursorBlink(); return true; });
-  t.RegisterAction("select_end", [&] { this->document->SelectEnd();      EnsureCursorOnView(); ResetCursorBlink(); return true; });
-
-  t.RegisterAction("add_cursor_down", [&] { this->document->AddCursorDown(); EnsureCursorOnView(); ResetCursorBlink(); return true; });
-  t.RegisterAction("add_cursor_up", [&] { this->document->AddCursorUp();   EnsureCursorOnView(); ResetCursorBlink(); return true; });
-
-  t.RegisterAction("insert_space", [&] { this->document->EnterCharacter(' ');  EnsureCursorOnView(); ResetCursorBlink(); return true; });
-  t.RegisterAction("insert_newline", [&] { this->document->EnterCharacter('\n'); EnsureCursorOnView(); ResetCursorBlink(); return true; });
-  t.RegisterAction("insert_tab", [&] { this->document->EnterCharacter('\t'); EnsureCursorOnView(); ResetCursorBlink(); return true; });
-
-  t.RegisterAction("backspace", [&] { this->document->Backspace();      EnsureCursorOnView(); ResetCursorBlink(); return true; });
-  t.RegisterAction("undo", [&] { this->document->Undo();           EnsureCursorOnView(); ResetCursorBlink(); return true; });
-  t.RegisterAction("redo", [&] { this->document->Redo();           EnsureCursorOnView(); ResetCursorBlink(); return true; });
-
-  t.RegisterAction("trigger_completion", [&] { this->document->TriggerCompletion(); EnsureCursorOnView(); ResetCursorBlink(); return true; });
-
-  // Fixme: TEMP command:
-  t.RegisterAction("clear_completion", [&] { this->document->ClearCompletionItems(); EnsureCursorOnView(); ResetCursorBlink(); return true; });
-  
-  t.RegisterAction("cycle_completion_list", [&] {
-    this->document->CycleCompletionList();
-    this->document->SelectCompletionItem();
-    EnsureCursorOnView(); ResetCursorBlink();
-    return true;
-    });
-
-  t.RegisterAction("cycle_completion_list_reversed", [&] {
-    this->document->CycleCompletionListReversed();
-    this->document->SelectCompletionItem();
-    EnsureCursorOnView(); ResetCursorBlink();
-    return true;
-    });
+  t.RegisterAction("cursor_up", (FuncAction) DocPane::Action_CursorUp);
+  t.RegisterAction("cursor_down", (FuncAction) DocPane::Action_CursorDown);
+  t.RegisterAction("cursor_left", (FuncAction) DocPane::Action_CursorLeft);
+  t.RegisterAction("cursor_right", (FuncAction) DocPane::Action_CursorRight);
+  t.RegisterAction("cursor_end", (FuncAction) DocPane::Action_CursorEnd);
+  t.RegisterAction("cursor_home", (FuncAction) DocPane::Action_CursorHome);
+  t.RegisterAction("select_right", (FuncAction) DocPane::Action_SelectRight);
+  t.RegisterAction("select_left", (FuncAction) DocPane::Action_SelectLeft);
+  t.RegisterAction("select_up", (FuncAction) DocPane::Action_SelectUp);
+  t.RegisterAction("select_down", (FuncAction) DocPane::Action_SelectDown);
+  t.RegisterAction("select_home", (FuncAction) DocPane::Action_SelectHome);
+  t.RegisterAction("select_end", (FuncAction) DocPane::Action_SelectEnd);
+  t.RegisterAction("add_cursor_down", (FuncAction) DocPane::Action_AddCursor_down);
+  t.RegisterAction("add_cursor_up", (FuncAction) DocPane::Action_AddCursor_up);
+  t.RegisterAction("insert_space", (FuncAction) DocPane::Action_InsertSpace);
+  t.RegisterAction("insert_newline", (FuncAction) DocPane::Action_InsertNewline);
+  t.RegisterAction("insert_tab", (FuncAction) DocPane::Action_InsertTab);
+  t.RegisterAction("backspace", (FuncAction) DocPane::Action_Backspace);
+  t.RegisterAction("undo", (FuncAction) DocPane::Action_Undo);
+  t.RegisterAction("redo", (FuncAction) DocPane::Action_Redo);
+  t.RegisterAction("trigger_completion", (FuncAction) DocPane::Action_TriggerCompletion);
+  t.RegisterAction("clear_completion", (FuncAction) DocPane::Action_ClearCompletion);
+  t.RegisterAction("cycle_completion_list", (FuncAction) DocPane::Action_CycleCompletionList);
+  t.RegisterAction("cycle_completion_list_reversed", (FuncAction) DocPane::Action_CycleCompletionListReversed);
 
   // ---------------------------------------------------------------------------
 
@@ -535,4 +519,40 @@ void DocPane::DrawAutoCompletions(FrameBuffer buff, Position docpos) {
       0,
       true);
 }
+
+// -----------------------------------------------------------------------------
+// Actions.
+// -----------------------------------------------------------------------------
+
+
+// The bellow code is common for all the bellow actions so defined here.
+#define COMMON_ACTION_END()                                            \
+  do {                                                                 \
+    self->EnsureCursorOnView(); self->ResetCursorBlink(); return true; \
+  } while (false)
+
+bool DocPane::Action_CursorUp(DocPane* self) { self->document->CursorUp(); COMMON_ACTION_END(); }
+bool DocPane::Action_CursorDown(DocPane* self) { self->document->CursorDown(); COMMON_ACTION_END(); }
+bool DocPane::Action_CursorLeft(DocPane* self) { self->document->CursorLeft(); COMMON_ACTION_END(); }
+bool DocPane::Action_CursorRight(DocPane* self) { self->document->CursorRight(); COMMON_ACTION_END(); }
+bool DocPane::Action_CursorEnd(DocPane* self) { self->document->CursorEnd(); COMMON_ACTION_END(); }
+bool DocPane::Action_CursorHome(DocPane* self) { self->document->CursorHome(); COMMON_ACTION_END(); }
+bool DocPane::Action_SelectRight(DocPane* self) { self->document->SelectRight(); COMMON_ACTION_END(); }
+bool DocPane::Action_SelectLeft(DocPane* self) { self->document->SelectLeft(); COMMON_ACTION_END(); }
+bool DocPane::Action_SelectUp(DocPane* self) { self->document->SelectUp(); COMMON_ACTION_END(); }
+bool DocPane::Action_SelectDown(DocPane* self) { self->document->SelectDown(); COMMON_ACTION_END(); }
+bool DocPane::Action_SelectHome(DocPane* self) { self->document->SelectHome(); COMMON_ACTION_END(); }
+bool DocPane::Action_SelectEnd(DocPane* self) { self->document->SelectEnd(); COMMON_ACTION_END(); }
+bool DocPane::Action_AddCursor_down(DocPane* self) { self->document->AddCursorDown(); COMMON_ACTION_END(); }
+bool DocPane::Action_AddCursor_up(DocPane* self) { self->document->AddCursorUp(); COMMON_ACTION_END(); }
+bool DocPane::Action_InsertSpace(DocPane* self) { self->document->EnterCharacter(' '); COMMON_ACTION_END(); }
+bool DocPane::Action_InsertNewline(DocPane* self) { self->document->EnterCharacter('\n'); COMMON_ACTION_END(); }
+bool DocPane::Action_InsertTab(DocPane* self) { self->document->EnterCharacter('\t'); COMMON_ACTION_END(); }
+bool DocPane::Action_Backspace(DocPane* self) { self->document->Backspace(); COMMON_ACTION_END(); }
+bool DocPane::Action_Undo(DocPane* self) { self->document->Undo(); COMMON_ACTION_END(); }
+bool DocPane::Action_Redo(DocPane* self) { self->document->Redo(); COMMON_ACTION_END(); }
+bool DocPane::Action_TriggerCompletion(DocPane* self) { self->document->TriggerCompletion(); COMMON_ACTION_END(); }
+bool DocPane::Action_ClearCompletion(DocPane* self) { self->document->ClearCompletionItems(); COMMON_ACTION_END(); }
+bool DocPane::Action_CycleCompletionList(DocPane* self) { self->document->CycleCompletionList(); self->document->SelectCompletionItem(); COMMON_ACTION_END(); }
+bool DocPane::Action_CycleCompletionListReversed(DocPane* self) { self->document->CycleCompletionListReversed(); self->document->SelectCompletionItem(); COMMON_ACTION_END(); }
 

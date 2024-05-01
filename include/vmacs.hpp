@@ -12,12 +12,6 @@
 #include <string>
 #include <functional>
 
-// Actions are functions which are "bindable" to keys, and associated with a
-// key/key combination that invoke the action. The function should return true
-// when the event is consumed and no need to propegate to the other listeners.
-typedef std::function<bool()> FuncAction;
-
-
 typedef uint32_t Color;
 
 // Attribute of the cells.
