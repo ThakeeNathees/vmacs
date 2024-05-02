@@ -60,44 +60,26 @@ void FindPane::EnsureSelectionOnView() {
 
 
 void FindPane::OnFilteredItemsChanged() {
-  int items_count = finder->GetFilteredItemsCount();
-  if (items_count == 0) {
-    this->selected_index = -1;
-  } else {
-    if (this->selected_index < 0) {
-      this->selected_index = 0;
-      this->view_start_index = 0;
-    } else if (this->selected_index >=  items_count) {
-      this->selected_index = items_count - 1;
-    }
-  }
+  if (finder->GetFilteredItemsCount() == 0) this->selected_index = -1;
+  else this->selected_index = 0;
+  this->view_start_index = 0;
 }
 
 
-void FindPane::CycleItems() {
-  int items_count = input_text.empty()
-    ? finder->GetTotalItemsCount()
-    : finder->GetFilteredItemsCount();
-
-  if (items_count  == 0) selected_index = -1;
-  else {
-    selected_index = (selected_index + 1) % items_count;
+std::string FindPane::GetSelectedItem() {
+  if (selected_index < 0) return "";
+  if (input_text.size() == 0) {
+    const std::vector<std::string>* total = nullptr;
+    std::unique_lock<std::mutex> lock_t = finder->GetTotalItems(&total);
+    if (selected_index >= total->size()) return "";
+    return (*total)[selected_index];
   }
-}
 
-
-void FindPane::CycleItemsReversed() {
-  int items_count = input_text.empty()
-    ? finder->GetTotalItemsCount()
-    : finder->GetFilteredItemsCount();
-
-  if (items_count == 0) selected_index = -1;
-  else {
-    selected_index--;
-    if (selected_index < 0) {
-      selected_index = items_count - 1;
-    }
-  }
+  // If we reached here, the selection is in filter list.
+  const std::vector<std::string>* filtered = nullptr;
+  std::unique_lock<std::mutex> lock_t = finder->GetFilteredItems(&filtered);
+  if (selected_index >= filtered->size()) return "";
+  return (*filtered)[selected_index];
 }
 
 
@@ -203,8 +185,34 @@ bool FindPane::Action_CursorRight(FindPane* self) { if (self->cursor_index < sel
 bool FindPane::Action_CursorLeft(FindPane* self) { if (self->cursor_index > 0) self->cursor_index--; return true; }
 bool FindPane::Action_CursorHome(FindPane* self) { self->cursor_index = 0; return true; }
 bool FindPane::Action_CursorEnd(FindPane* self) { self->cursor_index = self->input_text.size(); return true; }
-bool FindPane::Action_CycleSelection(FindPane* self) { self->CycleItems(); return true; }
-bool FindPane::Action_CycleSelectionReversed(FindPane* self) { self->CycleItemsReversed(); return true; }
+
+bool FindPane::Action_CycleSelection(FindPane* self) {
+  int items_count = self->input_text.empty()
+    ? self->finder->GetTotalItemsCount()
+    : self->finder->GetFilteredItemsCount();
+
+  if (items_count  == 0) self->selected_index = -1;
+  else {
+    self->selected_index = (self->selected_index + 1) % items_count;
+  }
+  return true;
+}
+
+bool FindPane::Action_CycleSelectionReversed(FindPane* self) {
+  int items_count = self->input_text.empty()
+    ? self->finder->GetTotalItemsCount()
+    : self->finder->GetFilteredItemsCount();
+
+  if (items_count == 0) self->selected_index = -1;
+  else {
+    self->selected_index--;
+    if (self->selected_index < 0) {
+      self->selected_index = items_count - 1;
+    }
+  }
+  return true;
+}
+
 bool FindPane::Action_Backspace(FindPane* self) {
   if (self->cursor_index > 0) {
     self->input_text.erase(self->cursor_index-1, 1);
@@ -217,3 +225,10 @@ bool FindPane::Action_Backspace(FindPane* self) {
   return true;
 }
 
+// FIXME(mess): This is temproary.
+bool FindPane::Action_AcceptSelection(FindPane* self) {
+  Editor* e = Editor::Singleton().get();
+  e->Singleton()->SetMessage(self->GetSelectedItem());
+  // e->ClosePopup(); // Will destroy this, can't.
+  return true;
+}

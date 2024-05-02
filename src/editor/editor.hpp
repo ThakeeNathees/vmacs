@@ -27,6 +27,75 @@ public:
 };
 
 
+// Split is a tree of child splits and the leaf node contains a pane.
+// If the split type is Vertical all of it's children would be horizontal splits
+// or leaf nodes and vice versa.
+//
+// Note that the split is just the view of the panes in the 'tab.panes' array.
+class Split {
+
+public:
+  enum class Type {
+    LEAF       = 0,
+    VERTICAL   = 1,
+    HORIZONTAL = 2,
+  };
+
+private:
+  Type type = Type::LEAF;
+
+  // TODO: There is no size (w, h) for the split and will take equally at the
+  // moment, fix it.
+
+  Split* parent = nullptr; // If parent is nullptr, its the root of the tab.
+  std::vector<std::unique_ptr<Split>> children;
+
+  // A leaf node will have 0 children and the pane* will be available. However
+  // it could be nullptr if the pane is not initialized yet.
+  Pane* pane = nullptr;
+
+  friend class Tab;
+};
+
+
+class Tab : public EventHandler {
+public:
+  Tab();
+
+  bool HandleEvent(const Event& event) override;
+  void Update();
+  void Draw(FrameBuffer buff, Position pos, Size area);
+
+  // "Constructors".
+  static std::unique_ptr<Tab> FromPane(std::unique_ptr<Pane> pane);
+
+  // Key tree is public so we can register action and bind to keys outside. I
+  // don't like the OOP getters and setters (what's the point)?
+  static KeyTree keytree;
+
+private:
+  Split root;
+
+  // TODO: Don't know how to handle popup, for now it's exists here.
+  std::unique_ptr<Pane> popup;
+
+  // The panes in the splits, where each split will have a weak reference to the
+  // pane in this list.
+  std::vector<std::unique_ptr<Pane>> panes;
+
+  // Currently active pane in the split tree. If the popup is not nullptr, we'll
+  // prioratize the popup to handle the events and ignore the active pane.
+  Pane* active = nullptr;
+
+private:
+  void DrawSplit(FrameBuffer buff, Split* split, Position pos, Size area);
+
+public: // Actions.
+  static bool Action_ClosePopup(Tab* self);
+  static bool Action_PopupFilesFinder(Tab* self);
+};
+
+
 // FIXME: Re-write this class and the interface.
 class Editor : public IEditor {
 
@@ -39,7 +108,7 @@ public:
   int MainLoop() override;
 
   void SetFrontEnd(std::unique_ptr<FrontEnd> frontend) override;
-  void SetRootPane(std::unique_ptr<Pane> root_pane);
+  void SetTab(std::unique_ptr<Tab> tab);
 
   std::shared_ptr<Document> OpenDocument(const Path& path);
   std::shared_ptr<const Language> GetLanguage(const LanguageId& id) const;
@@ -49,7 +118,15 @@ private:
 
   static std::shared_ptr<Editor> singleton;
 
-  std::unique_ptr<Pane> root_pane;
+  // ---------------------------------------------------------------------------
+  // TODO: Implement window and that contain a lsit of tabs.
+  std::unique_ptr<Tab> tab;
+  std::string message; // FIXME: a message to show at the bottom info bar.
+  public:
+  void SetMessage(const std::string& message) { this->message = message; }
+  // void ClosePopup() { tab->ClosePopup();  }
+  private:
+  // ---------------------------------------------------------------------------
 
   std::unique_ptr<FrontEnd> frontend;
   std::atomic<bool> redraw = true;

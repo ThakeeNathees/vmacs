@@ -491,7 +491,7 @@ bool DocPane::Action_Backspace(DocPane* self) { self->document->Backspace(); COM
 bool DocPane::Action_Undo(DocPane* self) { self->document->Undo(); COMMON_ACTION_END(); }
 bool DocPane::Action_Redo(DocPane* self) { self->document->Redo(); COMMON_ACTION_END(); }
 bool DocPane::Action_TriggerCompletion(DocPane* self) { self->document->TriggerCompletion(); COMMON_ACTION_END(); }
-bool DocPane::Action_ClearCompletion(DocPane* self) { self->document->ClearCompletionItems(); COMMON_ACTION_END(); }
 bool DocPane::Action_CycleCompletionList(DocPane* self) { self->document->CycleCompletionList(); self->document->SelectCompletionItem(); COMMON_ACTION_END(); }
 bool DocPane::Action_CycleCompletionListReversed(DocPane* self) { self->document->CycleCompletionListReversed(); self->document->SelectCompletionItem(); COMMON_ACTION_END(); }
+bool DocPane::Action_Clear(DocPane* self) { self->document->ClearCompletionItems(); self->document->cursors.ClearMultiCursors(); COMMON_ACTION_END(); }
 

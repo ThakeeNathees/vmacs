@@ -118,7 +118,7 @@ void FilesFinder::StdoutCallbackFilter(void* data, const char* buff, size_t leng
     const char* end = buff;
     while (length--) {
       if (*end == '\n') {
-        size_t len = (end-buff);
+        size_t len = (end-buff); // This will skip the '\n' character, +1 if needed.
         if (len != 0) {
           if (!self->buff_filter.empty()) {
             self->filters.push_back(self->buff_filter + std::string(buff, len));

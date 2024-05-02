@@ -242,9 +242,10 @@ void tree_sitter_test() {
 // loading resources from file (mainly theme and treesitter language).
 //
 // Now:
-//   open empty, search for a file with file picker (BUG: file picker buffer unfinished input), open and edit.
+//   open empty, search for a file with file picker.
 //   Add another language server client and test. show errors and ask inputs.
 //
+//   Path and Uri shouldn't be tow types -> merge.
 //   Path type in Platform doesn't normalize/"absolutifly" the path.
 //
 //
@@ -386,6 +387,14 @@ int main(int argc, char** argv) {
   // return 0;
 
   // FIXME: This shoul be called after the editor is initialized to send errors.
+
+  Tab::keytree.RegisterAction("close_popup", (FuncAction) Tab::Action_ClosePopup);
+  Tab::keytree.RegisterAction("popup_files_finder", (FuncAction) Tab::Action_PopupFilesFinder);
+
+  Tab::keytree.RegisterBinding("*", "<esc>", "close_popup");
+  Tab::keytree.RegisterBinding("*", "<C-o>", "popup_files_finder");
+
+
   DocPane::keytree.RegisterAction("cursor_up", (FuncAction) DocPane::Action_CursorUp);
   DocPane::keytree.RegisterAction("cursor_down", (FuncAction) DocPane::Action_CursorDown);
   DocPane::keytree.RegisterAction("cursor_left", (FuncAction) DocPane::Action_CursorLeft);
@@ -407,9 +416,9 @@ int main(int argc, char** argv) {
   DocPane::keytree.RegisterAction("undo", (FuncAction) DocPane::Action_Undo);
   DocPane::keytree.RegisterAction("redo", (FuncAction) DocPane::Action_Redo);
   DocPane::keytree.RegisterAction("trigger_completion", (FuncAction) DocPane::Action_TriggerCompletion);
-  DocPane::keytree.RegisterAction("clear_completion", (FuncAction) DocPane::Action_ClearCompletion);
   DocPane::keytree.RegisterAction("cycle_completion_list", (FuncAction) DocPane::Action_CycleCompletionList);
   DocPane::keytree.RegisterAction("cycle_completion_list_reversed", (FuncAction) DocPane::Action_CycleCompletionListReversed);
+  DocPane::keytree.RegisterAction("clear", (FuncAction) DocPane::Action_Clear);
 
   DocPane::keytree.RegisterBinding("*", "<up>",        "cursor_up");
   DocPane::keytree.RegisterBinding("*", "<down>",      "cursor_down");
@@ -434,9 +443,7 @@ int main(int argc, char** argv) {
   DocPane::keytree.RegisterBinding("*", "<C-x><C-k>",  "trigger_completion");
   DocPane::keytree.RegisterBinding("*", "<C-n>",       "cycle_completion_list");
   DocPane::keytree.RegisterBinding("*", "<C-p>",       "cycle_completion_list_reversed");
-  DocPane::keytree.RegisterBinding("*", "<esc>",       "clear_completion");
-
-
+  DocPane::keytree.RegisterBinding("*", "<esc>",       "clear");
 
 
 
@@ -447,6 +454,7 @@ int main(int argc, char** argv) {
   FindPane::keytree.RegisterAction("backspace", (FuncAction) FindPane::Action_Backspace);
   FindPane::keytree.RegisterAction("cycle_selection", (FuncAction) FindPane::Action_CycleSelection);
   FindPane::keytree.RegisterAction("cycle_selection_reversed", (FuncAction) FindPane::Action_CycleSelectionReversed);
+  FindPane::keytree.RegisterAction("accept_selection", (FuncAction) FindPane::Action_AcceptSelection);
 
   FindPane::keytree.RegisterBinding("*", "<right>", "cursor_right");
   FindPane::keytree.RegisterBinding("*", "<left>",  "cursor_left");
@@ -457,8 +465,7 @@ int main(int argc, char** argv) {
   FindPane::keytree.RegisterBinding("*", "<C-p>",  "cycle_selection_reversed");
   FindPane::keytree.RegisterBinding("*", "<tab>",  "cycle_selection");
   FindPane::keytree.RegisterBinding("*", "<S-tab>", "cycle_selection_reversed");
-
-
+  FindPane::keytree.RegisterBinding("*", "<enter>", "accept_selection");
 
 
 
@@ -472,7 +479,9 @@ int main(int argc, char** argv) {
 
   Editor* e = (Editor*) editor.get();
 
-#if 0
+
+
+#if 1
   Path path("/Users/thakeenathees/Desktop/thakee/repos/vmacs/build/main.cpp");
   std::shared_ptr<Document> doc = e->OpenDocument(path);
   ASSERT(doc != nullptr, OOPS);
@@ -482,12 +491,12 @@ int main(int argc, char** argv) {
   ASSERT(client != nullptr, OOPS);
   doc->SetLanguage(lang);
   doc->SetLspClient(client);
-  std::unique_ptr<Pane> p = std::make_unique<DocPane>(doc);
+  std::unique_ptr<Tab> tab = Tab::FromPane(std::make_unique<DocPane>(doc));
 #else
-  std::unique_ptr<Pane> p = std::make_unique<FindPane>(std::make_unique<FilesFinder>());
+  std::unique_ptr<Tab> tab = Tab::FromPane(std::make_unique<FindPane>(std::make_unique<FilesFinder>()));
 #endif
 
-  e->SetRootPane(std::move(p));
+  e->SetTab(std::move(tab));
 
   editor->MainLoop();
   return 0;

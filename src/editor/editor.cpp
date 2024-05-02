@@ -89,8 +89,8 @@ void Editor::SetFrontEnd(std::unique_ptr<FrontEnd> frontend) {
 }
 
 
-void Editor::SetRootPane(std::unique_ptr<Pane> root_pane) {
-  this->root_pane = std::move(root_pane);
+void Editor::SetTab(std::unique_ptr<Tab> tab) {
+  this->tab = std::move(tab);
 }
 
 
@@ -110,7 +110,7 @@ int Editor::MainLoop() {
   ASSERT(frontend != nullptr, "No frontend is available. Did you forgot to "
                               "call IEditor::SetFrontEnd() ?");
 
-  ASSERT(root_pane != nullptr, "Root pane is nullptr. Did you forget to set one?");
+  ASSERT(tab != nullptr, "tab is nullptr. Did you forget to set one?");
 
   if (!frontend->Initialize()) {
     fprintf(stdout, "Editor initialize failed.\n");
@@ -141,12 +141,12 @@ int Editor::MainLoop() {
       if (event.type == Event::Type::CLOSE) {
         running = false;
       }
-      root_pane->HandleEvent(event);
+      tab->HandleEvent(event);
       redraw = true;
     }
 
     // Update call.
-    root_pane->Update();
+    tab->Update();
 
     // FIXME: Because of raylib we can't do this. The fron end should own the main
     // loop and use the eidtor as a instance to run at each iteration.
@@ -194,7 +194,8 @@ void Editor::Draw() {
     buff.cells[i] = {.ch = ' ', .fg = 0, .bg = color_bg, .attrib=0};
   }
 
-  root_pane->Draw(buff, {0, 0}, {buff.width, buff.height});
+  tab->Draw(buff, {0, 0}, {buff.width, buff.height - 1});
+  DrawTextLine(buff, message.c_str(), 0, buff.height-1, buff.width, 0xffffff, color_bg, 0, false);
   frontend->Display(color_bg); // FIXME: background color for raylib.
 }
 

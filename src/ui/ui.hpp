@@ -81,9 +81,9 @@ public: // Actions.
   static bool Action_Undo(DocPane* self);
   static bool Action_Redo(DocPane* self);
   static bool Action_TriggerCompletion(DocPane* self);
-  static bool Action_ClearCompletion(DocPane* self);
   static bool Action_CycleCompletionList(DocPane* self);
   static bool Action_CycleCompletionListReversed(DocPane* self);
+  static bool Action_Clear(DocPane* self);
 };
 
 
@@ -118,9 +118,11 @@ private:
 private:
 
   void EnsureSelectionOnView();
-  void CycleItems();
-  void CycleItemsReversed();
   void OnFilteredItemsChanged();
+
+  // Will return empty string if nothing is selected or the index is exceeded
+  // because of IPC changed the list and index become invalid.
+  std::string GetSelectedItem();
 
   // Draw a list of items in the given area (xywh).
   void DrawItems(FrameBuffer buff,
@@ -136,6 +138,7 @@ public: // Actions.
   static bool Action_Backspace(FindPane* self);
   static bool Action_CycleSelection(FindPane* self);
   static bool Action_CycleSelectionReversed(FindPane* self);
+  static bool Action_AcceptSelection(FindPane* self);
 
 };
 
