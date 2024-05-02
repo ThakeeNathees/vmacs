@@ -23,7 +23,17 @@ public:
 
   // The handler should return true if the event is consumed by the pane.
   virtual void Update() = 0;
-  virtual void Draw(FrameBuffer buff, Position pos, Size area) = 0;
+
+  // This will internally call _Draw(), and the subclasses should override it.
+  void Draw(FrameBuffer buff, Position pos, Size area);
+  bool HandleEvent(const Event& event) final override;
+
+private:
+  Position pos = {0};
+  Size area    = {0};
+
+  virtual void _Draw(FrameBuffer buff, Position pos, Size area) = 0;
+  virtual bool _HandleEvent(const Event& event) = 0;
 };
 
 

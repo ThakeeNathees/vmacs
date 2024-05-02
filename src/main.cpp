@@ -481,7 +481,7 @@ int main(int argc, char** argv) {
 
 
 
-#if 1
+  // FIXME:
   Path path("/Users/thakeenathees/Desktop/thakee/repos/vmacs/build/main.cpp");
   std::shared_ptr<Document> doc = e->OpenDocument(path);
   ASSERT(doc != nullptr, OOPS);
@@ -492,9 +492,6 @@ int main(int argc, char** argv) {
   doc->SetLanguage(lang);
   doc->SetLspClient(client);
   std::unique_ptr<Tab> tab = Tab::FromPane(std::make_unique<DocPane>(doc));
-#else
-  std::unique_ptr<Tab> tab = Tab::FromPane(std::make_unique<FindPane>(std::make_unique<FilesFinder>()));
-#endif
 
   e->SetTab(std::move(tab));
 

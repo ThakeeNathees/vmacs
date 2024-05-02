@@ -22,7 +22,7 @@ DocPane::DocPane(std::shared_ptr<Document> document)
 }
 
 
-bool DocPane::HandleEvent(const Event& event) {
+bool DocPane::_HandleEvent(const Event& event) {
   if (EventHandler::HandleEvent(event)) return true;
 
   if (event.type == Event::Type::KEY && event.key.unicode != 0) {
@@ -31,6 +31,18 @@ bool DocPane::HandleEvent(const Event& event) {
     EnsureCursorOnView();
     ResetCursorBlink();
     return true;
+
+  } else if (event.type == Event::Type::MOUSE) {
+    if (event.mouse.button == Event::MouseButton::MOUSE_WHEEL_UP) {
+      view_start.row = MAX(0, view_start.row-3); // FIXME: 3 is hardcoded here.
+      return true;
+    }
+    if (event.mouse.button == Event::MouseButton::MOUSE_WHEEL_DOWN) {
+      int lines_count = document->buffer->GetLineCount();
+      // FIXME: 3 (scroll speed), 2 (visible lines at end) is hardcoded here.
+      view_start.row = MIN(MAX(lines_count-2, 0), view_start.row + 3);
+      return true;
+    }
   }
   return false;
 }
@@ -76,7 +88,7 @@ void DocPane::EnsureCursorOnView() {
 }
 
 
-void DocPane::Draw(FrameBuffer buff, Position pos, Size area) {
+void DocPane::_Draw(FrameBuffer buff, Position pos, Size area) {
   DrawBuffer(buff, pos, area);
   DrawAutoCompletions(buff, pos);
 }

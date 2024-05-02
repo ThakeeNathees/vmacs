@@ -25,9 +25,7 @@ public:
   DocPane();
   DocPane(std::shared_ptr<Document> document);
 
-  bool HandleEvent(const Event& event) override;
   void Update() override;
-  void Draw(FrameBuffer buff, Position pos, Size area) override;
 
 private:
   // The document we're editing on this pane.
@@ -48,6 +46,9 @@ private:
   bool cursor_blink_show  = true;
 
 private:
+  bool _HandleEvent(const Event& event) override;
+  void _Draw(FrameBuffer buff, Position pos, Size area) override;
+
   void ResetCursorBlink();
   void EnsureCursorOnView();
 
@@ -97,9 +98,7 @@ class FindPane : public Pane {
 public:
   FindPane(std::unique_ptr<Finder> finder);
 
-  bool HandleEvent(const Event& event) override;
   void Update() override;
-  void Draw(FrameBuffer buff, Position pos, Size area) override;
 
 private:
   std::unique_ptr<Finder> finder;
@@ -116,6 +115,8 @@ private:
                             // selection is on the view.
 
 private:
+  bool _HandleEvent(const Event& event) override;
+  void _Draw(FrameBuffer buff, Position pos, Size area) override;
 
   void EnsureSelectionOnView();
   void OnFilteredItemsChanged();

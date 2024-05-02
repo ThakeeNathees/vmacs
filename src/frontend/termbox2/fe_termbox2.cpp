@@ -117,14 +117,6 @@ std::vector<Event> Termbox2::GetEvents() {
         case TB_KEY_ARROW_DOWN       : e.key.code = Event::KEY_DOWN; break;
         case TB_KEY_ARROW_LEFT       : e.key.code = Event::KEY_LEFT; break;
         case TB_KEY_ARROW_RIGHT      : e.key.code = Event::KEY_RIGHT; break;
-#if 0 // TODO: Implement mouse events.
-        case TB_KEY_MOUSE_LEFT       : e.key.code = Event:: ; break;
-        case TB_KEY_MOUSE_RIGHT      : e.key.code = Event:: ; break;
-        case TB_KEY_MOUSE_MIDDLE     : e.key.code = Event:: ; break;
-        case TB_KEY_MOUSE_RELEASE    : e.key.code = Event:: ; break;
-        case TB_KEY_MOUSE_WHEEL_UP   : e.key.code = Event:: ; break;
-        case TB_KEY_MOUSE_WHEEL_DOWN : e.key.code = Event:: ; break;
-#endif
 
         // The value for both the bello are 0, cannot bind.
         // case TB_KEY_CTRL_TILDE    :
@@ -188,7 +180,7 @@ std::vector<Event> Termbox2::GetEvents() {
 
       }
 
-      // FIXME: Temproary close button.
+      // FIXME(mess): Temproary close button.
       if (e.key.code == Event::KEY_Q && e.key.ctrl) {
         events.push_back(Event(Event::Type::CLOSE));
       } else {
@@ -198,9 +190,20 @@ std::vector<Event> Termbox2::GetEvents() {
 
     } break;
 
-    // TODO: Handle mouse events..
-    case TB_EVENT_MOUSE:
-      break;
+    case TB_EVENT_MOUSE: {
+      Event e(Event::Type::MOUSE);
+      e.mouse.x = ev.x;
+      e.mouse.y = ev.y;
+      switch (ev.key) {
+        case TB_KEY_MOUSE_LEFT       : e.mouse.button = Event::MouseButton::MOUSE_BUTTON_LEFT; break;
+        case TB_KEY_MOUSE_RIGHT      : e.mouse.button = Event::MouseButton::MOUSE_BUTTON_RIGHT; break;
+        case TB_KEY_MOUSE_MIDDLE     : e.mouse.button = Event::MouseButton::MOUSE_BUTTON_MIDDLE; break;
+        case TB_KEY_MOUSE_RELEASE    : e.mouse.button = Event::MouseButton::MOUSE_RELEASED; break;
+        case TB_KEY_MOUSE_WHEEL_UP   : e.mouse.button = Event::MouseButton::MOUSE_WHEEL_UP; break;
+        case TB_KEY_MOUSE_WHEEL_DOWN : e.mouse.button = Event::MouseButton::MOUSE_WHEEL_DOWN; break;
+      }
+      events.push_back(e);
+    } break;
 
     case TB_EVENT_RESIZE: {
       Event e(Event::Type::RESIZE);

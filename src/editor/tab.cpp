@@ -13,6 +13,28 @@
 KeyTree Tab::keytree;
 
 
+void Pane::Draw(FrameBuffer buff, Position pos, Size area) {
+  this->pos = pos;
+  this->area = area;
+  _Draw(buff, pos, area);
+}
+
+
+bool Pane::HandleEvent(const Event& event) {
+  if (event.type == Event::Type::MOUSE) {
+    if (event.mouse.button == Event::MouseButton::MOUSE_WHEEL_UP ||
+        event.mouse.button == Event::MouseButton::MOUSE_WHEEL_DOWN) {
+      int x = event.mouse.x;
+      int y = event.mouse.y;
+      if (x < pos.col || x >= pos.col + area.width) return false;
+      if (y < pos.row || y >= pos.row + area.height) return false;
+    }
+  }
+  // TODO: If mouse wheel event, check bounds.
+  return _HandleEvent(event);
+}
+
+
 Tab::Tab() : EventHandler(&keytree) {
   SetMode("*");
 }

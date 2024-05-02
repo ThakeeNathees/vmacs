@@ -26,7 +26,7 @@ FindPane::FindPane(std::unique_ptr<Finder> finder_)
 }
 
 
-bool FindPane::HandleEvent(const Event& event) {
+bool FindPane::_HandleEvent(const Event& event) {
   if (EventHandler::HandleEvent(event)) return true;
   if (event.type == Event::Type::KEY && event.key.unicode != 0) {
     char c = (char) event.key.unicode;
@@ -83,7 +83,7 @@ std::string FindPane::GetSelectedItem() {
 }
 
 
-void FindPane::Draw(FrameBuffer buff, Position pos_windows, Size area) {
+void FindPane::_Draw(FrameBuffer buff, Position pos_windows, Size area) {
 
   // FIXME: Move this mess. ----------------------------------------------------
   Color fg = Global::GetCurrentTheme()->GetStyleOr("ui.text", {.fg = 0xff0000, .bg = 0xff0000, .attrib = 0}).fg;

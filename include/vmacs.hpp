@@ -173,6 +173,12 @@ struct Event {
     MOUSE_BUTTON_EXTRA   = 4,   // Mouse button extra (advanced mouse device)
     MOUSE_BUTTON_FORWARD = 5,   // Mouse button forward (advanced mouse device)
     MOUSE_BUTTON_BACK    = 6,   // Mouse button back (advanced mouse device)
+
+    // Additional buttons apart from what raylib provide (they use different
+    // event for wheel). Modify the event if raylib used as a frontend.
+    MOUSE_WHEEL_UP       = 7,
+    MOUSE_WHEEL_DOWN     = 8,
+    MOUSE_RELEASED       = 9,
   } MouseButton;
 
   struct Resize {
@@ -198,17 +204,10 @@ struct Event {
     int y;
   };
 
-  struct MouseWheel {
-    int delta;
-    int x;
-    int y;
-  };
-
   enum class Type {
     CLOSE,
     RESIZE,
     KEY,
-    WHEEL,
     MOUSE,
   };
 
@@ -219,7 +218,6 @@ struct Event {
     Resize     resize;
     Key        key;
     Mouse      mouse;
-    MouseWheel mouse_wheel;
   };
 
   Event(Event::Type type) : type(type), key(Key()) {}
