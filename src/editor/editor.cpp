@@ -34,6 +34,34 @@ std::shared_ptr<Editor> Editor::Singleton() {
 }
 
 
+void Editor::Info(const std::string& msg) {
+  IWindow* window = Singleton()->window.get();
+  ASSERT(window != nullptr, "Editor::singleton.window was nullptr, did you forget to initialize one?");
+  window->Info(msg);
+}
+
+
+void Editor::Success(const std::string& msg) {
+  IWindow* window = Singleton()->window.get();
+  ASSERT(window != nullptr, "Editor::singleton.window was nullptr, did you forget to initialize one?");
+  window->Success(msg);
+}
+
+
+void Editor::Warning(const std::string& msg) {
+  IWindow* window = Singleton()->window.get();
+  ASSERT(window != nullptr, "Editor::singleton.window was nullptr, did you forget to initialize one?");
+  window->Warning(msg);
+}
+
+
+void Editor::Error(const std::string& error) {
+  IWindow* window = Singleton()->window.get();
+  ASSERT(window != nullptr, "Editor::singleton.window was nullptr, did you forget to initialize one?");
+  window->Error(error);
+}
+
+
 void Global::ReDraw() {
   Editor::Singleton()->redraw = true;
 }
@@ -43,9 +71,6 @@ void Global::ReDraw() {
 const Theme* Global::GetCurrentTheme() {
   return Editor::Singleton()->themes["dracula_at_night"].get();
 }
-
-
-Pane::Pane(const KeyTree* keytree) : EventHandler(keytree) {}
 
 
 // FIXME: This is not how we do it.
@@ -89,8 +114,8 @@ void Editor::SetFrontEnd(std::unique_ptr<FrontEnd> frontend) {
 }
 
 
-void Editor::SetTab(std::unique_ptr<Tab> tab) {
-  this->tab = std::move(tab);
+void Editor::SetWindow(std::unique_ptr<IWindow> window) {
+  this->window = std::move(window);
 }
 
 
@@ -110,7 +135,7 @@ int Editor::MainLoop() {
   ASSERT(frontend != nullptr, "No frontend is available. Did you forgot to "
                               "call IEditor::SetFrontEnd() ?");
 
-  ASSERT(tab != nullptr, "tab is nullptr. Did you forget to set one?");
+  ASSERT(window != nullptr, "window is nullptr. Did you forget to set one?");
 
   if (!frontend->Initialize()) {
     fprintf(stdout, "Editor initialize failed.\n");
@@ -141,12 +166,12 @@ int Editor::MainLoop() {
       if (event.type == Event::Type::CLOSE) {
         running = false;
       }
-      tab->HandleEvent(event);
+      window->HandleEvent(event);
       redraw = true;
     }
 
     // Update call.
-    tab->Update();
+    window->Update();
 
     // FIXME: Because of raylib we can't do this. The fron end should own the main
     // loop and use the eidtor as a instance to run at each iteration.
@@ -194,8 +219,9 @@ void Editor::Draw() {
     buff.cells[i] = {.ch = ' ', .fg = 0, .bg = color_bg, .attrib=0};
   }
 
-  tab->Draw(buff, {0, 0}, {buff.width, buff.height - 1});
-  DrawTextLine(buff, message.c_str(), 0, buff.height-1, buff.width, 0xffffff, color_bg, 0, false);
+  window->Draw(buff, {0, 0}, {buff.width, buff.height - 1});
+  // FIXME(grep): Move this insde window.
+  // DrawTextLine(buff, message.c_str(), 0, buff.height-1, buff.width, 0xffffff, color_bg, 0, false);
   frontend->Display(color_bg); // FIXME: background color for raylib.
 }
 

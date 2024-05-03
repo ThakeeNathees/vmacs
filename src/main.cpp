@@ -390,11 +390,11 @@ int main(int argc, char** argv) {
 
   // FIXME: This shoul be called after the editor is initialized to send errors.
 
-  Tab::keytree.RegisterAction("close_popup", (FuncAction) Tab::Action_ClosePopup);
-  Tab::keytree.RegisterAction("popup_files_finder", (FuncAction) Tab::Action_PopupFilesFinder);
+  Window::keytree.RegisterAction("close_popup",  Window::Action_ClosePopup);
+  Window::keytree.RegisterAction("popup_files_finder",  Window::Action_PopupFilesFinder);
 
-  Tab::keytree.RegisterBinding("*", "<esc>", "close_popup");
-  Tab::keytree.RegisterBinding("*", "<C-o>", "popup_files_finder");
+  Window::keytree.RegisterBinding("*", "<esc>", "close_popup");
+  Window::keytree.RegisterBinding("*", "<C-o>", "popup_files_finder");
 
 
   DocPane::keytree.RegisterAction("cursor_up", (FuncAction) DocPane::Action_CursorUp);
@@ -496,9 +496,12 @@ int main(int argc, char** argv) {
   doc->SetLspClient(client);
   std::unique_ptr<Tab> tab = Tab::FromPane(std::make_unique<DocPane>(doc));
 
-  e->SetTab(std::move(tab));
+  std::unique_ptr<Window> window = std::make_unique<Window>();
+  window->AddTab(std::move(tab));
 
-  editor->MainLoop();
+  e->SetWindow(std::move(window));
+
+  e->MainLoop();
   return 0;
 }
 

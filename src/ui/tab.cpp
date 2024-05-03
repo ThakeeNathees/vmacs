@@ -6,12 +6,14 @@
 // Copyright (c) 2024 Thakee Nathees
 // Licenced under: MIT
 
-#include "editor.hpp"
+#include "ui.hpp"
 
 
 // Static member initialize.
 KeyTree Tab::keytree;
 
+
+Pane::Pane(const KeyTree* keytree) : EventHandler(keytree) {}
 
 void Pane::Draw(FrameBuffer buff, Position pos, Size area) {
   this->pos = pos;
@@ -53,9 +55,7 @@ std::unique_ptr<Tab> Tab::FromPane(std::unique_ptr<Pane> pane) {
 bool Tab::HandleEvent(const Event& event) {
   // Note that if the popup is available we won't send the event to the active
   // child split nodes.
-  if (popup.get()) {
-    if (popup->HandleEvent(event)) return true;
-  } else if (active != nullptr) {
+  if (active != nullptr) {
     // Send the event to the inner most child to handle if it cannot we do
     // event bubbling.
     if (active->HandleEvent(event)) return true;
@@ -67,7 +67,6 @@ bool Tab::HandleEvent(const Event& event) {
 
 
 void Tab::Update() {
-  if (popup.get()) popup->Update();
   for (auto& pane : panes) {
     pane->Update();
   }
@@ -76,7 +75,6 @@ void Tab::Update() {
 
 void Tab::Draw(FrameBuffer buff, Position pos, Size area) {
   DrawSplit(buff, &root, pos, area);
-  if (popup.get()) popup->Draw(buff, pos, area);
 }
 
 
@@ -113,20 +111,3 @@ void Tab::DrawSplit(FrameBuffer buff, Split* split, Position pos, Size area) {
   }
 }
 
-
-bool Tab::Action_ClosePopup(Tab* self) {
-  if (self->popup.get()) {
-    self->popup = nullptr; // This will destroy.
-    return true;
-  }
-  return false;
-}
-
-
-// FIXME(mess): This is temp.
-#include "ui/ui.hpp"
-bool Tab::Action_PopupFilesFinder(Tab* self) {
-  if (self->popup != nullptr) return false;
-  self->popup = std::make_unique<FindPane>(std::make_unique<FilesFinder>());
-  return true;
-}

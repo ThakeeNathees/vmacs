@@ -233,7 +233,7 @@ bool FindPane::Action_AcceptSelection(FindPane* self) {
   if (!path.Exists()) {
     // TODO: Error to editor.
   }
-  e->Singleton()->SetMessage(path.String());
+  // e->Singleton()->SetMessage(path.String());
   // e->ClosePopup(); // Will destroy this, can't.
   return true;
 }

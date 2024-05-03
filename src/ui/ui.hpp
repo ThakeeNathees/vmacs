@@ -14,6 +14,147 @@
 #include "finder.hpp"
 
 // -----------------------------------------------------------------------------
+// Pane.
+// -----------------------------------------------------------------------------
+
+// Note that since Pane is a subtype of event handler. And HandleEvent() is
+// already defined.
+class Pane : public EventHandler {
+
+public:
+  Pane(const KeyTree* keytree); // The static key tree registry of the child class.
+  virtual ~Pane() = default;
+
+  // The handler should return true if the event is consumed by the pane.
+  virtual void Update() = 0;
+
+  // This will internally call _Draw(), and the subclasses should override it.
+  void Draw(FrameBuffer buff, Position pos, Size area);
+  bool HandleEvent(const Event& event) final override;
+
+private:
+  Position pos = {0};
+  Size area    = {0};
+
+  virtual void _Draw(FrameBuffer buff, Position pos, Size area) = 0;
+  virtual bool _HandleEvent(const Event& event) = 0;
+};
+
+
+// -----------------------------------------------------------------------------
+// Split.
+// -----------------------------------------------------------------------------
+
+// Split is a tree of child splits and the leaf node contains a pane.
+// If the split type is Vertical all of it's children would be horizontal splits
+// or leaf nodes and vice versa.
+//
+// Note that the split is just the view of the panes in the 'tab.panes' array.
+class Split {
+
+public:
+  enum class Type {
+    LEAF       = 0,
+    VERTICAL   = 1,
+    HORIZONTAL = 2,
+  };
+
+private:
+  Type type = Type::LEAF;
+
+  // TODO: There is no size (w, h) for the split and will take equally at the
+  // moment, fix it.
+
+  Split* parent = nullptr; // If parent is nullptr, its the root of the tab.
+  std::vector<std::unique_ptr<Split>> children;
+
+  // A leaf node will have 0 children and the pane* will be available. However
+  // it could be nullptr if the pane is not initialized yet.
+  Pane* pane = nullptr;
+
+  friend class Tab;
+};
+
+
+// -----------------------------------------------------------------------------
+// Tab.
+// -----------------------------------------------------------------------------
+
+
+class Tab : public EventHandler {
+public:
+  Tab();
+
+  bool HandleEvent(const Event& event) override;
+  void Update();
+  void Draw(FrameBuffer buff, Position pos, Size area);
+
+  // "Constructors".
+  static std::unique_ptr<Tab> FromPane(std::unique_ptr<Pane> pane);
+
+  // Key tree is public so we can register action and bind to keys outside. I
+  // don't like the OOP getters and setters (what's the point)?
+  static KeyTree keytree;
+
+private:
+  Split root;
+
+  // The panes in the splits, where each split will have a weak reference to the
+  // pane in this list.
+  std::vector<std::unique_ptr<Pane>> panes;
+
+  // Currently active pane in the split tree. If the popup is not nullptr, we'll
+  // prioratize the popup to handle the events and ignore the active pane.
+  Pane* active = nullptr;
+
+private:
+  void DrawSplit(FrameBuffer buff, Split* split, Position pos, Size area);
+
+};
+
+
+// -----------------------------------------------------------------------------
+// Window.
+// -----------------------------------------------------------------------------
+
+// WARNING:
+//
+// Note that since Window's first parent is not EventHander we cannot safly do
+// the bellow case:
+//
+//   EventHandler* e = (EventHander*)(ptr_of_window); // This will fail.
+//
+// And that's why we're using EventHander* in the Action methods bellow. Unlike
+// other child classes of event handers.
+class Window : public IWindow, public EventHandler {
+public:
+  Window();
+
+  bool HandleEvent(const Event& event);
+  void Update();
+  void Draw(FrameBuffer buff, Position pos, Size area);
+
+  void Info(const std::string& error);
+  void Success(const std::string& error);
+  void Warning(const std::string& error);
+  void Error(const std::string& error);
+
+  // TODO: Support insert tab with a name.
+  void AddTab(std::unique_ptr<Tab> tab);
+
+  static KeyTree keytree;
+
+private:
+  std::unique_ptr<Tab> tab; // TODO: Make this a vector.
+  std::unique_ptr<Pane> popup;
+
+public: // Actions.
+  static bool Action_ClosePopup(EventHandler* self);
+  static bool Action_PopupFilesFinder(EventHandler* self);
+};
+
+
+// -----------------------------------------------------------------------------
 // Document Pane.
 // -----------------------------------------------------------------------------
 
