@@ -132,7 +132,7 @@ public:
 
   bool HandleEvent(const Event& event);
   void Update();
-  void Draw(FrameBuffer buff, Position pos, Size area);
+  void Draw(FrameBuffer buff);
 
   void Info(const std::string& error);
   void Success(const std::string& error);
@@ -147,6 +147,9 @@ public:
 private:
   std::unique_ptr<Tab> tab; // TODO: Make this a vector.
   std::unique_ptr<Pane> popup;
+
+  // FIXME(grep): This is temproary.
+  std::string info_bar_text;
 
 public: // Actions.
   static bool Action_ClosePopup(EventHandler* self);

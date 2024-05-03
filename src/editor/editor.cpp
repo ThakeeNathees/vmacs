@@ -219,9 +219,8 @@ void Editor::Draw() {
     buff.cells[i] = {.ch = ' ', .fg = 0, .bg = color_bg, .attrib=0};
   }
 
-  window->Draw(buff, {0, 0}, {buff.width, buff.height - 1});
+  window->Draw(buff);
   // FIXME(grep): Move this insde window.
-  // DrawTextLine(buff, message.c_str(), 0, buff.height-1, buff.width, 0xffffff, color_bg, 0, false);
   frontend->Display(color_bg); // FIXME: background color for raylib.
 }
 

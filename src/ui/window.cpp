@@ -39,29 +39,33 @@ void Window::Update() {
 }
 
 
-void Window::Draw(FrameBuffer buff, Position pos, Size area) {
-  tab->Draw(buff, pos, area);
-  if (popup.get()) popup->Draw(buff, pos, area);
+void Window::Draw(FrameBuffer buff) {
+  // FIXME(mess): Cleanup this mess.
+  tab->Draw(buff, {0, 0}, {.width = buff.width, .height = buff.height-1});
+  if (popup.get()) popup->Draw(buff, {0, 0}, {.width = buff.width, .height = buff.height-1});
+
+  Color color_bg = Global::GetCurrentTheme()->GetStyleOr("ui.background", {.fg=0, .bg=0xffffff, .attrib=0}).bg;
+  DrawTextLine(buff, info_bar_text.c_str(), 0, buff.height-1, buff.width, 0xffffff, color_bg, 0, true);
 }
 
 
-void Window::Info(const std::string& error) {
-
+void Window::Info(const std::string& msg) {
+  info_bar_text = msg;
 }
 
 
-void Window::Success(const std::string& error) {
-
+void Window::Success(const std::string& msg) {
+  info_bar_text = msg;
 }
 
 
-void Window::Warning(const std::string& error) {
-
+void Window::Warning(const std::string& msg) {
+  info_bar_text = msg;
 }
 
 
-void Window::Error(const std::string& error) {
-
+void Window::Error(const std::string& msg) {
+  info_bar_text = msg;
 }
 
 

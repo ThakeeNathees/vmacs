@@ -228,12 +228,11 @@ bool FindPane::Action_Backspace(FindPane* self) {
 
 // FIXME(mess): This is temproary.
 bool FindPane::Action_AcceptSelection(FindPane* self) {
-  Editor* e = Editor::Singleton().get();
   Path path(self->GetSelectedItem());
   if (!path.Exists()) {
     // TODO: Error to editor.
   }
-  // e->Singleton()->SetMessage(path.String());
+  Editor::Info(path.String());
   // e->ClosePopup(); // Will destroy this, can't.
   return true;
 }
