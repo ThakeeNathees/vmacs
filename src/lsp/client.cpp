@@ -102,7 +102,7 @@ LspClient::~LspClient() {
 }
 
 
-void LspClient::StartServer(std::optional<Uri> root_uri) {
+void LspClient::StartServer() {
   ipc->Run();
   // TODO: configure params.
   SendRequest("initialize", Json::object());
@@ -147,12 +147,12 @@ void LspClient::SendNotification(const std::string& method, const Json& params) 
 }
 
 
-void LspClient::DidOpen(const Uri& uri, const std::string& text, const std::string& language) {
+void LspClient::DidOpen(const Path& path, const std::string& text, const std::string& language) {
   SendNotification(
     "textDocument/didOpen", {
       {
         "textDocument", {
-          { "uri", uri },
+          { "uri", path.Uri() },
           { "text", text },
           { "languageId", language },
         }
@@ -161,7 +161,7 @@ void LspClient::DidOpen(const Uri& uri, const std::string& text, const std::stri
 }
 
 
-void LspClient::DidChange(const Uri& uri, uint32_t version, const std::vector<DocumentChange>& changes) {
+void LspClient::DidChange(const Path& path, uint32_t version, const std::vector<DocumentChange>& changes) {
   std::vector<Json> content_changes;
   for (const DocumentChange& change : changes) {
     content_changes.push_back({
@@ -175,20 +175,20 @@ void LspClient::DidChange(const Uri& uri, uint32_t version, const std::vector<Do
     });
   }
   SendNotification("textDocument/didChange", {
-      { "textDocument", {{ "uri", uri }, { "version", version }} },
+      { "textDocument", {{ "uri", path.Uri() }, { "version", version }} },
       { "contentChanges", content_changes },
   });
 }
 
 
-void LspClient::Completion(const Uri& uri, Coord position) {
+void LspClient::Completion(const Path& path, Coord position) {
   RequestId id = SendRequest("textDocument/completion", {
-      { "textDocument", {{ "uri", uri }} },
+      { "textDocument", {{ "uri", path.Uri() }} },
       { "position", {{ "line", position.line }, { "character", position.character }} },
   });
   ResponseContext ctx;
   ctx.type = ResponseType::RESP_COMPLETION;
-  ctx.uri = uri;
+  ctx.path = path;
   {
     std::lock_guard<std::mutex> lock(mutex_pending_requests);
     pending_requests[id] = ctx;
@@ -196,14 +196,14 @@ void LspClient::Completion(const Uri& uri, Coord position) {
 }
 
 
-void LspClient::SignatureHelp(const Uri& uri, Coord position) {
+void LspClient::SignatureHelp(const Path& path, Coord position) {
   RequestId id = SendRequest("textDocument/signatureHelp", {
-      { "textDocument", {{ "uri", uri }} },
+      { "textDocument", {{ "uri", path.Uri() }} },
       { "position", {{ "line", position.line }, { "character", position.character }} },
   });
   ResponseContext ctx;
   ctx.type = ResponseType::RESP_SIGNATURE_HELP;
-  ctx.uri = uri;
+  ctx.path = path;
   {
     std::lock_guard<std::mutex> lock(mutex_pending_requests);
     pending_requests[id] = ctx;
@@ -348,9 +348,9 @@ void LspClient::HandleNotify(const std::string& method, const Json& params) {
       diagnostics.push_back(std::move(diagnostic));
     }
 
-    Uri uri = GET_STRING_OR(params, "uri", "");
+    std::string uri = GET_STRING_OR(params, "uri", "");
     uint32_t version = GET_INT_OR(params, "version", 0);
-    cb_diagnostics(uri, version, std::move(diagnostics));
+    cb_diagnostics(Path::FromUri(uri), version, std::move(diagnostics));
     return;
   }
 
@@ -409,7 +409,7 @@ void LspClient::HandleResponse(RequestId id, const Json& result) {
 
        } else return; // Unknown response ??
 
-       cb_completion(ctx.uri, is_incomplete, std::move(completion_list));
+       cb_completion(ctx.path, is_incomplete, std::move(completion_list));
        return; // we're done here.
 
      } break; // case RESP_COMPLETION
@@ -461,7 +461,7 @@ void LspClient::HandleResponse(RequestId id, const Json& result) {
          items.signatures.push_back(signature);
        }
 
-       cb_signature_help(ctx.uri, std::move(items));
+       cb_signature_help(ctx.path, std::move(items));
      } break;
   }
 

@@ -11,6 +11,9 @@
 #include "core/core.hpp"
 #include <tree_sitter/api.h>
 
+#include <filesystem>
+namespace fs = std::filesystem;
+
 // The language parser loading function.
 typedef const TSLanguage* (*TreeSitterLoader)(void);
 
@@ -25,8 +28,6 @@ struct LanguageLoadResult {
 typedef std::function<void(void* user_data, const char* buff, size_t length)> FuncStdoutCallback;
 typedef std::function<void(void* user_data, int exit_code)> FuncExitCallback;
 
-typedef std::string Uri;
-
 
 class Path {
 
@@ -34,13 +35,20 @@ public:
   Path() = default;
   Path(std::string path);
 
-  const std::string& Get() const;
-  Uri Uri() const;
+  std::string String() const;
+  std::string Uri() const;
+
+  bool Empty() const;
+  bool Exists() const;
 
   Path operator /(const std::string& inner) const;
+  bool operator <(const Path& other) const; // Needed to be used in map keys.
+
+  static Path FromUri(const std::string& uri);
+  static fs::path Normalize(const fs::path& path);
 
 private:
-  std::string path;
+  fs::path path;
 };
 
 

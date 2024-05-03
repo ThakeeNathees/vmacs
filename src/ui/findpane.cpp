@@ -213,6 +213,7 @@ bool FindPane::Action_CycleSelectionReversed(FindPane* self) {
   return true;
 }
 
+
 bool FindPane::Action_Backspace(FindPane* self) {
   if (self->cursor_index > 0) {
     self->input_text.erase(self->cursor_index-1, 1);
@@ -228,7 +229,11 @@ bool FindPane::Action_Backspace(FindPane* self) {
 // FIXME(mess): This is temproary.
 bool FindPane::Action_AcceptSelection(FindPane* self) {
   Editor* e = Editor::Singleton().get();
-  e->Singleton()->SetMessage(self->GetSelectedItem());
+  Path path(self->GetSelectedItem());
+  if (!path.Exists()) {
+    // TODO: Error to editor.
+  }
+  e->Singleton()->SetMessage(path.String());
   // e->ClosePopup(); // Will destroy this, can't.
   return true;
 }

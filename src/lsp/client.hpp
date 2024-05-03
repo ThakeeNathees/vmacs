@@ -27,9 +27,9 @@ typedef uint32_t RequestId;
 typedef std::string LanguageId;  // c, cpp, python, js, etc.
 typedef std::string LspClientId; // clangd, ccls, pyright, etc.
 
-typedef std::function<void(const Uri&, uint32_t version, std::vector<Diagnostic>&&)> CallbackDiagnostic;
-typedef std::function<void(const Uri&, bool is_incomplete, std::vector<CompletionItem>&&)> CallbackCompletion;
-typedef std::function<void(const Uri&, SignatureItems&&)> CallbackSignatureHelp;
+typedef std::function<void(const Path&, uint32_t version, std::vector<Diagnostic>&&)> CallbackDiagnostic;
+typedef std::function<void(const Path&, bool is_incomplete, std::vector<CompletionItem>&&)> CallbackCompletion;
+typedef std::function<void(const Path&, SignatureItems&&)> CallbackSignatureHelp;
 
 
 // Currently only the IPC method is supported.
@@ -49,7 +49,7 @@ public:
 
   // This will start the server and send initialize request, async wait for
   // server to respond with initialized. And send client initialized.
-  void StartServer(std::optional<Uri> root_uri);
+  void StartServer();
 
   bool IsTriggeringCharacterCompletion(char c) const;
   bool IsTriggeringCharacterSignature(char c) const;
@@ -58,10 +58,10 @@ public:
   void SendNotification(const std::string& method, const Json& params);
 
   // Abstracted request/notification methods.
-  void DidOpen(const Uri& uri, const std::string& text, const std::string& langauge);
-  void DidChange(const Uri& uri, uint32_t version, const std::vector<DocumentChange>& changes);
-  void Completion(const Uri& uri, Coord position);
-  void SignatureHelp(const Uri& uri, Coord position);
+  void DidOpen(const Path& path, const std::string& text, const std::string& langauge);
+  void DidChange(const Path& path, uint32_t version, const std::vector<DocumentChange>& changes);
+  void Completion(const Path& path, Coord position);
+  void SignatureHelp(const Path& path, Coord position);
   // TODO(grep): Did close.
 
   // Callbacks for content recieved from the server. (FIXME: this is a public variable
@@ -117,7 +117,7 @@ private:
 
   struct ResponseContext {
     ResponseType type;
-    Uri uri; // Which uri that was requested this response.
+    Path path; // Which path that was requested this response.
   };
 
   // A table of all the pending requests that needs to be resolved when the

@@ -87,15 +87,14 @@ void lsp_test() {
   config.id = "clangd";
 
   LspClient client(config);
-  client.StartServer(std::nullopt);
+  client.StartServer();
 
-  std::string path = "/Users/thakeenathees/Desktop/thakee/repos/vmacs/build/main.c";
-  Uri uri = std::string("file://") + path;
+  Path path = Path("/Users/thakeenathees/Desktop/thakee/repos/vmacs/build/main.c");
   std::string x;
 
   std::string text;
   ASSERT(Platform::ReadFile(&text, path), "My ugly code");
-  client.DidOpen(uri, text, "c");
+  client.DidOpen(path, text, "c");
 
   // goto definition.
   // std::cin >> x;
@@ -119,7 +118,7 @@ void lsp_test() {
     "textDocument/completion", {
     {
       "textDocument", {
-        { "uri",  std::string("file://") + path },
+        { "uri",  path.Uri() },
       },
     },
     {
@@ -242,11 +241,9 @@ void tree_sitter_test() {
 // loading resources from file (mainly theme and treesitter language).
 //
 // Now:
+//   check what happens with empty Path with lsp server and handle.
 //   open empty, search for a file with file picker.
 //   Add another language server client and test. show errors and ask inputs.
-//
-//   Path and Uri shouldn't be tow types -> merge.
-//   Path type in Platform doesn't normalize/"absolutifly" the path.
 //
 //
 // Pending:
@@ -254,13 +251,17 @@ void tree_sitter_test() {
 //   Better draw diagnostics.
 //   remove global thread stop and handle locally.
 //
-//
 //   structure:
 //     config move.
 //     theme: getting values and proper, dynamic changeing (listener);
-//   cleanup what ever we have and try to complete: before adding more things.
-//   Platform interface and Utils class.
-//   thememes and querty integrate.
+//     cleanup what ever we have and try to complete: before adding more things.
+//     Platform interface and Utils class.
+//
+//  Note:
+//    Document shouldn't draw autocompletion if it's in a pane that's not focused.
+//      and if the same document opened in two panes, only one show the list.
+//    Drawing autocompletion is done at the document draw level, so split will
+//      override the list if we draw another on top of.
 //
 // Big things:
 //   gap buffer.
@@ -291,6 +292,7 @@ void tree_sitter_test() {
 //   draw auto completion popup only in the current focused pane.
 //   drawing popup needs to be reviewed since if it goes out of the window, we just trim it but it needs to be pushed inside. (better draw primitives required)
 //   signature help will hide pressing space after comma.
+//   esc doesn't clear the selection.
 //
 //  Cleanup things:
 //    Registry of language server, and language => lsp mapping in the Editor:
@@ -463,6 +465,8 @@ int main(int argc, char** argv) {
   FindPane::keytree.RegisterBinding("*", "<backspace>",  "backspace");
   FindPane::keytree.RegisterBinding("*", "<C-n>",  "cycle_selection");
   FindPane::keytree.RegisterBinding("*", "<C-p>",  "cycle_selection_reversed");
+  FindPane::keytree.RegisterBinding("*", "<down>",  "cycle_selection");
+  FindPane::keytree.RegisterBinding("*", "<up>",  "cycle_selection_reversed");
   FindPane::keytree.RegisterBinding("*", "<tab>",  "cycle_selection");
   FindPane::keytree.RegisterBinding("*", "<S-tab>", "cycle_selection_reversed");
   FindPane::keytree.RegisterBinding("*", "<enter>", "accept_selection");
@@ -478,7 +482,6 @@ int main(int argc, char** argv) {
   editor->SetFrontEnd(std::move(fe));
 
   Editor* e = (Editor*) editor.get();
-
 
 
   // FIXME:

@@ -408,13 +408,13 @@ class Document : public HistoryListener, public BufferListener {
 
 public:
   Document(); // Create with an empty buffer.
-  Document(const Uri& uri, std::shared_ptr<Buffer> buffer);
+  Document(const Path& path, std::shared_ptr<Buffer> buffer);
   ~Document();
 
   // Getters.
   LanguageId GetLanguageId() const;
   bool IsReadOnly() const;
-  const Uri& GetUri() const;
+  const Path& GetPath() const;
 
   // Through parameter "returns" Diagnostics* at the given index if has any,
   // otherwise it won't change the given pointer.
@@ -508,15 +508,11 @@ private:
   std::shared_ptr<const Language> language;
   Syntax syntax;
 
-  // TODO: Maybe implement a string wrapper as uri type.
-  //
-  // Uri is simply "file://" + "the/file/path/in/the/disk".
-  //
-  // If the file is a new buffer the uri will be empty and the editor will ask
-  // a path before save. If we started the editor like `vim test.c` the uri is
+  // If the file is a new buffer the path will be empty and the editor will ask
+  // a path before save. If we started the editor like `vim test.c` the path is
   // `file://path/to/cwd/test.c` even thought the file isn't exists in the disk
   // we'll create a new one.
-  Uri uri;
+  Path path;
 
   std::shared_ptr<LspClient> lsp_client;
 

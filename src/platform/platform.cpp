@@ -9,36 +9,59 @@
 #include "platform.hpp"
 
 #include <fstream>
-#include <filesystem>
-namespace fs = std::filesystem;
-
-#define PATH_SEP "/"
 
 
 Path::Path(std::string path) {
-  // TODO: The path could be relative, normalize it first before storing.
-  this->path = path;
+  this->path = Normalize(fs::path(path));
 }
 
 
-const std::string& Path::Get() const {
-  return path;
+std::string Path::String() const {
+  return path.string();
 }
 
 
 std::string Path::Uri() const {
-  return std::string("file://") + path;
+  return std::string("file://") + path.string();
+}
+
+
+bool Path::Empty() const {
+  return path.empty();
+}
+
+
+bool Path::Exists() const {
+  return fs::exists(path);
 }
 
 
 Path Path::operator /(const std::string& inner) const {
-  return this->path + PATH_SEP + inner;
+  return Path(path/inner);
+}
+
+
+bool Path::operator <(const Path& other) const {
+  return path.string() < other.path.string();
+}
+
+
+Path Path::FromUri(const std::string& uri) {
+  // TODO: It's not a valid uri, handle here or assert.
+  if (!StartsWith(uri, "file://")) return Path(uri);
+  return Path(uri.substr(0, strlen("file://")));
+}
+
+
+fs::path Path::Normalize(const fs::path& path) {
+  fs::path canonical = std::filesystem::weakly_canonical(path);
+    return canonical.make_preferred().string();
 }
 
 
 bool Platform::ReadFile(std::string* ret, const Path& path) {
   ASSERT(ret != nullptr, OOPS);
-  std::ifstream file(path.Get());
+  std::ifstream file(path.String());
   if (!file.is_open()) return false;
   std::stringstream buffer;
   buffer << file.rdbuf();
@@ -51,7 +74,7 @@ bool Platform::ReadFile(std::string* ret, const Path& path) {
 bool Platform::ListDirectory(std::vector<std::string>* items, const Path& path) {
   ASSERT(items != nullptr, OOPS);
   // FIXME(grep): Handle if this throws.
-  for (const auto & entry : fs::directory_iterator(path.Get())) {
+  for (const auto & entry : fs::directory_iterator(path.String())) {
     std::string filename = entry.path().filename().string();
     items->push_back(std::move(filename));
   }

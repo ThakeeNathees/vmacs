@@ -203,18 +203,16 @@ void Editor::Draw() {
 // FIXME: Properly re-implement this method.
 std::shared_ptr<Document> Editor::OpenDocument(const Path& path) {
 
-  Uri uri = path.Uri();
-
   // If the document is already opened, just return it.
-  auto it = documents.find(uri);
+  auto it = documents.find(path);
   if (it != documents.end()) return it->second;
 
   std::string text;
   if (!Platform::ReadFile(&text, path)) return nullptr;
 
   std::shared_ptr<Buffer> buff = std::make_shared<Buffer>(text);
-  std::shared_ptr<Document> document = std::make_shared<Document>(uri, buff);
-  documents[uri] = document;
+  std::shared_ptr<Document> document = std::make_shared<Document>(path, buff);
+  documents[path] = document;
 
   return document;
 }
@@ -238,14 +236,14 @@ void Editor::RegisterLspClient(const LspConfig& config) {
   std::shared_ptr<LspClient> client = std::make_shared<LspClient>(config);
 
   // Register callbacks.
-  client->cb_diagnostics = [this](const Uri& uri, uint32_t version, std::vector<Diagnostic>&& diagnostics) {
-    this->OnLspDiagnostics(uri, version, std::move(diagnostics));
+  client->cb_diagnostics = [this](const Path& path, uint32_t version, std::vector<Diagnostic>&& diagnostics) {
+    this->OnLspDiagnostics(path, version, std::move(diagnostics));
   };
-  client->cb_completion = [this](const Uri& uri, bool is_incomplete, std::vector<CompletionItem>&& items) {
-    this->OnLspCompletion(uri, is_incomplete, std::move(items));
+  client->cb_completion = [this](const Path& path, bool is_incomplete, std::vector<CompletionItem>&& items) {
+    this->OnLspCompletion(path, is_incomplete, std::move(items));
   };
-  client->cb_signature_help = [this](const Uri& uri, SignatureItems&& items) {
-    this->OnLspSignatureHelp(uri, std::move(items));
+  client->cb_signature_help = [this](const Path& path, SignatureItems&& items) {
+    this->OnLspSignatureHelp(path, std::move(items));
   };
 
   // Register the client.
@@ -253,26 +251,26 @@ void Editor::RegisterLspClient(const LspConfig& config) {
 
   // FIXME(grep): We shouldn't start all the servers at the start. Move this to
   // somewhere else.
-  client->StartServer(std::nullopt);
+  client->StartServer();
 }
 
 
-void Editor::OnLspDiagnostics(const Uri& uri, uint32_t version, std::vector<Diagnostic>&& diagnostics) {
-  auto it = documents.find(uri);
+void Editor::OnLspDiagnostics(const Path& path, uint32_t version, std::vector<Diagnostic>&& diagnostics) {
+  auto it = documents.find(path);
   if (it == documents.end()) return;
   it->second->PushDiagnostics(version, std::move(diagnostics));
 }
 
 
-void Editor::OnLspCompletion(const Uri& uri, bool is_incomplete, std::vector<CompletionItem>&& items) {
-  auto it = documents.find(uri);
+void Editor::OnLspCompletion(const Path& path, bool is_incomplete, std::vector<CompletionItem>&& items) {
+  auto it = documents.find(path);
   if (it == documents.end()) return;
   it->second->PushCompletions(is_incomplete, std::move(items));
 }
 
 
-void Editor::OnLspSignatureHelp(const Uri& uri, SignatureItems&& items) {
-  auto it = documents.find(uri);
+void Editor::OnLspSignatureHelp(const Path& path, SignatureItems&& items) {
+  auto it = documents.find(path);
   if (it == documents.end()) return;
   it->second->PushSignatureHelp(std::move(items));
 }

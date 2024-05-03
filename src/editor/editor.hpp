@@ -148,16 +148,16 @@ private:
   // unlocked. properly (at the moment It's not doing that).
   std::map<std::string, std::shared_ptr<const Theme>>   themes;
   std::map<LanguageId, std::shared_ptr<const Language>> languages;
-  std::map<Uri, std::shared_ptr<Document>>              documents;
+  std::map<Path, std::shared_ptr<Document>>             documents;
   std::map<LspClientId, std::shared_ptr<LspClient>>     lsp_clients;
 
   friend class Global;
 
 private:
   // Lsp listeners.
-  void OnLspDiagnostics(const Uri&, uint32_t version, std::vector<Diagnostic>&&);
-  void OnLspCompletion(const Uri&, bool is_incomplete, std::vector<CompletionItem>&&);
-  void OnLspSignatureHelp(const Uri&, SignatureItems&&);
+  void OnLspDiagnostics(const Path&, uint32_t version, std::vector<Diagnostic>&&);
+  void OnLspCompletion(const Path&, bool is_incomplete, std::vector<CompletionItem>&&);
+  void OnLspSignatureHelp(const Path&, SignatureItems&&);
 
   // Construct, configure, and register an lsp client.
   void RegisterLspClient(const LspConfig& config);

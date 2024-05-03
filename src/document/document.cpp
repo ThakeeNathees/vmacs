@@ -14,8 +14,8 @@
 Document::Document() : buffer(std::make_shared<Buffer>()), history(buffer) {}
 
 
-Document::Document(const Uri& uri, std::shared_ptr<Buffer> buffer)
-  : uri(uri), buffer(buffer), cursors(buffer.get()), history(buffer)
+Document::Document(const Path& path, std::shared_ptr<Buffer> buffer)
+  : path(path), buffer(buffer), cursors(buffer.get()), history(buffer)
 {
   history.RegisterListener(this);
   buffer->RegisterListener(this);
@@ -38,8 +38,8 @@ bool Document::IsReadOnly() const {
 }
 
 
-const Uri& Document::GetUri() const {
-  return uri;
+const Path& Document::GetPath() const {
+  return path;
 }
 
 
@@ -124,7 +124,7 @@ std::unique_lock<std::mutex> Document::GetSignatureHelp(SignatureItems** items) 
 void Document::SetLspClient(std::shared_ptr<LspClient> client) {
   if (language == nullptr) return;
   lsp_client = client;
-  lsp_client->DidOpen(uri, buffer->GetData(), language->id);
+  lsp_client->DidOpen(path, buffer->GetData(), language->id);
 }
 
 
@@ -200,7 +200,7 @@ void Document::OnHistoryChanged(const std::vector<DocumentChange>& changes) {
   // diagnostics after a certain time in the update() method.
 
   if (lsp_client) {
-    lsp_client->DidChange(uri, history.GetVersion(), changes);
+    lsp_client->DidChange(path, history.GetVersion(), changes);
   }
 }
 
@@ -585,14 +585,14 @@ void Document::AddCursorUp() {
 
 void Document::TriggerCompletion() {
   if (lsp_client) {
-    lsp_client->Completion(uri, cursors.GetPrimaryCursor().GetCoord());
+    lsp_client->Completion(path, cursors.GetPrimaryCursor().GetCoord());
   }
 }
 
 
 void Document::TriggerSignatureHelp() {
   if (lsp_client) {
-    lsp_client->SignatureHelp(uri, cursors.GetPrimaryCursor().GetCoord());
+    lsp_client->SignatureHelp(path, cursors.GetPrimaryCursor().GetCoord());
   }
 }
 
