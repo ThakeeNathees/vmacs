@@ -149,13 +149,23 @@ using Json = nlohmann::json;
   (buff).cells[ (buff).width * ((y)) + (x)  ]
 
 // FIXME: make this as a function and make sure x, y are in the bounds.
-#define SET_CELL(buff, x, y, c, fg_, bg_, attrib_) \
+#define SET_CELL(buff, x, y, c, style)             \
   do {                                             \
     Cell& cell  = BUFF_CELL((buff), (x), (y));     \
     cell.ch     = (c);                             \
-    cell.fg     = (fg_);                           \
-    cell.bg     = (bg_);                           \
-    cell.attrib = (attrib_);                       \
+    cell.fg     = (style).fg.value_or(0x000000);   \
+    cell.bg     = (style).bg.value_or(0xffffff);   \
+    cell.attrib = (style).attrib;                  \
+  } while (false)
+
+// FIXME: Make this a function and overload the above with this.
+#define SET_CELL_I(buff, i, c, style)              \
+  do {                                             \
+    Cell& cell  = (buff).cells[i];                 \
+    cell.ch     = (c);                             \
+    cell.fg     = (style).fg.value_or(0x000000);   \
+    cell.bg     = (style).bg.value_or(0xffffff);   \
+    cell.attrib = (style).attrib;                  \
   } while (false)
 
 
@@ -213,9 +223,14 @@ typedef struct {
 // Each capture "keyword", "constant", "string-literal", has it's own style.
 // which we'll use to highlight a buffer.
 struct Style {
-  Color fg;
-  Color bg;
-  uint8_t attrib;
+  std::optional<Color> fg;
+  std::optional<Color> bg;
+  uint8_t attrib = 0;
+
+  // Apply this style with the given style, which will override the fg, bg and
+  // bitwise or the attribute.
+  Style Apply(const Style& other) const;
+  void ApplyInplace(const Style& other);
 };
 
 // -----------------------------------------------------------------------------
@@ -328,15 +343,12 @@ public:
   // inherits, if so that needs to be resolved beforehand by the caller.
   Theme(const Json& json);
 
-  // Returns the Style for the given capture.
-  // For a key like "keyword.control.conditional" if not exists, we again
-  // search for "keyword.control" and then "keyword". If found it'll return true
-  // and the style parameter will be updated, otherwise, return false.
-  bool GetStyle(Style* style, const std::string& capture) const;
-
-  // Return the style for the given capture, this is the same as GetStyle but
-  // with a defalt value if not present.
-  Style GetStyleOr(const std::string& capture, Style fallback) const;
+  // Returns the Style for the given capture. For a key like
+  // "keyword.control.conditional" if not exists, we again search for
+  // "keyword.control" and then "keyword". If found it'll return true and the
+  // style parameter will be updated, otherwise, return false. If the capture
+  // doesn't exists the return style will be empty.
+  Style GetStyle(const std::string& capture) const;
 
   // Converts a hex string of color values and returns as the equelevent numeric value.
   // as 0x00rrggbb value.
@@ -411,16 +423,14 @@ void DrawTextLine(
     int x,
     int y,
     int width,       // If the text goes beyond the width it'll terminate.
-    Color fg,
-    Color bg,
-    uint8_t attrib,
+    Style style,
     bool fill_area); // If true all the width is filled with the bg othereise
                      // only the text is drawn with the given bg.
 
 
-void DrawRectangleFill(FrameBuffer buff, int x, int y, int width, int height, Color bg);
-void DrawRectangleLine(FrameBuffer buff, int x, int y, int width, int height, Color fg, Color bg, bool fill=false);
-void DrawHorizontalLine(FrameBuffer buff, int x, int y, int width, Color fg, Color bg);
+void DrawRectangleFill(FrameBuffer buff, int x, int y, int width, int height, Style style);
+void DrawRectangleLine(FrameBuffer buff, int x, int y, int width, int height, Style style, bool fill=false);
+void DrawHorizontalLine(FrameBuffer buff, int x, int y, int width, Style style);
 
 
 // On a successfull parse, it'll return true and push all the keys are parsed

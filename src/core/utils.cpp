@@ -101,7 +101,7 @@ int GetElapsedTime() {
 }
 
 
-void DrawTextLine(FrameBuffer buff, const char* text, int x, int y, int width, Color fg, Color bg, uint8_t attrib, bool fill_area) {
+void DrawTextLine(FrameBuffer buff, const char* text, int x, int y, int width, Style style, bool fill_area) {
   if (text == NULL || *text == '\0') return;
   if (x < 0 || y < 0) return;
   if (x >= buff.width || y >= buff.height) return;
@@ -128,18 +128,18 @@ void DrawTextLine(FrameBuffer buff, const char* text, int x, int y, int width, C
     uint32_t ch;
     c += Utf8CharToUnicode(&ch, c);
     if (ch == '\n' || ch == '\t') ch = ' ';
-    SET_CELL(buff, xcurr, y, ch, fg, bg, attrib);
+    SET_CELL(buff, xcurr, y, ch, style);
   }
-  if (trimming) SET_CELL(buff, xcurr++, y, trim_indicator, fg, bg, attrib);
+  if (trimming) SET_CELL(buff, xcurr++, y, trim_indicator, style);
   if (fill_area) {
     while (xcurr < (x + width)) {
-      SET_CELL(buff, xcurr++, y, ' ', fg, bg, attrib);
+      SET_CELL(buff, xcurr++, y, ' ', style);
     }
   }
 }
 
 
-void DrawRectangleFill(FrameBuffer buff, int x, int y, int width, int height, Color bg) {
+void DrawRectangleFill(FrameBuffer buff, int x, int y, int width, int height, Style style) {
   if (x < 0 || y < 0) return;
   if (x >= buff.width || y >= buff.height) return;
   if (x + width > buff.width) width = buff.width - x;
@@ -148,13 +148,13 @@ void DrawRectangleFill(FrameBuffer buff, int x, int y, int width, int height, Co
 
   for (int row = y; row < y+height; row++) {
     for (int col = x; col < x+width; col++) {
-      SET_CELL(buff, col, row, ' ', 0, bg, 0);
+      SET_CELL(buff, col, row, ' ', style);
     }
   }
 }
 
 
-void DrawRectangleLine(FrameBuffer buff, int x, int y, int width, int height, Color fg, Color bg, bool fill) {
+void DrawRectangleLine(FrameBuffer buff, int x, int y, int width, int height, Style style, bool fill) {
   if (x < 0 || y < 0) return;
   if (x >= buff.width || y >= buff.height) return;
   if (x + width > buff.width) width = buff.width - x;
@@ -175,26 +175,26 @@ void DrawRectangleLine(FrameBuffer buff, int x, int y, int width, int height, Co
   int HL = 0x2500;
   int VL = 0x2502;
 
-  SET_CELL(buff, x,         y,          TR, fg, bg, 0); // Top right.
-  SET_CELL(buff, x+width-1, y,          TL, fg, bg, 0); // Top left.
-  SET_CELL(buff, x,         y+height-1, BL, fg, bg, 0); // Bottom left.
-  SET_CELL(buff, x+width-1, y+height-1, BR, fg, bg, 0); // Bottom right.
+  SET_CELL(buff, x,         y,          TR, style); // Top right.
+  SET_CELL(buff, x+width-1, y,          TL, style); // Top left.
+  SET_CELL(buff, x,         y+height-1, BL, style); // Bottom left.
+  SET_CELL(buff, x+width-1, y+height-1, BR, style); // Bottom right.
 
   for (int col = x+1; col < x+width-1; col++) {
-    SET_CELL(buff, col, y,          HL, fg, bg, 0); // Tob horizontal bar.
-    SET_CELL(buff, col, y+height-1, HL, fg, bg, 0); // Bottom horizontal bar.
+    SET_CELL(buff, col, y,          HL, style); // Tob horizontal bar.
+    SET_CELL(buff, col, y+height-1, HL, style); // Bottom horizontal bar.
   }
 
   for (int row = y+1; row < y+height-1; row++) {
-    SET_CELL(buff, x,         row, VL, fg, bg, 0); // Left vertical bar.
-    SET_CELL(buff, x+width-1, row, VL, fg, bg, 0); // Right vertical bar.
+    SET_CELL(buff, x,         row, VL, style); // Left vertical bar.
+    SET_CELL(buff, x+width-1, row, VL, style); // Right vertical bar.
   }
 
-  if (fill) DrawRectangleFill(buff, x+1, y+1, width-2, height-2, bg);
+  if (fill) DrawRectangleFill(buff, x+1, y+1, width-2, height-2, style);
 }
 
 
-void DrawHorizontalLine(FrameBuffer buff, int x, int y, int width, Color fg, Color bg) {
+void DrawHorizontalLine(FrameBuffer buff, int x, int y, int width, Style style) {
   if (x < 0 || y < 0) return;
   if (x >= buff.width || y >= buff.height) return;
   if (x + width > buff.width) width = buff.width - x;
@@ -202,7 +202,7 @@ void DrawHorizontalLine(FrameBuffer buff, int x, int y, int width, Color fg, Col
 
   int HL = 0x2500;
   for (int col = x+1; col < x+width-1; col++) {
-    SET_CELL(buff, col, y, HL, fg, bg, 0);
+    SET_CELL(buff, col, y, HL, style);
   }
 }
 

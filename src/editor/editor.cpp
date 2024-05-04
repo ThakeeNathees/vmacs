@@ -69,7 +69,7 @@ void Global::ReDraw() {
 
 // FIXME: This is temproary. Set current theme and get from there.
 const Theme* Global::GetCurrentTheme() {
-  return Editor::Singleton()->themes["dracula_at_night"].get();
+  return Editor::Singleton()->themes["dark_plus"].get();
 }
 
 
@@ -212,16 +212,16 @@ void Editor::Draw() {
   // FIXME: This needs to be re-factored and cleaned up.
   // Draw to the front end buffer.
   FrameBuffer buff = frontend->GetDrawBuffer();
-  Color color_bg = Global::GetCurrentTheme()->GetStyleOr("ui.background", {.fg=0, .bg=0xffffff, .attrib=0}).bg;
+  Style style_bg = Global::GetCurrentTheme()->GetStyle("ui.background");
 
   // Clear the background.
   for (int i = 0; i < buff.width * buff.height; i++) {
-    buff.cells[i] = {.ch = ' ', .fg = 0, .bg = color_bg, .attrib=0};
+    SET_CELL_I(buff, i, ' ', style_bg);
   }
 
   window->Draw(buff);
   // FIXME(grep): Move this insde window.
-  frontend->Display(color_bg); // FIXME: background color for raylib.
+  frontend->Display(style_bg.bg.value_or(0xffffff)); // FIXME: background color for raylib.
 }
 
 

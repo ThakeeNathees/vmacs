@@ -293,6 +293,9 @@ void tree_sitter_test() {
 //   drawing popup needs to be reviewed since if it goes out of the window, we just trim it but it needs to be pushed inside. (better draw primitives required)
 //   signature help will hide pressing space after comma.
 //   esc doesn't clear the selection.
+//   [bug in termbox] color 0x000000 (black) cannot be used as it will be replaced
+//     with default color (use emacs theme compare with helix)
+//     ref: https://github.com/nsf/termbox/issues/114
 //
 //  Cleanup things:
 //    Registry of language server, and language => lsp mapping in the Editor:

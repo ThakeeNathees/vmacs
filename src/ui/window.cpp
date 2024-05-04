@@ -44,8 +44,11 @@ void Window::Draw(FrameBuffer buff) {
   tab->Draw(buff, {0, 0}, {.width = buff.width, .height = buff.height-1});
   if (popup.get()) popup->Draw(buff, {0, 0}, {.width = buff.width, .height = buff.height-1});
 
-  Color color_bg = Global::GetCurrentTheme()->GetStyleOr("ui.background", {.fg=0, .bg=0xffffff, .attrib=0}).bg;
-  DrawTextLine(buff, info_bar_text.c_str(), 0, buff.height-1, buff.width, 0xffffff, color_bg, 0, true);
+  Style style_text = Global::GetCurrentTheme()->GetStyle("ui.text");
+  Style style_bg   = Global::GetCurrentTheme()->GetStyle("ui.background");
+
+  Style style = style_bg.Apply(style_text);
+  DrawTextLine(buff, info_bar_text.c_str(), 0, buff.height-1, buff.width, style, true);
 }
 
 

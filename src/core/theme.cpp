@@ -26,6 +26,22 @@ static bool ResolveColorFromString(
 }
 
 
+Style Style::Apply(const Style& other) const {
+  Style ret = *this;
+  if (other.fg != std::nullopt) ret.fg = other.fg;
+  if (other.bg != std::nullopt) ret.bg = other.bg;
+  ret.attrib |= other.attrib;
+  return ret;
+}
+
+
+void Style::ApplyInplace(const Style& other) {
+  if (other.fg != std::nullopt) fg = other.fg;
+  if (other.bg != std::nullopt) bg = other.bg;
+  attrib |= other.attrib;
+}
+
+
 // TODO: Comup with a proper set of ui entries this one only rely on helix.
 Theme::Theme(const Json& json) {
   std::map<std::string, Color> palette;
@@ -128,27 +144,19 @@ Theme::Theme(const Json& json) {
 }
 
 
-bool Theme::GetStyle(Style* style, const std::string& capture_) const {
+Style Theme::GetStyle(const std::string& capture_) const {
   std::string capture = capture_; // We need to modify.
   while (true) {
     auto iter = entries.find(capture);
     if (iter != entries.end()) {
-      *style = iter->second;
-      return true;
+      return iter->second;
     }
     size_t pos = capture.find_last_of('.');
-    if (pos == std::string::npos) return false;
+    if (pos == std::string::npos) return Style();
     capture.erase(pos, capture.size() - pos);
   }
   UNREACHABLE();
-  return false;
-}
-
-
-Style Theme::GetStyleOr(const std::string& capture, Style fallback) const {
-  Style style;
-  if (!GetStyle(&style, capture)) return fallback;
-  return style;
+  return Style();
 }
 
 

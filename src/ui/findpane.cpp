@@ -86,11 +86,15 @@ std::string FindPane::GetSelectedItem() {
 void FindPane::_Draw(FrameBuffer buff, Position pos_windows, Size area) {
 
   // FIXME: Move this mess. ----------------------------------------------------
-  Color fg = Global::GetCurrentTheme()->GetStyleOr("ui.text", {.fg = 0xff0000, .bg = 0xff0000, .attrib = 0}).fg;
-  Color bg = Global::GetCurrentTheme()->GetStyleOr("ui.background", {.fg = 0xff0000, .bg = 0xff0000, .attrib = 0}).bg;
-  Color color_cursor_fg     = Global::GetCurrentTheme()->GetStyleOr("ur.cursor.primary", {.fg = 0x0000ff, .bg = 0xffffff, .attrib = 0}).fg;
-  Color color_cursor_bg     = Global::GetCurrentTheme()->GetStyleOr("ui.cursor.primary", {.fg = 0x000000, .bg = 0xffffff, .attrib = 0}).bg;
+  const Theme* theme = Global::GetCurrentTheme();
+  Style style_text   = theme->GetStyle("ui.text");
+  Style style_cursor = theme->GetStyle("ui.cursor.primary");
+  Style style_bg     = theme->GetStyle("ui.background");
+  Style style_border = theme->GetStyle("ui.background.separator");
   // --------------------------------------------------------------------------
+
+  // The default fg,bg,attrib for drawing bellow.
+  const Style style = style_bg.Apply(style_text);
 
   // Dimentions.
   const int percent = 90;
@@ -107,16 +111,16 @@ void FindPane::_Draw(FrameBuffer buff, Position pos_windows, Size area) {
   // the end.
 
   // Draw the border.
-  DrawRectangleLine(buff, x, y, w, h, fg, bg, true);
+  DrawRectangleLine(buff, x, y, w, h, style_border, true);
 
   // Draw the input area.
   for (int i = 0; i < input_text.size(); i++) {
-    Color fg_ = (i == cursor_index) ? color_cursor_fg : fg;
-    Color bg_ = (i == cursor_index) ? color_cursor_bg : bg;
-    SET_CELL(buff, x+2+i, y+1, input_text[i], fg_, bg_, 0);
+    SET_CELL(buff, x+2+i, y+1, input_text[i],
+       (i == cursor_index) ? style.Apply(style_cursor) : style);
   }
   if (cursor_index == input_text.size()) {
-    SET_CELL(buff, x+2 + cursor_index, y+1, ' ', color_cursor_fg, color_cursor_bg, 0);
+    auto s = style.Apply(style_cursor);
+    SET_CELL(buff, x+2 + cursor_index, y+1, ' ', s);
   }
 
   int total_count = finder->GetTotalItemsCount();
@@ -129,11 +133,11 @@ void FindPane::_Draw(FrameBuffer buff, Position pos_windows, Size area) {
       " / " + std::to_string(total_count);
     int x_ = x + w - 2 - filter_ratio.size(); // -2: right_bar, spacing.
     int y_ = y + 1;
-    DrawTextLine(buff, filter_ratio.c_str(), x_, y_, filter_ratio.size(), fg, bg, 0, false);
+    DrawTextLine(buff, filter_ratio.c_str(), x_, y_, filter_ratio.size(), style, false);
   }
 
   // Draw the split line.
-  DrawHorizontalLine(buff, x+1, y+2, w-2, fg, bg);
+  DrawHorizontalLine(buff, x+1, y+2, w-2, style);
 
   // Draw the filtered items.
 
@@ -166,14 +170,18 @@ void FindPane::_Draw(FrameBuffer buff, Position pos_windows, Size area) {
 
 void FindPane::DrawItems(FrameBuffer buff, int x, int y, int w, int h, const std::vector<std::string>* items) {
   // FIXME: Move this mess. ----------------------------------------------------
-  Color fg = Global::GetCurrentTheme()->GetStyleOr("ui.text", {.fg = 0xff0000, .bg = 0xff0000, .attrib = 0}).fg;
-  Color bg = Global::GetCurrentTheme()->GetStyleOr("ui.background", {.fg = 0xff0000, .bg = 0xff0000, .attrib = 0}).bg;
+  const Theme* theme = Global::GetCurrentTheme();
+  Style style_text = theme->GetStyle("ui.text");
+  Style style_bg   = theme->GetStyle("ui.background");
+  Style style_selected = theme->GetStyle("ui.menu.selected");
   // --------------------------------------------------------------------------
+  Style style = style_bg.Apply(style_text);
   for (int i = 0; i < h; i++) {
     if  (view_start_index + i >= items->size()) return; // Out of bound.
     const std::string& item = (*items)[view_start_index + i];
-    Color bg_ = (view_start_index + i == selected_index) ? 0xff0000 : bg;
-    DrawTextLine(buff, item.c_str(), x, y+i, w, fg, bg_, 0, true);
+    DrawTextLine(buff, item.c_str(), x, y+i, w, 
+        (view_start_index + i == selected_index) ? style.Apply(style_selected) : style,
+        true);
   }
 }
 

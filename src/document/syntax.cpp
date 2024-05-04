@@ -204,15 +204,14 @@ void Syntax::CacheBufferStyle(const Buffer* buffer) {
   const Theme* theme = Global::GetCurrentTheme();
   size_t buffer_size = buffer->GetSize();
   highlights.assign(
-    buffer_size, // FIXME: Have a default value for each themes and get them properly.
-    theme->GetStyleOr("ui.text", {.fg = 0, .bg = 0xffffff, .attrib=0}));
+    buffer_size,
+    theme->GetStyle("ui.text"));
 
-  Style style; // To store the return value.
   for (auto it = slices.begin(); it != slices.end(); ++it) {
-    if (!theme->GetStyle(&style, it->capture)) continue;
+    Style style = theme->GetStyle(it->capture);
     for (int i = it->start; i < it->end; i++) {
       if (i >= buffer_size) return; // Failsafe.
-      highlights[i] = style;
+      highlights[i].ApplyInplace(style);
     }
   }
 }

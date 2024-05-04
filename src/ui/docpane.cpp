@@ -115,20 +115,15 @@ void DocPane::DrawBuffer(FrameBuffer buff, Position pos, Size area) {
   // FIXME: Move this to themes.
   // --------------------------------------------------------------------------
   const Theme* theme = Global::GetCurrentTheme();
-  Color color_red           = 0xff0000;
-  Color color_yellow        = 0xcccc2d;
-  Color color_black         = 0x000000;
-  Color color_text          = 0xffffff;
-  Color color_tab_indicator = 0x656966;
-  const Style style_default = {.fg = 0, .bg = 0xffffff, .attrib = 0};
-  Style style;
-  #define GET_STYLE(style_name) \
-    (theme->GetStyle(&style, style_name) ? style : style_default)
-  Color color_cursor_fg     = GET_STYLE("ui.cursor.primary").fg;
-  Color color_cursor_bg     = GET_STYLE("ui.cursor.primary").bg;
-  Color color_sel           = GET_STYLE("ui.selection").bg;
-  Color color_bg            = GET_STYLE("ui.background").bg;
-  // FIXME: Move this somewhere general.
+  // TODO: Use ui.cursor for secondary cursor same as selection.
+  Style style_text       = theme->GetStyle("ui.text");
+  Style style_whitespace = theme->GetStyle("ui.virtual.whitespace");
+  Style style_cursor     = theme->GetStyle("ui.cursor.primary");
+  Style style_selection  = theme->GetStyle("ui.selection.primary");
+  Style style_bg         = theme->GetStyle("ui.background");
+  Style style_error      = theme->GetStyle("error");
+  Style style_warning    = theme->GetStyle("warning");
+
   // We draw an indicator for the tab character.
   // 0x2102 : '→'
   int tab_indicator = 0x2192;
@@ -172,10 +167,11 @@ void DocPane::DrawBuffer(FrameBuffer buff, Position pos, Size area) {
       // If the line starts at the middle of a tab character or after the end of
       // line draw the rest of the tab (newline will be handled as well).
       while (col_delta--) {
+        Style style = style_bg.Apply(style_text);
+        if (in_selection) style.ApplyInplace(style_selection);
         // If cursor in the character  we don't want to draw the cursor for
         // the rest of the white spaces.
-        int bg = (in_selection) ? color_sel : color_bg;
-        SET_CELL(buff, pos.col+x, pos.row+y, ' ', color_text, color_bg, 0);
+        SET_CELL(buff, pos.col+x, pos.row+y, ' ', style);
         x++;
       }
       index++;
@@ -186,25 +182,20 @@ void DocPane::DrawBuffer(FrameBuffer buff, Position pos, Size area) {
     while (x < area.width && index <= line.end) {
 
       // Current cell configuration.
-      int c      = document->buffer->At(index);
-      Color fg   = color_text;
-      Color bg   = color_bg;
-      int attrib = 0;
+      int c       = document->buffer->At(index);
+      Style style = style_bg.Apply(style_text);
 
       // Get teh syntax highlighting of the character. Note that the background
       // color is fetched from theme (not from syntax highlighter).
       if (highlights.size() > index) {
-        style = highlights[index];
-        fg = style.fg;
-        attrib |= style.attrib;
+        style.ApplyInplace(highlights[index]);
       }
 
 
       // Check if we're in tab character.
       bool istab = (c == '\t');
       if (istab) {
-        c  = tab_indicator;
-        fg = color_tab_indicator;
+        style.ApplyInplace(style_whitespace);
       } else if (isspace(c) || c == '\0') {
         c = ' ';
       }
@@ -214,7 +205,9 @@ void DocPane::DrawBuffer(FrameBuffer buff, Position pos, Size area) {
       // till we're using. If the current character has diagnostic 
       const Diagnostic* diagnos = nullptr;
       std::unique_lock<std::mutex> diagnos_lock = document->GetDiagnosticAt(&diagnos, index);
-      if (diagnos != nullptr) attrib |= VMACS_CELL_UNDERLINE;
+      if (diagnos != nullptr) {
+        style.attrib |= VMACS_CELL_UNDERLINE;
+      }
 
 
       // Check if the current cell is under cursor or selection, this will override
@@ -222,21 +215,21 @@ void DocPane::DrawBuffer(FrameBuffer buff, Position pos, Size area) {
       bool in_cursor;
       bool in_selection;
       CheckCellStatus(index, &in_cursor, &in_selection);
-      if (in_cursor && cursor_blink_show) fg = color_cursor_fg,  bg = color_cursor_bg;
-      else if (in_selection) fg = bg, bg = color_sel;
+      if (in_cursor && cursor_blink_show) style.ApplyInplace(style_cursor);
+      else if (in_selection) style.ApplyInplace(style_selection);
 
 
       // Draw the character finally.
-      SET_CELL(buff, pos.col+x, pos.row+y, c, fg, bg, attrib);
+      SET_CELL(buff, pos.col+x, pos.row+y, c, style);
       x++;
 
       // If it's a tab character we'll draw more white spaces.
       if (istab) {
         int space_count = TABSIZE_ - document->buffer->IndexToColumn(index) % TABSIZE_;
         space_count -= 1; // Since the tab character is drawn already above.
-        bg = (in_selection) ? color_sel : color_bg; // Don't draw cursor on all the cells.
+        Style empty = style_bg.Apply(in_selection ? style_selection : style_text);
         for (int _ = 0; _ < space_count; _++) {
-          SET_CELL(buff, pos.col+x, pos.row+y, ' ', fg, bg, attrib);
+          SET_CELL(buff, pos.col+x, pos.row+y, ' ', empty);
           x++;
         }
       }
@@ -246,18 +239,18 @@ void DocPane::DrawBuffer(FrameBuffer buff, Position pos, Size area) {
       // --------------------------------------------------------------------------
       // Draw diagnostic text.
       if (diagnos && index == document->cursors.GetPrimaryCursor().GetIndex()) {
-        Color color = (diagnos->severity == 1) ? color_red : color_yellow;
+        Style style_diag = style_bg.Apply(diagnos->severity == 1 ? style_error : style_warning);
 
         // Draw the message.
         int width = MIN(diagnos->message.size(), buff.width);
         int x = buff.width - width;
-        DrawTextLine(buff, diagnos->message.c_str(), x, 0, width, color, color_bg, 0, false);
+        DrawTextLine(buff, diagnos->message.c_str(), x, 0, width, style_diag, false);
 
         // Draw the code + source.
         std::string code_source = diagnos->source + ": " + diagnos->code;
         width = MIN(code_source.size(), buff.width);
         x = buff.width - width;
-        DrawTextLine(buff, code_source.c_str(), x, 1, width, color, color_bg, 0, false);
+        DrawTextLine(buff, code_source.c_str(), x, 1, width, style_diag, false);
       }
       // --------------------------------------------------------------------------
 
@@ -306,13 +299,9 @@ void DocPane::DrawAutoCompletions(FrameBuffer buff, Position docpos) {
 
   // FIXME: Cleanup this mess.-------------------------------------------------
   const Theme* theme = Global::GetCurrentTheme();
-  Style style;
-  Style style_default = {.fg = 0, .bg = 0xffffff, .attrib = 0};
-#define GET_STYLE(style_name) \
-  (theme->GetStyle(&style, style_name) ? style : style_default)
-  Color popup_fg     = GET_STYLE("ui.popup").fg;
-  Color popup_bg     = GET_STYLE("ui.popup").bg;
-  Color param_active = GET_STYLE("type").fg;
+  Style style_menu          = theme->GetStyle("ui.menu");
+  Style style_menu_selected = theme->GetStyle("ui.menu.selected");
+  Style style_active_param  = theme->GetStyle("type"); // FIXME: Not the correct one.
   //---------------------------------------------------------------------------
 
 
@@ -368,12 +357,12 @@ void DocPane::DrawAutoCompletions(FrameBuffer buff, Position docpos) {
   }
 
   // Prepare the coord for drawing the completions.
-  int popup_start_index = (BETWEEN(0, document->completion_start_index, document->buffer->GetSize()))
+  int menu_start_index = (BETWEEN(0, document->completion_start_index, document->buffer->GetSize()))
     ? document->completion_start_index
     : document->GetWordBeforeIndex(cursor_index);
-  Position popup_start;
-  popup_start.col = document->buffer->IndexToColumn(popup_start_index) - view_start.col;
-  popup_start.row = document->buffer->IndexToCoord(popup_start_index).line - view_start.row;
+  Position menu_start;
+  menu_start.col = document->buffer->IndexToColumn(menu_start_index) - view_start.col;
+  menu_start.row = document->buffer->IndexToCoord(menu_start_index).line - view_start.row;
 
   // Current drawing position (relative to the docpos).
   Position pos = {0, 0};
@@ -382,15 +371,14 @@ void DocPane::DrawAutoCompletions(FrameBuffer buff, Position docpos) {
   // Drawing auto completion list.
   // ---------------------------------------------------------------------------
 
-  pos = popup_start;
+  pos = menu_start;
   pos.row += (drawing_bellow_cursor) ? 1 : (-count_dispaynig_items);
 
   for (int i = 0; i < count_dispaynig_items; i++) {
     auto& item = (*completion_items)[i];
     int icon_index = CLAMP(0, (int)item.kind-1, completion_kind_count);
 
-    // Highlight selected item. TODO: background color.
-    Color bg = (i == document->completion_selected) ? 0xff0000 : popup_bg;
+    Style style = (i == document->completion_selected) ? style_menu_selected : style_menu;
 
     // TODO: Draw a scroll bar.
     // FIXME: The layout is hardcoded.
@@ -399,22 +387,20 @@ void DocPane::DrawAutoCompletions(FrameBuffer buff, Position docpos) {
         docpos.col + pos.col,
         docpos.row + pos.row,
         completion_kind_nerd_icon[icon_index],
-        popup_fg, bg, 0);
+        style);
     SET_CELL(
         buff,
         docpos.col + pos.col + 1,
         docpos.row + pos.row,
         ' ',
-        popup_fg, bg, 0);
+        style);
     DrawTextLine(
         buff,
         item.label.c_str(),
         docpos.col + pos.col + 2, // + becase we draw the icon above.
         docpos.row + pos.row,
         max_len,
-        popup_fg,
-        bg,
-        0,
+        style,
         true);
     pos.row++;
   }
@@ -439,7 +425,7 @@ void DocPane::DrawAutoCompletions(FrameBuffer buff, Position docpos) {
   drawing_bellow_cursor = count_items == 0 || !drawing_bellow_cursor;
 
   // Prepare the coord for drawing the completions.
-  pos = popup_start;
+  pos = menu_start;
   pos.row += (drawing_bellow_cursor) ? 1 : -1;
 
   DrawTextLine(
@@ -448,9 +434,7 @@ void DocPane::DrawAutoCompletions(FrameBuffer buff, Position docpos) {
       docpos.col + pos.col,
       docpos.row + pos.row,
       si.label.size(),
-      popup_fg,
-      popup_bg,
-      0,
+      style_menu,
       true);
 
   // Draw the current parameter highlighted.
@@ -465,9 +449,7 @@ void DocPane::DrawAutoCompletions(FrameBuffer buff, Position docpos) {
       docpos.col + pos.col + pi.label.start,
       docpos.row + pos.row,
       param_label.size(),
-      param_active,
-      popup_bg,
-      0,
+      style_menu.Apply(style_active_param),
       true);
 }
 

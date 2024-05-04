@@ -46,16 +46,16 @@ bool Path::operator <(const Path& other) const {
 }
 
 
-Path Path::FromUri(const std::string& uri) {
+Path Path::FromUri(std::string uri) {
   // TODO: It's not a valid uri, handle here or assert.
   if (!StartsWith(uri, "file://")) return Path(uri);
-  return Path(uri.substr(0, strlen("file://")));
+  return Path(uri.erase(0, strlen("file://")));
 }
 
 
 fs::path Path::Normalize(const fs::path& path) {
   fs::path canonical = std::filesystem::weakly_canonical(path);
-    return canonical.make_preferred().string();
+  return canonical.make_preferred();
 }
 
 

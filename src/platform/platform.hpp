@@ -44,7 +44,7 @@ public:
   Path operator /(const std::string& inner) const;
   bool operator <(const Path& other) const; // Needed to be used in map keys.
 
-  static Path FromUri(const std::string& uri);
+  static Path FromUri(std::string uri);
   static fs::path Normalize(const fs::path& path);
 
 private:
