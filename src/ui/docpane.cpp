@@ -164,7 +164,7 @@ void DocPane::DrawBuffer(FrameBuffer buff, Position pos, Size area) {
     int col_delta = 0;
     int index = document->buffer->ColumnToIndex(view_start.col, line_index, &col_delta);
 
-    if (col_delta > 0) {
+    if (col_delta > 0 && index < line.end) {
       col_delta = TABSIZE_ - col_delta;
       bool in_cursor, in_selection;
       CheckCellStatus(index, &in_cursor, &in_selection);
