@@ -27,6 +27,20 @@ public:
 };
 
 
+class DocumentListener {
+public:
+  virtual void OnDocumentChanged()  = 0;
+  virtual ~DocumentListener() = default;
+};
+
+
+// Since the document need theme when parsing the buffer to syntax highlight,
+// we'll use this function pointer to fetch the theme, set it to document
+// from the docpane since document class doesn't know editor or theme config
+// exists.
+typedef const Theme* (*GetThemeFn)();
+
+
 /*
  * text    = "hello\nworld"
  * buffer  = {"h", "e", "l", "l", "o", "\n", "w", "o", "r", "l", "d", "\0"}
@@ -385,7 +399,8 @@ public:
   NO_COPY_CONSTRUCTOR(Syntax);
 
   // This will parse and update it's syntax tree, highlight information textobjects.
-  void Parse(const Language* language, const Buffer* buffer);
+  // If nullptr used for theme, it'll skip caching the highlight with sytle.
+  void Parse(const Language* language, const Buffer* buffer, const Theme* theme);
   const std::vector<Style>& GetHighlights() const;
 
 private:
@@ -400,7 +415,7 @@ private:
 
 private:
   void CacheHighlightSlices(const TSQuery* query, const Buffer* buffer);
-  void CacheBufferStyle(const Buffer* buffer);
+  void CacheBufferStyle(const Theme* theme, const Buffer* buffer);
 };
 
 
@@ -410,6 +425,12 @@ public:
   Document(); // Create with an empty buffer.
   Document(const Path& path, std::shared_ptr<Buffer> buffer);
   ~Document();
+
+  // Listener registeration.
+  void RegisterListener(DocumentListener* listener);
+  void UnRegisterListener(DocumentListener* listener);
+
+  void SetThemeGetter(GetThemeFn fn);
 
   // Getters.
   LanguageId GetLanguageId() const;
@@ -502,11 +523,13 @@ private:
   MultiCursor cursors;
   std::shared_ptr<Buffer> buffer;
   History history;
+  std::vector<DocumentListener*> listeners;
 
   // Syntax tree of this document, can be used for syntax based navigation and
   // highlight.
   std::shared_ptr<const Language> language;
   Syntax syntax;
+  GetThemeFn get_theme = nullptr;
 
   // If the file is a new buffer the path will be empty and the editor will ask
   // a path before save. If we started the editor like `vim test.c` the path is
@@ -551,4 +574,7 @@ private:
   // DocPane need cursor and buffer to draw the document, this might not be the
   // "oop" way I don't know.
   friend class DocPane;
+
+private:
+  void OnDocumentChanged();
 };

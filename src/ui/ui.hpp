@@ -163,13 +163,16 @@ public: // Actions.
 
 // BufferPane is the Pane that handles events and display the undeling buffer
 // it's more of a text editor with number line and scroll bar etc.
-class DocPane : public Pane {
+class DocPane : public Pane, public DocumentListener {
 
 public:
   DocPane();
   DocPane(std::shared_ptr<Document> document);
 
   void Update() override;
+
+  // Document listener methods.
+  void OnDocumentChanged() override;
 
 private:
   // The document we're editing on this pane.

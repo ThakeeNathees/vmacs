@@ -47,7 +47,7 @@ const std::vector<Style>& Syntax::GetHighlights() const {
 }
 
 
-void Syntax::Parse(const Language* language, const Buffer* buffer) {
+void Syntax::Parse(const Language* language, const Buffer* buffer, const Theme* theme) {
 
   if (language == nullptr) {
     slices.clear();
@@ -65,7 +65,7 @@ void Syntax::Parse(const Language* language, const Buffer* buffer) {
 
   // Cache highlight slices.
   CacheHighlightSlices(language->query_highlight, buffer);
-  CacheBufferStyle(buffer);
+  CacheBufferStyle(theme, buffer);
 
   // TODO: Cache textobjects (functions, classes, enums, parameters, etc to navigate/view-all-symbols).
 }
@@ -200,8 +200,14 @@ static bool TreeSitterCheckPredicate(const char* source, const TSQuery* query, T
 }
 
 
-void Syntax::CacheBufferStyle(const Buffer* buffer) {
-  const Theme* theme = Global::GetCurrentTheme();
+void Syntax::CacheBufferStyle(const Theme* theme, const Buffer* buffer) {
+  ASSERT(buffer != nullptr, OOPS);
+
+  if (theme == nullptr) {
+    highlights.clear();
+    return;
+  }
+
   size_t buffer_size = buffer->GetSize();
   highlights.assign(
     buffer_size,

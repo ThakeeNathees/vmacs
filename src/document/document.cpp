@@ -27,6 +27,33 @@ Document::~Document() {
 }
 
 
+void Document::OnDocumentChanged() {
+  for (auto& it : listeners) {
+    it->OnDocumentChanged();
+  }
+}
+
+
+void Document::RegisterListener(DocumentListener* listener) {
+  listeners.push_back(listener);
+}
+
+
+void Document::UnRegisterListener(DocumentListener* listener) {
+  for (int i = 0; i < listeners.size(); i++) {
+    if (listeners[i] == listener) {
+      listeners.erase(listeners.begin() + i);
+      return;
+    }
+  }
+}
+
+
+void Document::SetThemeGetter(GetThemeFn fn) {
+  get_theme = fn;
+}
+
+
 LanguageId Document::GetLanguageId() const {
   if (language) return language->id;
   return "";
@@ -50,7 +77,8 @@ void Document::SetReadOnly(bool readonly) {
 
 void Document::SetLanguage(std::shared_ptr<const Language> language) {
   this->language = language;
-  syntax.Parse(language.get(), buffer.get());
+  const Theme* theme = get_theme ? get_theme() : nullptr;
+  syntax.Parse(language.get(), buffer.get(), theme);
 }
 
 
@@ -158,7 +186,7 @@ void Document::PushDiagnostics(uint32_t version, std::vector<Diagnostic>&& diagn
       this->diagnostics.clear();
     }
   }
-  Global::ReDraw();
+  OnDocumentChanged();
 }
 
 
@@ -181,7 +209,7 @@ void Document::PushCompletions(bool is_incomplete, std::vector<CompletionItem>&&
         });
 
   }
-  Global::ReDraw();
+  OnDocumentChanged();
 }
 
 
@@ -190,7 +218,7 @@ void Document::PushSignatureHelp(SignatureItems&& items) {
     std::lock_guard<std::mutex> lock(mutex_signature_help);
     this->signatures_helps = items;
   }
-  Global::ReDraw();
+  OnDocumentChanged();
 }
 
 
@@ -206,7 +234,9 @@ void Document::OnHistoryChanged(const std::vector<DocumentChange>& changes) {
 
 
 void Document::OnBufferChanged() {
-  syntax.Parse(language.get(), buffer.get());
+  const Theme* theme = get_theme ? get_theme() : nullptr;
+  syntax.Parse(language.get(), buffer.get(), theme);
+  OnDocumentChanged();
 }
 
 

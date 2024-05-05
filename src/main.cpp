@@ -241,15 +241,17 @@ void tree_sitter_test() {
 // loading resources from file (mainly theme and treesitter language).
 //
 // Now:
-//   check what happens with empty Path with lsp server and handle.
-//   open empty, search for a file with file picker.
-//   Add another language server client and test. show errors and ask inputs.
 //
 //
 // Pending:
+//   check what happens with empty Path with lsp server and handle.
+//   open empty, search for a file with file picker.
+//   Add another language server client and test. show errors and ask inputs.
 //   Global config (tabsize), dropdown icons, dropdown list max count. lsp config.
 //   Better draw diagnostics.
-//   remove global thread stop and handle locally.
+//   remove global thread stop and handle locally
+//     document depends on redraw and: use listeners.
+//     synax depends on get theme: use callback to fetch theme.
 //
 //   structure:
 //     config move.
@@ -491,6 +493,10 @@ int main(int argc, char** argv) {
   Path path("/Users/thakeenathees/Desktop/thakee/repos/vmacs/build/main.cpp");
   std::shared_ptr<Document> doc = e->OpenDocument(path);
   ASSERT(doc != nullptr, OOPS);
+  doc->SetThemeGetter([](){
+      return Editor::GetCurrentTheme();
+  });
+
   std::shared_ptr<const Language> lang = e->GetLanguage("cpp");
   ASSERT(lang != nullptr, OOPS);
   std::shared_ptr<LspClient> client = e->GetLspClient("clangd");

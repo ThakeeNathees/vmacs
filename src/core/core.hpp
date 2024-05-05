@@ -362,21 +362,6 @@ private:
 };
 
 
-// The global interface like logging/error to editor, ask the current theme, Get
-// certain configuration etc. Note that the functionalities are defined in the
-// editor module as it's the one who provides them.
-class Global {
-public:
-
-  // Signale the editor to draw to the frame buffer since something is changed.
-  static void ReDraw();
-
-  // Since the resources are loaded at the start of the application and only
-  // released at the very end, it's safe to use the raw pointers.
-  static const Theme* GetCurrentTheme();
-};
-
-
 // ----------------------------------------------------------------------------
 // Util function definitions.
 // ----------------------------------------------------------------------------

@@ -86,7 +86,7 @@ std::string FindPane::GetSelectedItem() {
 void FindPane::_Draw(FrameBuffer buff, Position pos_windows, Size area) {
 
   // FIXME: Move this mess. ----------------------------------------------------
-  const Theme* theme = Global::GetCurrentTheme();
+  const Theme* theme = Editor::GetCurrentTheme();
   Style style_text   = theme->GetStyle("ui.text");
   Style style_cursor = theme->GetStyle("ui.cursor.primary");
   Style style_bg     = theme->GetStyle("ui.background");
@@ -170,7 +170,7 @@ void FindPane::_Draw(FrameBuffer buff, Position pos_windows, Size area) {
 
 void FindPane::DrawItems(FrameBuffer buff, int x, int y, int w, int h, const std::vector<std::string>* items) {
   // FIXME: Move this mess. ----------------------------------------------------
-  const Theme* theme = Global::GetCurrentTheme();
+  const Theme* theme = Editor::GetCurrentTheme();
   Style style_text = theme->GetStyle("ui.text");
   Style style_bg   = theme->GetStyle("ui.background");
   Style style_selected = theme->GetStyle("ui.menu.selected");

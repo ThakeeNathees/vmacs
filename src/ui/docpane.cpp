@@ -60,6 +60,11 @@ void DocPane::Update() {
 }
 
 
+void DocPane::OnDocumentChanged() {
+  Editor::ReDraw();
+}
+
+
 void DocPane::ResetCursorBlink() {
   cursor_blink_show = true;
   cursor_last_blink = GetElapsedTime();
@@ -114,7 +119,7 @@ void DocPane::DrawBuffer(FrameBuffer buff, Position pos, Size area) {
 
   // FIXME: Move this to themes.
   // --------------------------------------------------------------------------
-  const Theme* theme = Global::GetCurrentTheme();
+  const Theme* theme = Editor::GetCurrentTheme();
   // TODO: Use ui.cursor for secondary cursor same as selection.
   Style style_text       = theme->GetStyle("ui.text");
   Style style_whitespace = theme->GetStyle("ui.virtual.whitespace");
@@ -125,7 +130,7 @@ void DocPane::DrawBuffer(FrameBuffer buff, Position pos, Size area) {
   Style style_warning    = theme->GetStyle("warning");
 
   // We draw an indicator for the tab character.
-  // 0x2102 : '→'
+  // 0x2192 : '→'
   int tab_indicator = 0x2192;
   // --------------------------------------------------------------------------
 
@@ -196,6 +201,7 @@ void DocPane::DrawBuffer(FrameBuffer buff, Position pos, Size area) {
       bool istab = (c == '\t');
       if (istab) {
         style.ApplyInplace(style_whitespace);
+        c = tab_indicator;
       } else if (isspace(c) || c == '\0') {
         c = ' ';
       }
@@ -298,7 +304,7 @@ static const int completion_kind_count = sizeof completion_kind_nerd_icon / size
 void DocPane::DrawAutoCompletions(FrameBuffer buff, Position docpos) {
 
   // FIXME: Cleanup this mess.-------------------------------------------------
-  const Theme* theme = Global::GetCurrentTheme();
+  const Theme* theme = Editor::GetCurrentTheme();
   Style style_menu          = theme->GetStyle("ui.menu");
   Style style_menu_selected = theme->GetStyle("ui.menu.selected");
   Style style_active_param  = theme->GetStyle("type"); // FIXME: Not the correct one.

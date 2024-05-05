@@ -15,8 +15,6 @@
 #include <future>
 
 
-// FIXME: Maybe create another file for pane (pane.cpp).
-
 // Static singleton definition goes here.
 std::shared_ptr<Editor> Editor::singleton = nullptr;
 
@@ -62,14 +60,14 @@ void Editor::Error(const std::string& error) {
 }
 
 
-void Global::ReDraw() {
-  Editor::Singleton()->redraw = true;
+void Editor::ReDraw() {
+  Singleton()->redraw = true;
 }
 
 
-// FIXME: This is temproary. Set current theme and get from there.
-const Theme* Global::GetCurrentTheme() {
-  return Editor::Singleton()->themes["dark_plus"].get();
+// FIXME: This is temproary.
+const Theme* Editor::GetCurrentTheme() {
+  return Singleton()->themes["dark_plus"].get();
 }
 
 
@@ -212,7 +210,7 @@ void Editor::Draw() {
   // FIXME: This needs to be re-factored and cleaned up.
   // Draw to the front end buffer.
   FrameBuffer buff = frontend->GetDrawBuffer();
-  Style style_bg = Global::GetCurrentTheme()->GetStyle("ui.background");
+  Style style_bg = Editor::GetCurrentTheme()->GetStyle("ui.background");
 
   // Clear the background.
   for (int i = 0; i < buff.width * buff.height; i++) {
