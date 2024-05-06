@@ -196,14 +196,21 @@ void MultiCursor::ClearSelections() {
 
 
 void MultiCursor::Changed() {
-  // Clamp the cursor indexes if it goes out of range. This is possible if we
-  // the buffer changed without our influence.
+  // Clamp the cursor indexes if it goes out of range. This is possible if the
+  // buffer changed without our influence or in a different split.
+  size_t buffsize = buffer->GetSize();
   for (Cursor& cursor : cursors) {
     int cursor_index = cursor.GetIndex();
     if (cursor_index < 0) {
       cursor.SetIndex(0);
-    } else if (cursor_index > buffer->GetSize()) {
-      cursor.SetIndex(buffer->GetSize());
+    } else if (cursor_index > buffsize) {
+      cursor.SetIndex(buffsize);
+    }
+
+    int sel_start = cursor.GetSelectionStart();
+    if (sel_start < 0) continue;
+    if (sel_start >= buffsize) {
+      cursor.SetSelectionStart(buffsize);
     }
   }
 

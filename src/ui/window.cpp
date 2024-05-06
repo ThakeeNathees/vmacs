@@ -20,13 +20,16 @@ Window::Window() : EventHandler(&keytree) {
 
 
 bool Window::HandleEvent(const Event& event) {
+
+#define return_handled do { ResetCursor(); return true; } while (false)
   // Note that if the popup is available we won't send the event to the active
   // child split nodes.
   if (popup.get()) {
-    if (popup->HandleEvent(event)) return true;
+    if (popup->HandleEvent(event)) return_handled;
   } else if (tab && tab->HandleEvent(event)) {
-    return true;
+    return_handled;
   }
+#undef return_handled
 
   // No one consumed the event, so we'll with the keytree.
   return EventHandler::HandleEvent(event);

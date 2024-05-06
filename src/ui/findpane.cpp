@@ -137,7 +137,7 @@ void FindPane::_Draw(FrameBuffer buff, Position pos_windows, Size area) {
   }
 
   // Draw the split line.
-  DrawHorizontalLine(buff, x+2, y+2, w-4, style);
+  DrawHorizontalLine(buff, x+2, y+2, w-4, style_border);
 
   // Draw the filtered items.
 

@@ -291,6 +291,7 @@ void tree_sitter_test() {
 //   the signature help contains multiple signatures only send the active signature to the caller not an array.
 //
 // BUG:
+//   not scrolling if not focused
 //   draw auto completion popup only in the current focused pane.
 //   drawing popup needs to be reviewed since if it goes out of the window, we just trim it but it needs to be pushed inside. (better draw primitives required)
 //   signature help will hide pressing space after comma.
@@ -513,9 +514,9 @@ int main(int argc, char** argv) {
   std::unique_ptr<Split> root = std::make_unique<Split>();
 
   root->Vsplit(true);
-  root->GetChild(0)->SetPane(std::move(docpane1));
-
   root->GetChild(1)->Hsplit(true);
+
+  root->GetChild(0)->SetPane(std::move(docpane1));
   root->GetChild(1)->GetChild(0)->SetPane(std::move(docpane2));
   root->GetChild(1)->GetChild(1)->SetPane(std::move(docpane3));
 

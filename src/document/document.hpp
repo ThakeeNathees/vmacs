@@ -430,12 +430,14 @@ public:
   void RegisterListener(DocumentListener* listener);
   void UnRegisterListener(DocumentListener* listener);
 
-  void SetThemeGetter(GetThemeFn fn);
-
-  // Getters.
   LanguageId GetLanguageId() const;
   bool IsReadOnly() const;
   const Path& GetPath() const;
+
+  void SetThemeGetter(GetThemeFn fn);
+
+  const MultiCursor& GetCursors() const;
+  void SetCursors(const MultiCursor& cursors);
 
   // Through parameter "returns" Diagnostics* at the given index if has any,
   // otherwise it won't change the given pointer.

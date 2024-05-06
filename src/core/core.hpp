@@ -283,6 +283,9 @@ public:
   // Try to execute the event with the bindings, if success returns true.
   bool TryEvent(EventHandler* handler, const Event& event);
 
+  // Clear all the tracks of cursor and set back to the root node.
+  void ResetCursor();
+
 private:
   const KeyTree* tree = nullptr; // The tree we're traversing.
   std::string mode;              // Current mode we're in.
@@ -291,9 +294,6 @@ private:
   std::vector<event_t> recorded_events; // Previous events which leads here.
 
 private:
-  // Clear all the tracks of cursor and set back to the root node.
-  void ResetCursor();
-
   // Returns true if the cursor is at the root node and not listening to any key
   // sequences at the moment.
   bool IsCursorRoot() const;
@@ -319,6 +319,9 @@ public:
 
   // It'll try execute the event with the cursor and return the result.
   virtual bool HandleEvent(const Event& event);
+
+  // Reset the cursor if we're already listening to some key combinations.
+  void ResetCursor();
 
   void SetMode(const std::string& mode);
 

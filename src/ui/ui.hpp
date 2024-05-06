@@ -46,6 +46,9 @@ private:
 
   virtual void _Draw(FrameBuffer buff, Position pos, Size area) = 0;
   virtual bool _HandleEvent(const Event& event) = 0;
+
+  // Override this to handled this event.
+  virtual void OnFocusChanged(bool focus);
 };
 
 
@@ -226,12 +229,17 @@ public:
 
   void Update() override;
 
-  // Document listener methods.
+  // Events.
   void OnDocumentChanged() override;
+  void OnFocusChanged(bool focus) override;
 
 private:
   // The document we're editing on this pane.
   std::shared_ptr<Document> document;
+
+  // We take a backup of the document's cursors when we lost the focus and re-apply
+  // when we gain again so if it changed by other docpanes it doesn't effect this.
+  MultiCursor cursors_backup;
 
   // The coordinate where we start drawing the buffer from, this will change
   // after h-scroll and v-scroll.
@@ -258,8 +266,9 @@ private:
   void DrawAutoCompletions(FrameBuffer buff, Position pos, Size area);
 
   // Check the given index is within selection or inside the cursor and sets the pointers.
-  // This is needed to set the background color of a cell and re-usable.
-  void CheckCellStatus(int index, bool* in_cursor, bool* in_selection);
+  // This is needed to set the background color of a cell and re-usable. Note that this
+  // is only used in drawing the color of the cell.
+  void CheckCellStatusForDrawing(int index, bool* in_cursor, bool* in_selection);
 
 public: // Actions.
   static KeyTree keytree;

@@ -54,6 +54,17 @@ void Document::SetThemeGetter(GetThemeFn fn) {
 }
 
 
+const MultiCursor& Document::GetCursors() const {
+  return cursors;
+}
+
+
+void Document::SetCursors(const MultiCursor& cursors) {
+  this->cursors = cursors;
+  this->cursors.Changed();
+}
+
+
 LanguageId Document::GetLanguageId() const {
   if (language) return language->id;
   return "";

@@ -16,8 +16,10 @@ KeyTree DocPane::keytree;
 DocPane::DocPane() : DocPane(std::make_shared<Document>()) {}
 
 
-DocPane::DocPane(std::shared_ptr<Document> document)
-  : Pane(&keytree), document(document) {
+DocPane::DocPane(std::shared_ptr<Document> document_)
+  : Pane(&keytree), document(document_) {
+
+  cursors_backup = document->cursors;
   SetMode("*"); // FIXME:
 }
 
@@ -65,6 +67,20 @@ void DocPane::OnDocumentChanged() {
 }
 
 
+void DocPane::OnFocusChanged(bool focus) {
+
+  document->ClearCompletionItems();
+
+  // FIXME(mess): Use getter and setter to handle this properly.
+  // If we lost focus, take a backup of the cursors.
+  if (!focus) {
+    cursors_backup = document->GetCursors();
+  } else {
+    document->SetCursors(cursors_backup);
+  }
+}
+
+
 void DocPane::ResetCursorBlink() {
   cursor_blink_show = true;
   cursor_last_blink = GetElapsedTime();
@@ -99,11 +115,15 @@ void DocPane::_Draw(FrameBuffer buff, Position pos, Size area) {
 }
 
 
-void DocPane::CheckCellStatus(int index, bool* in_cursor, bool* in_selection) {
+void DocPane::CheckCellStatusForDrawing(int index, bool* in_cursor, bool* in_selection) {
   ASSERT(in_cursor != nullptr, OOPS);
   ASSERT(in_selection != nullptr, OOPS);
   *in_cursor = false;
   *in_selection = false;
+
+  // If it's not active we don't draw the cursor or selection.
+  if (!IsActive()) return;
+
   for (const Cursor& cursor : document->cursors.Get()) {
     if (index == cursor.GetIndex()) *in_cursor = true;
     Slice selection = cursor.GetSelection();
@@ -111,8 +131,6 @@ void DocPane::CheckCellStatus(int index, bool* in_cursor, bool* in_selection) {
       *in_selection = true;
     }
   }
-  // If it's not active we don't draw the cursor.
-  if (!IsActive()) *in_cursor = false;
 }
 
 
@@ -169,7 +187,7 @@ void DocPane::DrawBuffer(FrameBuffer buff, Position pos, Size area) {
     if (col_delta > 0 && index < line.end) {
       col_delta = TABSIZE_ - col_delta;
       bool in_cursor, in_selection;
-      CheckCellStatus(index, &in_cursor, &in_selection);
+      CheckCellStatusForDrawing(index, &in_cursor, &in_selection);
 
       // If the line starts at the middle of a tab character or after the end of
       // line draw the rest of the tab (newline will be handled as well).
@@ -222,7 +240,7 @@ void DocPane::DrawBuffer(FrameBuffer buff, Position pos, Size area) {
       // all the themes above.
       bool in_cursor;
       bool in_selection;
-      CheckCellStatus(index, &in_cursor, &in_selection);
+      CheckCellStatusForDrawing(index, &in_cursor, &in_selection);
       if (in_cursor && cursor_blink_show) style.ApplyInplace(style_cursor);
       else if (in_selection) style.ApplyInplace(style_selection);
 
@@ -339,6 +357,7 @@ void DocPane::DrawAutoCompletions(FrameBuffer buff, Position docpos, Size docare
   int count_lines_above_cursor  = cursor_coord.line - view_start.row;
   int count_lines_bellow_cursor = view_start.row + text_area.height - cursor_coord.line - 1;
 
+  // Check if we're focused before calling this to pass the bellow assertion.
   ASSERT(count_lines_above_cursor >= 0, OOPS);
   ASSERT(count_lines_bellow_cursor >= 0, OOPS);
 

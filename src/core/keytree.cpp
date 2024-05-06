@@ -135,6 +135,11 @@ bool EventHandler::HandleEvent(const Event& event) {
 }
 
 
+void EventHandler::ResetCursor() {
+  cursor.ResetCursor();
+}
+
+
 void EventHandler::SetMode(const std::string& mode) {
   cursor.SetMode(mode);
 }

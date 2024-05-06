@@ -44,12 +44,16 @@ bool Pane::HandleEvent(const Event& event) {
 // TOOD: Call OnActive callback on the inherited classes.
 void Pane::SetActive(bool active) {
   this->active = active;
+  OnFocusChanged(active);
 }
 
 
 bool Pane::IsActive() const {
   return active;
 }
+
+
+void Pane::OnFocusChanged(bool focus) {}
 
 
 // -----------------------------------------------------------------------------
@@ -229,11 +233,14 @@ Tab::Tab(std::unique_ptr<Split> root_, Split* active_)
 
 
 bool Tab::HandleEvent(const Event& event) {
+
+#define return_handled do { ResetCursor(); return true; } while (false)
   // Send the event to the inner most child to handle if it cannot we do
   // event bubbling.
   if (active != nullptr && active->pane != nullptr) {
-    if (active->pane->HandleEvent(event)) return true;
+    if (active->pane->HandleEvent(event)) return_handled;
   }
+#undef return_handled
 
   // No one consumed the event, so we'll with the keytree.
   return EventHandler::HandleEvent(event);
