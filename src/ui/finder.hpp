@@ -14,7 +14,7 @@
 typedef std::function<void()> CallbackFinderItemsChanged;
 
 
-// An abstract type which will be used as the "backend" for the FindPane to provide
+// An abstract type which will be used as the "backend" for the FindWindow to provide
 // the filter items, preview and a selection action.
 class Finder {
 public:

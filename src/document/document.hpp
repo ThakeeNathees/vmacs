@@ -36,7 +36,7 @@ public:
 
 // Since the document need theme when parsing the buffer to syntax highlight,
 // we'll use this function pointer to fetch the theme, set it to document
-// from the docpane since document class doesn't know editor or theme config
+// from the docwindow since document class doesn't know editor or theme config
 // exists.
 typedef const Theme* (*GetThemeFn)();
 
@@ -573,9 +573,9 @@ private:
   // Line Ending.
   // Indent style (\t, or ' ').
 
-  // DocPane need cursor and buffer to draw the document, this might not be the
+  // DocumentWindow need cursor and buffer to draw the document, this might not be the
   // "oop" way I don't know.
-  friend class DocPane;
+  friend class DocumentWindow;
 
 private:
   void OnDocumentChanged();

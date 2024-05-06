@@ -260,8 +260,8 @@ void tree_sitter_test() {
 //     Platform interface and Utils class.
 //
 //  Note:
-//    Document shouldn't draw autocompletion if it's in a pane that's not focused.
-//      and if the same document opened in two panes, only one show the list.
+//    Document shouldn't draw autocompletion if it's in a window that's not focused.
+//      and if the same document opened in two windows, only one show the list.
 //    Drawing autocompletion is done at the document draw level, so split will
 //      override the list if we draw another on top of.
 //
@@ -292,7 +292,7 @@ void tree_sitter_test() {
 //
 // BUG:
 //   not scrolling if not focused
-//   draw auto completion popup only in the current focused pane.
+//   draw auto completion popup only in the current focused window.
 //   drawing popup needs to be reviewed since if it goes out of the window, we just trim it but it needs to be pushed inside. (better draw primitives required)
 //   signature help will hide pressing space after comma.
 //   esc doesn't clear the selection.
@@ -396,89 +396,89 @@ int main(int argc, char** argv) {
 
   // FIXME: This shoul be called after the editor is initialized to send errors.
 
-  Window::keytree.RegisterAction("close_popup",  Window::Action_ClosePopup);
-  Window::keytree.RegisterAction("popup_files_finder",  Window::Action_PopupFilesFinder);
+  Ui::keytree.RegisterAction("close_popup",  Ui::Action_ClosePopup);
+  Ui::keytree.RegisterAction("popup_files_finder",  Ui::Action_PopupFilesFinder);
 
-  Window::keytree.RegisterBinding("*", "<esc>", "close_popup");
-  Window::keytree.RegisterBinding("*", "<C-o>", "popup_files_finder");
+  Ui::keytree.RegisterBinding("*", "<esc>", "close_popup");
+  Ui::keytree.RegisterBinding("*", "<C-o>", "popup_files_finder");
 
-  Tab::keytree.RegisterAction("next_pane", (FuncAction) Tab::Action_NextPane);
-  Tab::keytree.RegisterBinding("*", "<C-w>w", "next_pane");
-  Tab::keytree.RegisterBinding("*", "<C-w><C-w>", "next_pane");
+  Tab::keytree.RegisterAction("next_window", (FuncAction) Tab::Action_NextWindow);
+  Tab::keytree.RegisterBinding("*", "<C-w>w", "next_window");
+  Tab::keytree.RegisterBinding("*", "<C-w><C-w>", "next_window");
 
-  DocPane::keytree.RegisterAction("cursor_up", (FuncAction) DocPane::Action_CursorUp);
-  DocPane::keytree.RegisterAction("cursor_down", (FuncAction) DocPane::Action_CursorDown);
-  DocPane::keytree.RegisterAction("cursor_left", (FuncAction) DocPane::Action_CursorLeft);
-  DocPane::keytree.RegisterAction("cursor_right", (FuncAction) DocPane::Action_CursorRight);
-  DocPane::keytree.RegisterAction("cursor_end", (FuncAction) DocPane::Action_CursorEnd);
-  DocPane::keytree.RegisterAction("cursor_home", (FuncAction) DocPane::Action_CursorHome);
-  DocPane::keytree.RegisterAction("select_right", (FuncAction) DocPane::Action_SelectRight);
-  DocPane::keytree.RegisterAction("select_left", (FuncAction) DocPane::Action_SelectLeft);
-  DocPane::keytree.RegisterAction("select_up", (FuncAction) DocPane::Action_SelectUp);
-  DocPane::keytree.RegisterAction("select_down", (FuncAction) DocPane::Action_SelectDown);
-  DocPane::keytree.RegisterAction("select_home", (FuncAction) DocPane::Action_SelectHome);
-  DocPane::keytree.RegisterAction("select_end", (FuncAction) DocPane::Action_SelectEnd);
-  DocPane::keytree.RegisterAction("add_cursor_down", (FuncAction) DocPane::Action_AddCursor_down);
-  DocPane::keytree.RegisterAction("add_cursor_up", (FuncAction) DocPane::Action_AddCursor_up);
-  DocPane::keytree.RegisterAction("insert_space", (FuncAction) DocPane::Action_InsertSpace);
-  DocPane::keytree.RegisterAction("insert_newline", (FuncAction) DocPane::Action_InsertNewline);
-  DocPane::keytree.RegisterAction("insert_tab", (FuncAction) DocPane::Action_InsertTab);
-  DocPane::keytree.RegisterAction("backspace", (FuncAction) DocPane::Action_Backspace);
-  DocPane::keytree.RegisterAction("undo", (FuncAction) DocPane::Action_Undo);
-  DocPane::keytree.RegisterAction("redo", (FuncAction) DocPane::Action_Redo);
-  DocPane::keytree.RegisterAction("trigger_completion", (FuncAction) DocPane::Action_TriggerCompletion);
-  DocPane::keytree.RegisterAction("cycle_completion_list", (FuncAction) DocPane::Action_CycleCompletionList);
-  DocPane::keytree.RegisterAction("cycle_completion_list_reversed", (FuncAction) DocPane::Action_CycleCompletionListReversed);
-  DocPane::keytree.RegisterAction("clear", (FuncAction) DocPane::Action_Clear);
+  DocumentWindow::keytree.RegisterAction("cursor_up", (FuncAction) DocumentWindow::Action_CursorUp);
+  DocumentWindow::keytree.RegisterAction("cursor_down", (FuncAction) DocumentWindow::Action_CursorDown);
+  DocumentWindow::keytree.RegisterAction("cursor_left", (FuncAction) DocumentWindow::Action_CursorLeft);
+  DocumentWindow::keytree.RegisterAction("cursor_right", (FuncAction) DocumentWindow::Action_CursorRight);
+  DocumentWindow::keytree.RegisterAction("cursor_end", (FuncAction) DocumentWindow::Action_CursorEnd);
+  DocumentWindow::keytree.RegisterAction("cursor_home", (FuncAction) DocumentWindow::Action_CursorHome);
+  DocumentWindow::keytree.RegisterAction("select_right", (FuncAction) DocumentWindow::Action_SelectRight);
+  DocumentWindow::keytree.RegisterAction("select_left", (FuncAction) DocumentWindow::Action_SelectLeft);
+  DocumentWindow::keytree.RegisterAction("select_up", (FuncAction) DocumentWindow::Action_SelectUp);
+  DocumentWindow::keytree.RegisterAction("select_down", (FuncAction) DocumentWindow::Action_SelectDown);
+  DocumentWindow::keytree.RegisterAction("select_home", (FuncAction) DocumentWindow::Action_SelectHome);
+  DocumentWindow::keytree.RegisterAction("select_end", (FuncAction) DocumentWindow::Action_SelectEnd);
+  DocumentWindow::keytree.RegisterAction("add_cursor_down", (FuncAction) DocumentWindow::Action_AddCursor_down);
+  DocumentWindow::keytree.RegisterAction("add_cursor_up", (FuncAction) DocumentWindow::Action_AddCursor_up);
+  DocumentWindow::keytree.RegisterAction("insert_space", (FuncAction) DocumentWindow::Action_InsertSpace);
+  DocumentWindow::keytree.RegisterAction("insert_newline", (FuncAction) DocumentWindow::Action_InsertNewline);
+  DocumentWindow::keytree.RegisterAction("insert_tab", (FuncAction) DocumentWindow::Action_InsertTab);
+  DocumentWindow::keytree.RegisterAction("backspace", (FuncAction) DocumentWindow::Action_Backspace);
+  DocumentWindow::keytree.RegisterAction("undo", (FuncAction) DocumentWindow::Action_Undo);
+  DocumentWindow::keytree.RegisterAction("redo", (FuncAction) DocumentWindow::Action_Redo);
+  DocumentWindow::keytree.RegisterAction("trigger_completion", (FuncAction) DocumentWindow::Action_TriggerCompletion);
+  DocumentWindow::keytree.RegisterAction("cycle_completion_list", (FuncAction) DocumentWindow::Action_CycleCompletionList);
+  DocumentWindow::keytree.RegisterAction("cycle_completion_list_reversed", (FuncAction) DocumentWindow::Action_CycleCompletionListReversed);
+  DocumentWindow::keytree.RegisterAction("clear", (FuncAction) DocumentWindow::Action_Clear);
 
-  DocPane::keytree.RegisterBinding("*", "<up>",        "cursor_up");
-  DocPane::keytree.RegisterBinding("*", "<down>",      "cursor_down");
-  DocPane::keytree.RegisterBinding("*", "<left>",      "cursor_left");
-  DocPane::keytree.RegisterBinding("*", "<right>",     "cursor_right");
-  DocPane::keytree.RegisterBinding("*", "<home>",      "cursor_home");
-  DocPane::keytree.RegisterBinding("*", "<end>",       "cursor_end");
-  DocPane::keytree.RegisterBinding("*", "<S-right>",   "select_right");
-  DocPane::keytree.RegisterBinding("*", "<S-left>",    "select_left");
-  DocPane::keytree.RegisterBinding("*", "<S-up>",      "select_up");
-  DocPane::keytree.RegisterBinding("*", "<S-down>",    "select_down");
-  DocPane::keytree.RegisterBinding("*", "<S-home>",    "select_home");
-  DocPane::keytree.RegisterBinding("*", "<S-end>",     "select_end");
-  DocPane::keytree.RegisterBinding("*", "<M-down>",    "add_cursor_down");
-  DocPane::keytree.RegisterBinding("*", "<M-up>",      "add_cursor_up");
-  DocPane::keytree.RegisterBinding("*", "<space>",     "insert_space");
-  DocPane::keytree.RegisterBinding("*", "<enter>",     "insert_newline");
-  DocPane::keytree.RegisterBinding("*", "<tab>",       "insert_tab");
-  DocPane::keytree.RegisterBinding("*", "<backspace>", "backspace");
-  DocPane::keytree.RegisterBinding("*", "<C-z>",       "undo");
-  DocPane::keytree.RegisterBinding("*", "<C-y>",       "redo");
-  DocPane::keytree.RegisterBinding("*", "<C-x><C-k>",  "trigger_completion");
-  DocPane::keytree.RegisterBinding("*", "<C-n>",       "cycle_completion_list");
-  DocPane::keytree.RegisterBinding("*", "<C-p>",       "cycle_completion_list_reversed");
-  DocPane::keytree.RegisterBinding("*", "<esc>",       "clear");
+  DocumentWindow::keytree.RegisterBinding("*", "<up>",        "cursor_up");
+  DocumentWindow::keytree.RegisterBinding("*", "<down>",      "cursor_down");
+  DocumentWindow::keytree.RegisterBinding("*", "<left>",      "cursor_left");
+  DocumentWindow::keytree.RegisterBinding("*", "<right>",     "cursor_right");
+  DocumentWindow::keytree.RegisterBinding("*", "<home>",      "cursor_home");
+  DocumentWindow::keytree.RegisterBinding("*", "<end>",       "cursor_end");
+  DocumentWindow::keytree.RegisterBinding("*", "<S-right>",   "select_right");
+  DocumentWindow::keytree.RegisterBinding("*", "<S-left>",    "select_left");
+  DocumentWindow::keytree.RegisterBinding("*", "<S-up>",      "select_up");
+  DocumentWindow::keytree.RegisterBinding("*", "<S-down>",    "select_down");
+  DocumentWindow::keytree.RegisterBinding("*", "<S-home>",    "select_home");
+  DocumentWindow::keytree.RegisterBinding("*", "<S-end>",     "select_end");
+  DocumentWindow::keytree.RegisterBinding("*", "<M-down>",    "add_cursor_down");
+  DocumentWindow::keytree.RegisterBinding("*", "<M-up>",      "add_cursor_up");
+  DocumentWindow::keytree.RegisterBinding("*", "<space>",     "insert_space");
+  DocumentWindow::keytree.RegisterBinding("*", "<enter>",     "insert_newline");
+  DocumentWindow::keytree.RegisterBinding("*", "<tab>",       "insert_tab");
+  DocumentWindow::keytree.RegisterBinding("*", "<backspace>", "backspace");
+  DocumentWindow::keytree.RegisterBinding("*", "<C-z>",       "undo");
+  DocumentWindow::keytree.RegisterBinding("*", "<C-y>",       "redo");
+  DocumentWindow::keytree.RegisterBinding("*", "<C-x><C-k>",  "trigger_completion");
+  DocumentWindow::keytree.RegisterBinding("*", "<C-n>",       "cycle_completion_list");
+  DocumentWindow::keytree.RegisterBinding("*", "<C-p>",       "cycle_completion_list_reversed");
+  DocumentWindow::keytree.RegisterBinding("*", "<esc>",       "clear");
 
 
 
-  FindPane::keytree.RegisterAction("cursor_right", (FuncAction) FindPane::Action_CursorRight);
-  FindPane::keytree.RegisterAction("cursor_left", (FuncAction) FindPane::Action_CursorLeft);
-  FindPane::keytree.RegisterAction("cursor_home", (FuncAction) FindPane::Action_CursorHome);
-  FindPane::keytree.RegisterAction("cursor_end", (FuncAction) FindPane::Action_CursorEnd);
-  FindPane::keytree.RegisterAction("backspace", (FuncAction) FindPane::Action_Backspace);
-  FindPane::keytree.RegisterAction("cycle_selection", (FuncAction) FindPane::Action_CycleSelection);
-  FindPane::keytree.RegisterAction("cycle_selection_reversed", (FuncAction) FindPane::Action_CycleSelectionReversed);
-  FindPane::keytree.RegisterAction("accept_selection", (FuncAction) FindPane::Action_AcceptSelection);
+  FindWindow::keytree.RegisterAction("cursor_right", (FuncAction) FindWindow::Action_CursorRight);
+  FindWindow::keytree.RegisterAction("cursor_left", (FuncAction) FindWindow::Action_CursorLeft);
+  FindWindow::keytree.RegisterAction("cursor_home", (FuncAction) FindWindow::Action_CursorHome);
+  FindWindow::keytree.RegisterAction("cursor_end", (FuncAction) FindWindow::Action_CursorEnd);
+  FindWindow::keytree.RegisterAction("backspace", (FuncAction) FindWindow::Action_Backspace);
+  FindWindow::keytree.RegisterAction("cycle_selection", (FuncAction) FindWindow::Action_CycleSelection);
+  FindWindow::keytree.RegisterAction("cycle_selection_reversed", (FuncAction) FindWindow::Action_CycleSelectionReversed);
+  FindWindow::keytree.RegisterAction("accept_selection", (FuncAction) FindWindow::Action_AcceptSelection);
 
-  FindPane::keytree.RegisterBinding("*", "<right>", "cursor_right");
-  FindPane::keytree.RegisterBinding("*", "<left>",  "cursor_left");
-  FindPane::keytree.RegisterBinding("*", "<home>",  "cursor_home");
-  FindPane::keytree.RegisterBinding("*", "<end>",  "cursor_home");
-  FindPane::keytree.RegisterBinding("*", "<backspace>",  "backspace");
-  FindPane::keytree.RegisterBinding("*", "<C-n>",  "cycle_selection");
-  FindPane::keytree.RegisterBinding("*", "<C-p>",  "cycle_selection_reversed");
-  FindPane::keytree.RegisterBinding("*", "<down>",  "cycle_selection");
-  FindPane::keytree.RegisterBinding("*", "<up>",  "cycle_selection_reversed");
-  FindPane::keytree.RegisterBinding("*", "<tab>",  "cycle_selection");
-  FindPane::keytree.RegisterBinding("*", "<S-tab>", "cycle_selection_reversed");
-  FindPane::keytree.RegisterBinding("*", "<enter>", "accept_selection");
+  FindWindow::keytree.RegisterBinding("*", "<right>", "cursor_right");
+  FindWindow::keytree.RegisterBinding("*", "<left>",  "cursor_left");
+  FindWindow::keytree.RegisterBinding("*", "<home>",  "cursor_home");
+  FindWindow::keytree.RegisterBinding("*", "<end>",  "cursor_home");
+  FindWindow::keytree.RegisterBinding("*", "<backspace>",  "backspace");
+  FindWindow::keytree.RegisterBinding("*", "<C-n>",  "cycle_selection");
+  FindWindow::keytree.RegisterBinding("*", "<C-p>",  "cycle_selection_reversed");
+  FindWindow::keytree.RegisterBinding("*", "<down>",  "cycle_selection");
+  FindWindow::keytree.RegisterBinding("*", "<up>",  "cycle_selection_reversed");
+  FindWindow::keytree.RegisterBinding("*", "<tab>",  "cycle_selection");
+  FindWindow::keytree.RegisterBinding("*", "<S-tab>", "cycle_selection_reversed");
+  FindWindow::keytree.RegisterBinding("*", "<enter>", "accept_selection");
 
 
 
@@ -510,23 +510,23 @@ int main(int argc, char** argv) {
   std::unique_ptr<Split> root = std::make_unique<Split>();
 
 #if 0 // Split test.
-  std::unique_ptr<DocPane> docpane1 = std::make_unique<DocPane>(doc);
-  std::unique_ptr<DocPane> docpane2 = std::make_unique<DocPane>(doc);
-  std::unique_ptr<DocPane> docpane3 = std::make_unique<DocPane>(doc);
+  std::unique_ptr<DocumentWindow> docwindow1 = std::make_unique<DocumentWindow>(doc);
+  std::unique_ptr<DocumentWindow> docwindow2 = std::make_unique<DocumentWindow>(doc);
+  std::unique_ptr<DocumentWindow> docwindow3 = std::make_unique<DocumentWindow>(doc);
 
   auto s1 = root->Vsplit(true);
   s1->Hsplit(true);
   auto it = root->Iterate();
-  it.Get()->SetPane(std::move(docpane1));
+  it.Get()->SetWindow(std::move(docwindow1));
   it.Next();
-  it.Get()->SetPane(std::move(docpane2));
+  it.Get()->SetWindow(std::move(docwindow2));
   it.Next();
-  it.Get()->SetPane(std::move(docpane3));
+  it.Get()->SetWindow(std::move(docwindow3));
   it.Next();
   ASSERT(it.Get() == nullptr, OOPS);
 #else
-  std::unique_ptr<DocPane> docpane = std::make_unique<DocPane>(doc);
-  root->SetPane(std::move(docpane));
+  std::unique_ptr<DocumentWindow> docwindow = std::make_unique<DocumentWindow>(doc);
+  root->SetWindow(std::move(docwindow));
 #endif
 
   // root->GetChild(1)->Vsplit(true);
@@ -541,7 +541,7 @@ int main(int argc, char** argv) {
   // Split* active = root->GetChild(1);
   std::unique_ptr<Tab> tab = std::make_unique<Tab>(std::move(root));
 
-  std::unique_ptr<Window> window = std::make_unique<Window>();
+  std::unique_ptr<Ui> window = std::make_unique<Ui>();
   window->AddTab(std::move(tab));
 
   e->SetWindow(std::move(window));

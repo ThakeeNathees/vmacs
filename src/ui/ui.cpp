@@ -9,24 +9,25 @@
 #include "ui.hpp"
 
 
-// Static member initialize.
+// Static member initialization.
 KeyTree Tab::keytree;
+KeyTree Ui::keytree;
 
 // -----------------------------------------------------------------------------
-// Pane.
+// Window.
 // -----------------------------------------------------------------------------
 
 
-Pane::Pane(const KeyTree* keytree) : EventHandler(keytree) {}
+Window::Window(const KeyTree* keytree) : EventHandler(keytree) {}
 
-void Pane::Draw(FrameBuffer buff, Position pos, Size area) {
+void Window::Draw(FrameBuffer buff, Position pos, Size area) {
   this->pos = pos;
   this->area = area;
   _Draw(buff, pos, area);
 }
 
 
-bool Pane::HandleEvent(const Event& event) {
+bool Window::HandleEvent(const Event& event) {
   if (event.type == Event::Type::MOUSE) {
     if (event.mouse.button == Event::MouseButton::MOUSE_WHEEL_UP ||
         event.mouse.button == Event::MouseButton::MOUSE_WHEEL_DOWN) {
@@ -42,18 +43,18 @@ bool Pane::HandleEvent(const Event& event) {
 
 
 // TOOD: Call OnActive callback on the inherited classes.
-void Pane::SetActive(bool active) {
+void Window::SetActive(bool active) {
   this->active = active;
   OnFocusChanged(active);
 }
 
 
-bool Pane::IsActive() const {
+bool Window::IsActive() const {
   return active;
 }
 
 
-void Pane::OnFocusChanged(bool focus) {}
+void Window::OnFocusChanged(bool focus) {}
 
 
 // -----------------------------------------------------------------------------
@@ -76,8 +77,8 @@ Split* Split::Vsplit(bool right) {
     type = Type::VERTICAL;
     auto l = std::make_unique<Split>();
     auto r = std::make_unique<Split>();
-    if (right) l->pane = std::move(pane);
-    else r->pane = std::move(pane);
+    if (right) l->window = std::move(window);
+    else r->window = std::move(window);
     Split* split_left  = InsertChild(children.size(), std::move(l));
     Split* split_right = InsertChild(children.size(), std::move(r));
     return right ? split_right : split_left;
@@ -97,8 +98,8 @@ Split* Split::Hsplit(bool bottom) {
     type = Type::HORIZONTAL;
     auto t = std::make_unique<Split>();
     auto b = std::make_unique<Split>();
-    if (bottom) t->pane = std::move(pane);
-    else b->pane = std::move(pane);
+    if (bottom) t->window = std::move(window);
+    else b->window = std::move(window);
     Split* split_top    = InsertChild(children.size(), std::move(t));
     Split* split_bottom = InsertChild(children.size(), std::move(b));
     return bottom ? split_bottom : split_top;
@@ -127,14 +128,14 @@ int Split::GetIndexInParent() const {
 }
 
 
-void Split::SetPane(std::unique_ptr<Pane> pane) {
+void Split::SetWindow(std::unique_ptr<Window> window) {
   ASSERT(type == Type::LEAF, OOPS);
-  this->pane = std::move(pane);
+  this->window = std::move(window);
 }
 
 
-Pane* Split::GetPane() {
-  return pane.get();
+Window* Split::GetWindow() {
+  return window.get();
 }
 
 
@@ -225,9 +226,9 @@ Tab::Tab(std::unique_ptr<Split> root_, Split* active_)
 
   this->active = active_;
 
-  Pane* pane = this->active->GetPane();
-  ASSERT(pane != nullptr, "A split with un-initialized pane did you forget to set one?");
-  pane->SetActive(true);
+  Window* window = this->active->GetWindow();
+  ASSERT(window != nullptr, "A split with un-initialized window did you forget to set one?");
+  window->SetActive(true);
 
   SetMode("*");
 }
@@ -238,8 +239,8 @@ bool Tab::HandleEvent(const Event& event) {
 #define return_handled do { ResetCursor(); return true; } while (false)
   // Send the event to the inner most child to handle if it cannot we do
   // event bubbling.
-  if (active != nullptr && active->pane != nullptr) {
-    if (active->pane->HandleEvent(event)) return_handled;
+  if (active != nullptr && active->window != nullptr) {
+    if (active->window->HandleEvent(event)) return_handled;
   }
 #undef return_handled
 
@@ -251,9 +252,9 @@ bool Tab::HandleEvent(const Event& event) {
 void Tab::Update() {
   if (root == nullptr) return;
   for (auto it = root->Iterate(); it.Get() != nullptr; it.Next()) {
-    Pane* pane = it.Get()->pane.get();
-    if (pane == nullptr) continue;
-    pane->Update();
+    Window* window = it.Get()->window.get();
+    if (window == nullptr) continue;
+    window->Update();
   }
 }
 
@@ -266,7 +267,7 @@ void Tab::Draw(FrameBuffer buff, Position pos, Size area) {
 void Tab::DrawSplit(FrameBuffer buff, Split* split, Position pos, Size area) {
   if (split->children.size() == 0) { // Leaf node.
     ASSERT(split->type == Split::Type::LEAF, OOPS);
-    if (split->pane != nullptr) split->pane->Draw(buff, pos, area);
+    if (split->window != nullptr) split->window->Draw(buff, pos, area);
     return;
   }
 
@@ -311,20 +312,109 @@ void Tab::DrawSplit(FrameBuffer buff, Split* split, Position pos, Size area) {
 
 
 
-bool Tab::Action_NextPane(Tab* self) {
+bool Tab::Action_NextWindow(Tab* self) {
   ASSERT(self->active != nullptr, OOPS);
   auto it = Split::Iterator(self->active);
   ASSERT(it.Get() != nullptr, OOPS);
   it.Next(); // Increment the leaf by one.
 
-  ASSERT(self->active->pane != nullptr, OOPS);
-  self->active->pane->SetActive(false);
+  ASSERT(self->active->window != nullptr, OOPS);
+  self->active->window->SetActive(false);
   if (it.Get() != nullptr) {
     self->active = it.Get();
   } else { // Reached the end of the tree.
     self->active = self->root->Iterate().Get();
   }
-  ASSERT(self->active->pane != nullptr, OOPS);
-  self->active->pane->SetActive(true);
+  ASSERT(self->active->window != nullptr, OOPS);
+  self->active->window->SetActive(true);
+  return true;
+}
+
+
+// -----------------------------------------------------------------------------
+// Window.
+// -----------------------------------------------------------------------------
+
+
+Ui::Ui() : EventHandler(&keytree) {
+  SetMode("*");
+}
+
+
+bool Ui::HandleEvent(const Event& event) {
+
+#define return_handled do { ResetCursor(); return true; } while (false)
+  // Note that if the popup is available we won't send the event to the active
+  // child split nodes.
+  if (popup.get()) {
+    if (popup->HandleEvent(event)) return_handled;
+  } else if (tab && tab->HandleEvent(event)) {
+    return_handled;
+  }
+#undef return_handled
+
+  // No one consumed the event, so we'll with the keytree.
+  return EventHandler::HandleEvent(event);
+}
+
+
+void Ui::Update() {
+  if (popup.get()) popup->Update();
+  tab->Update();
+}
+
+
+void Ui::Draw(FrameBuffer buff) {
+  // FIXME(mess): Cleanup this mess.
+  tab->Draw(buff, {0, 0}, {.width = buff.width, .height = buff.height-1});
+  if (popup.get()) popup->Draw(buff, {0, 0}, {.width = buff.width, .height = buff.height-1});
+
+  Style style_text = Editor::GetCurrentTheme()->GetStyle("ui.text");
+  Style style_bg   = Editor::GetCurrentTheme()->GetStyle("ui.background");
+
+  Style style = style_bg.Apply(style_text);
+  DrawTextLine(buff, info_bar_text.c_str(), 0, buff.height-1, buff.width, style, true);
+}
+
+
+void Ui::Info(const std::string& msg) {
+  info_bar_text = msg;
+}
+
+
+void Ui::Success(const std::string& msg) {
+  info_bar_text = msg;
+}
+
+
+void Ui::Warning(const std::string& msg) {
+  info_bar_text = msg;
+}
+
+
+void Ui::Error(const std::string& msg) {
+  info_bar_text = msg;
+}
+
+
+void Ui::AddTab(std::unique_ptr<Tab> tab) {
+  this->tab = std::move(tab);
+}
+
+
+bool Ui::Action_ClosePopup(EventHandler* self) {
+  Ui* w = (Ui*) self;
+  if (w->popup.get()) {
+    w->popup = nullptr; // This will destroy.
+    return true;
+  }
+  return false;
+}
+
+
+bool Ui::Action_PopupFilesFinder(EventHandler* self) {
+  Ui* w = (Ui*) self;
+  if (w->popup != nullptr) return false;
+  w->popup = std::make_unique<FindWindow>(std::make_unique<FilesFinder>());
   return true;
 }

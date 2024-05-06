@@ -8,12 +8,12 @@
 
 #include "ui.hpp"
 
-KeyTree FindPane::keytree;
+KeyTree FindWindow::keytree;
 
 // FIXME(grep) The finder might not have the requirnment installed, handle it.
 
-FindPane::FindPane(std::unique_ptr<Finder> finder_)
-  : Pane(&keytree), finder(std::move(finder_)) {
+FindWindow::FindWindow(std::unique_ptr<Finder> finder_)
+  : Window(&keytree), finder(std::move(finder_)) {
 
   // Initialize the finder.
   finder->Initialize();
@@ -26,7 +26,7 @@ FindPane::FindPane(std::unique_ptr<Finder> finder_)
 }
 
 
-bool FindPane::_HandleEvent(const Event& event) {
+bool FindWindow::_HandleEvent(const Event& event) {
   if (EventHandler::HandleEvent(event)) return true;
   if (event.type == Event::Type::KEY && event.key.unicode != 0) {
     char c = (char) event.key.unicode;
@@ -39,12 +39,12 @@ bool FindPane::_HandleEvent(const Event& event) {
 }
 
 
-void FindPane::Update() {
+void FindWindow::Update() {
   EnsureSelectionOnView();
 }
 
 
-void FindPane::EnsureSelectionOnView() {
+void FindWindow::EnsureSelectionOnView() {
   if (input_text.empty() && selected_index < 0) {
     int total_count = finder->GetTotalItemsCount();
     selected_index = (total_count > 0) ? 0 : -1;
@@ -59,14 +59,14 @@ void FindPane::EnsureSelectionOnView() {
 }
 
 
-void FindPane::OnFilteredItemsChanged() {
+void FindWindow::OnFilteredItemsChanged() {
   if (finder->GetFilteredItemsCount() == 0) this->selected_index = -1;
   else this->selected_index = 0;
   this->view_start_index = 0;
 }
 
 
-std::string FindPane::GetSelectedItem() {
+std::string FindWindow::GetSelectedItem() {
   if (selected_index < 0) return "";
   if (input_text.size() == 0) {
     const std::vector<std::string>* total = nullptr;
@@ -83,7 +83,7 @@ std::string FindPane::GetSelectedItem() {
 }
 
 
-void FindPane::_Draw(FrameBuffer buff, Position pos_windows, Size area) {
+void FindWindow::_Draw(FrameBuffer buff, Position pos_windows, Size area) {
 
   // FIXME: Move this mess. ----------------------------------------------------
   const Theme* theme = Editor::GetCurrentTheme();
@@ -168,7 +168,7 @@ void FindPane::_Draw(FrameBuffer buff, Position pos_windows, Size area) {
 }
 
 
-void FindPane::DrawItems(FrameBuffer buff, int x, int y, int w, int h, const std::vector<std::string>* items) {
+void FindWindow::DrawItems(FrameBuffer buff, int x, int y, int w, int h, const std::vector<std::string>* items) {
   // FIXME: Move this mess. ----------------------------------------------------
   const Theme* theme = Editor::GetCurrentTheme();
   Style style_text = theme->GetStyle("ui.text");
@@ -189,12 +189,12 @@ void FindPane::DrawItems(FrameBuffer buff, int x, int y, int w, int h, const std
 // Actions.
 // -----------------------------------------------------------------------------
 
-bool FindPane::Action_CursorRight(FindPane* self) { if (self->cursor_index < self->input_text.size()) self->cursor_index++; return true; }
-bool FindPane::Action_CursorLeft(FindPane* self) { if (self->cursor_index > 0) self->cursor_index--; return true; }
-bool FindPane::Action_CursorHome(FindPane* self) { self->cursor_index = 0; return true; }
-bool FindPane::Action_CursorEnd(FindPane* self) { self->cursor_index = self->input_text.size(); return true; }
+bool FindWindow::Action_CursorRight(FindWindow* self) { if (self->cursor_index < self->input_text.size()) self->cursor_index++; return true; }
+bool FindWindow::Action_CursorLeft(FindWindow* self) { if (self->cursor_index > 0) self->cursor_index--; return true; }
+bool FindWindow::Action_CursorHome(FindWindow* self) { self->cursor_index = 0; return true; }
+bool FindWindow::Action_CursorEnd(FindWindow* self) { self->cursor_index = self->input_text.size(); return true; }
 
-bool FindPane::Action_CycleSelection(FindPane* self) {
+bool FindWindow::Action_CycleSelection(FindWindow* self) {
   int items_count = self->input_text.empty()
     ? self->finder->GetTotalItemsCount()
     : self->finder->GetFilteredItemsCount();
@@ -206,7 +206,7 @@ bool FindPane::Action_CycleSelection(FindPane* self) {
   return true;
 }
 
-bool FindPane::Action_CycleSelectionReversed(FindPane* self) {
+bool FindWindow::Action_CycleSelectionReversed(FindWindow* self) {
   int items_count = self->input_text.empty()
     ? self->finder->GetTotalItemsCount()
     : self->finder->GetFilteredItemsCount();
@@ -222,7 +222,7 @@ bool FindPane::Action_CycleSelectionReversed(FindPane* self) {
 }
 
 
-bool FindPane::Action_Backspace(FindPane* self) {
+bool FindWindow::Action_Backspace(FindWindow* self) {
   if (self->cursor_index > 0) {
     self->input_text.erase(self->cursor_index-1, 1);
     self->cursor_index--;
@@ -235,7 +235,7 @@ bool FindPane::Action_Backspace(FindPane* self) {
 }
 
 // FIXME(mess): This is temproary.
-bool FindPane::Action_AcceptSelection(FindPane* self) {
+bool FindWindow::Action_AcceptSelection(FindWindow* self) {
   Path path(self->GetSelectedItem());
   if (!path.Exists()) {
     // TODO: Error to editor.

@@ -10,21 +10,21 @@
 
 
 // Static type initialization.
-KeyTree DocPane::keytree;
+KeyTree DocumentWindow::keytree;
 
 
-DocPane::DocPane() : DocPane(std::make_shared<Document>()) {}
+DocumentWindow::DocumentWindow() : DocumentWindow(std::make_shared<Document>()) {}
 
 
-DocPane::DocPane(std::shared_ptr<Document> document_)
-  : Pane(&keytree), document(document_) {
+DocumentWindow::DocumentWindow(std::shared_ptr<Document> document_)
+  : Window(&keytree), document(document_) {
 
   cursors_backup = document->cursors;
   SetMode("*"); // FIXME:
 }
 
 
-bool DocPane::_HandleEvent(const Event& event) {
+bool DocumentWindow::_HandleEvent(const Event& event) {
   if (EventHandler::HandleEvent(event)) return true;
 
   if (event.type == Event::Type::KEY && event.key.unicode != 0) {
@@ -50,7 +50,7 @@ bool DocPane::_HandleEvent(const Event& event) {
 }
 
 
-void DocPane::Update() {
+void DocumentWindow::Update() {
   // Update the cursor blink.
   if (cursor_blink_period > 0) {
     int now = GetElapsedTime();
@@ -62,12 +62,12 @@ void DocPane::Update() {
 }
 
 
-void DocPane::OnDocumentChanged() {
+void DocumentWindow::OnDocumentChanged() {
   Editor::ReDraw();
 }
 
 
-void DocPane::OnFocusChanged(bool focus) {
+void DocumentWindow::OnFocusChanged(bool focus) {
 
   document->ClearCompletionItems();
 
@@ -81,13 +81,13 @@ void DocPane::OnFocusChanged(bool focus) {
 }
 
 
-void DocPane::ResetCursorBlink() {
+void DocumentWindow::ResetCursorBlink() {
   cursor_blink_show = true;
   cursor_last_blink = GetElapsedTime();
 }
 
 
-void DocPane::EnsureCursorOnView() {
+void DocumentWindow::EnsureCursorOnView() {
 
   // Note that the col of Coord is not the view column, and cursor.GetColumn()
   // will return the column it wants go to and not the column it actually is.
@@ -109,13 +109,13 @@ void DocPane::EnsureCursorOnView() {
 }
 
 
-void DocPane::_Draw(FrameBuffer buff, Position pos, Size area) {
+void DocumentWindow::_Draw(FrameBuffer buff, Position pos, Size area) {
   DrawBuffer(buff, pos, area);
   if (IsActive()) DrawAutoCompletions(buff, pos, area);
 }
 
 
-void DocPane::CheckCellStatusForDrawing(int index, bool* in_cursor, bool* in_selection) {
+void DocumentWindow::CheckCellStatusForDrawing(int index, bool* in_cursor, bool* in_selection) {
   ASSERT(in_cursor != nullptr, OOPS);
   ASSERT(in_selection != nullptr, OOPS);
   *in_cursor = false;
@@ -134,7 +134,7 @@ void DocPane::CheckCellStatusForDrawing(int index, bool* in_cursor, bool* in_sel
 }
 
 
-void DocPane::DrawBuffer(FrameBuffer buff, Position pos, Size area) {
+void DocumentWindow::DrawBuffer(FrameBuffer buff, Position pos, Size area) {
   ASSERT(this->document != nullptr, OOPS);
 
   // FIXME: Move this to themes.
@@ -321,7 +321,7 @@ static const int completion_kind_count = sizeof completion_kind_nerd_icon / size
 
 
 // FIXME: This method is not clean.
-void DocPane::DrawAutoCompletions(FrameBuffer buff, Position docpos, Size docarea) {
+void DocumentWindow::DrawAutoCompletions(FrameBuffer buff, Position docpos, Size docarea) {
 
   // FIXME: Cleanup this mess.-------------------------------------------------
   const Theme* theme = Editor::GetCurrentTheme();
@@ -506,28 +506,28 @@ void DocPane::DrawAutoCompletions(FrameBuffer buff, Position docpos, Size docare
     self->EnsureCursorOnView(); self->ResetCursorBlink(); return true; \
   } while (false)
 
-bool DocPane::Action_CursorUp(DocPane* self) { self->document->CursorUp(); COMMON_ACTION_END(); }
-bool DocPane::Action_CursorDown(DocPane* self) { self->document->CursorDown(); COMMON_ACTION_END(); }
-bool DocPane::Action_CursorLeft(DocPane* self) { self->document->CursorLeft(); COMMON_ACTION_END(); }
-bool DocPane::Action_CursorRight(DocPane* self) { self->document->CursorRight(); COMMON_ACTION_END(); }
-bool DocPane::Action_CursorEnd(DocPane* self) { self->document->CursorEnd(); COMMON_ACTION_END(); }
-bool DocPane::Action_CursorHome(DocPane* self) { self->document->CursorHome(); COMMON_ACTION_END(); }
-bool DocPane::Action_SelectRight(DocPane* self) { self->document->SelectRight(); COMMON_ACTION_END(); }
-bool DocPane::Action_SelectLeft(DocPane* self) { self->document->SelectLeft(); COMMON_ACTION_END(); }
-bool DocPane::Action_SelectUp(DocPane* self) { self->document->SelectUp(); COMMON_ACTION_END(); }
-bool DocPane::Action_SelectDown(DocPane* self) { self->document->SelectDown(); COMMON_ACTION_END(); }
-bool DocPane::Action_SelectHome(DocPane* self) { self->document->SelectHome(); COMMON_ACTION_END(); }
-bool DocPane::Action_SelectEnd(DocPane* self) { self->document->SelectEnd(); COMMON_ACTION_END(); }
-bool DocPane::Action_AddCursor_down(DocPane* self) { self->document->AddCursorDown(); COMMON_ACTION_END(); }
-bool DocPane::Action_AddCursor_up(DocPane* self) { self->document->AddCursorUp(); COMMON_ACTION_END(); }
-bool DocPane::Action_InsertSpace(DocPane* self) { self->document->EnterCharacter(' '); COMMON_ACTION_END(); }
-bool DocPane::Action_InsertNewline(DocPane* self) { self->document->EnterCharacter('\n'); COMMON_ACTION_END(); }
-bool DocPane::Action_InsertTab(DocPane* self) { self->document->EnterCharacter('\t'); COMMON_ACTION_END(); }
-bool DocPane::Action_Backspace(DocPane* self) { self->document->Backspace(); COMMON_ACTION_END(); }
-bool DocPane::Action_Undo(DocPane* self) { self->document->Undo(); COMMON_ACTION_END(); }
-bool DocPane::Action_Redo(DocPane* self) { self->document->Redo(); COMMON_ACTION_END(); }
-bool DocPane::Action_TriggerCompletion(DocPane* self) { self->document->TriggerCompletion(); COMMON_ACTION_END(); }
-bool DocPane::Action_CycleCompletionList(DocPane* self) { self->document->CycleCompletionList(); self->document->SelectCompletionItem(); COMMON_ACTION_END(); }
-bool DocPane::Action_CycleCompletionListReversed(DocPane* self) { self->document->CycleCompletionListReversed(); self->document->SelectCompletionItem(); COMMON_ACTION_END(); }
-bool DocPane::Action_Clear(DocPane* self) { self->document->ClearCompletionItems(); self->document->cursors.ClearMultiCursors(); COMMON_ACTION_END(); }
+bool DocumentWindow::Action_CursorUp(DocumentWindow* self) { self->document->CursorUp(); COMMON_ACTION_END(); }
+bool DocumentWindow::Action_CursorDown(DocumentWindow* self) { self->document->CursorDown(); COMMON_ACTION_END(); }
+bool DocumentWindow::Action_CursorLeft(DocumentWindow* self) { self->document->CursorLeft(); COMMON_ACTION_END(); }
+bool DocumentWindow::Action_CursorRight(DocumentWindow* self) { self->document->CursorRight(); COMMON_ACTION_END(); }
+bool DocumentWindow::Action_CursorEnd(DocumentWindow* self) { self->document->CursorEnd(); COMMON_ACTION_END(); }
+bool DocumentWindow::Action_CursorHome(DocumentWindow* self) { self->document->CursorHome(); COMMON_ACTION_END(); }
+bool DocumentWindow::Action_SelectRight(DocumentWindow* self) { self->document->SelectRight(); COMMON_ACTION_END(); }
+bool DocumentWindow::Action_SelectLeft(DocumentWindow* self) { self->document->SelectLeft(); COMMON_ACTION_END(); }
+bool DocumentWindow::Action_SelectUp(DocumentWindow* self) { self->document->SelectUp(); COMMON_ACTION_END(); }
+bool DocumentWindow::Action_SelectDown(DocumentWindow* self) { self->document->SelectDown(); COMMON_ACTION_END(); }
+bool DocumentWindow::Action_SelectHome(DocumentWindow* self) { self->document->SelectHome(); COMMON_ACTION_END(); }
+bool DocumentWindow::Action_SelectEnd(DocumentWindow* self) { self->document->SelectEnd(); COMMON_ACTION_END(); }
+bool DocumentWindow::Action_AddCursor_down(DocumentWindow* self) { self->document->AddCursorDown(); COMMON_ACTION_END(); }
+bool DocumentWindow::Action_AddCursor_up(DocumentWindow* self) { self->document->AddCursorUp(); COMMON_ACTION_END(); }
+bool DocumentWindow::Action_InsertSpace(DocumentWindow* self) { self->document->EnterCharacter(' '); COMMON_ACTION_END(); }
+bool DocumentWindow::Action_InsertNewline(DocumentWindow* self) { self->document->EnterCharacter('\n'); COMMON_ACTION_END(); }
+bool DocumentWindow::Action_InsertTab(DocumentWindow* self) { self->document->EnterCharacter('\t'); COMMON_ACTION_END(); }
+bool DocumentWindow::Action_Backspace(DocumentWindow* self) { self->document->Backspace(); COMMON_ACTION_END(); }
+bool DocumentWindow::Action_Undo(DocumentWindow* self) { self->document->Undo(); COMMON_ACTION_END(); }
+bool DocumentWindow::Action_Redo(DocumentWindow* self) { self->document->Redo(); COMMON_ACTION_END(); }
+bool DocumentWindow::Action_TriggerCompletion(DocumentWindow* self) { self->document->TriggerCompletion(); COMMON_ACTION_END(); }
+bool DocumentWindow::Action_CycleCompletionList(DocumentWindow* self) { self->document->CycleCompletionList(); self->document->SelectCompletionItem(); COMMON_ACTION_END(); }
+bool DocumentWindow::Action_CycleCompletionListReversed(DocumentWindow* self) { self->document->CycleCompletionListReversed(); self->document->SelectCompletionItem(); COMMON_ACTION_END(); }
+bool DocumentWindow::Action_Clear(DocumentWindow* self) { self->document->ClearCompletionItems(); self->document->cursors.ClearMultiCursors(); COMMON_ACTION_END(); }
 

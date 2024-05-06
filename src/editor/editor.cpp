@@ -33,28 +33,28 @@ std::shared_ptr<Editor> Editor::Singleton() {
 
 
 void Editor::Info(const std::string& msg) {
-  IWindow* window = Singleton()->window.get();
+  IUi* window = Singleton()->window.get();
   ASSERT(window != nullptr, "Editor::singleton.window was nullptr, did you forget to initialize one?");
   window->Info(msg);
 }
 
 
 void Editor::Success(const std::string& msg) {
-  IWindow* window = Singleton()->window.get();
+  IUi* window = Singleton()->window.get();
   ASSERT(window != nullptr, "Editor::singleton.window was nullptr, did you forget to initialize one?");
   window->Success(msg);
 }
 
 
 void Editor::Warning(const std::string& msg) {
-  IWindow* window = Singleton()->window.get();
+  IUi* window = Singleton()->window.get();
   ASSERT(window != nullptr, "Editor::singleton.window was nullptr, did you forget to initialize one?");
   window->Warning(msg);
 }
 
 
 void Editor::Error(const std::string& error) {
-  IWindow* window = Singleton()->window.get();
+  IUi* window = Singleton()->window.get();
   ASSERT(window != nullptr, "Editor::singleton.window was nullptr, did you forget to initialize one?");
   window->Error(error);
 }
@@ -112,7 +112,7 @@ void Editor::SetFrontEnd(std::unique_ptr<FrontEnd> frontend) {
 }
 
 
-void Editor::SetWindow(std::unique_ptr<IWindow> window) {
+void Editor::SetWindow(std::unique_ptr<IUi> window) {
   this->window = std::move(window);
 }
 

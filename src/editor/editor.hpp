@@ -13,12 +13,12 @@
 #include "document/document.hpp"
 
 
-// An abstract interface for the Window class defined in the ui directory. A
-// window is simply something that should be able to handle events, update each
+// An abstract interface for the Ui class defined in the ui directory. A
+// Ui is simply something that should be able to handle events, update each
 // iteration and draw itself on the editor.
-class IWindow {
+class IUi {
 public:
-  virtual ~IWindow() = default;
+  virtual ~IUi() = default;
 
   virtual bool HandleEvent(const Event& event) = 0;
   virtual void Update() = 0;
@@ -57,7 +57,7 @@ public:
   int MainLoop() override;
 
   void SetFrontEnd(std::unique_ptr<FrontEnd> frontend) override;
-  void SetWindow(std::unique_ptr<IWindow> window);
+  void SetWindow(std::unique_ptr<IUi> window);
 
   std::shared_ptr<Document> OpenDocument(const Path& path);
   std::shared_ptr<const Language> GetLanguage(const LanguageId& id) const;
@@ -67,7 +67,7 @@ private:
 
   static std::shared_ptr<Editor> singleton;
 
-  std::unique_ptr<IWindow> window; // The ui root element.
+  std::unique_ptr<IUi> window; // The ui root element.
   std::unique_ptr<FrontEnd> frontend;
 
   std::atomic<bool> redraw = true;

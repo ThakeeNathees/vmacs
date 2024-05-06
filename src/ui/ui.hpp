@@ -14,25 +14,25 @@
 #include "finder.hpp"
 
 // -----------------------------------------------------------------------------
-// Pane.
+// Window.
 // -----------------------------------------------------------------------------
 
-// Note that since Pane is a subtype of event handler. And HandleEvent() is
+// Note that since Window is a subtype of event handler. And HandleEvent() is
 // already defined.
-class Pane : public EventHandler {
+class Window : public EventHandler {
 
 public:
-  Pane(const KeyTree* keytree); // The static key tree registry of the child class.
-  virtual ~Pane() = default;
+  Window(const KeyTree* keytree); // The static key tree registry of the child class.
+  virtual ~Window() = default;
 
-  // The handler should return true if the event is consumed by the pane.
+  // The handler should return true if the event is consumed by the window.
   virtual void Update() = 0;
 
   // This will internally call _Draw(), and the subclasses should override it.
   void Draw(FrameBuffer buff, Position pos, Size area);
   bool HandleEvent(const Event& event) final override;
 
-  // Set if this pane is active in it's tab, this will be called if the pane
+  // Set if this window is active in it's tab, this will be called if the window
   // gained or lost focus.
   void SetActive(bool active);
   bool IsActive() const;
@@ -41,7 +41,7 @@ private:
   Position pos = {0};
   Size area    = {0};
 
-  // Weather this pane is active in the tab.
+  // Weather this window is active in the tab.
   bool active = false;
 
   virtual void _Draw(FrameBuffer buff, Position pos, Size area) = 0;
@@ -56,11 +56,11 @@ private:
 // Split.
 // -----------------------------------------------------------------------------
 
-// Split is a tree of child splits and the leaf node contains a pane.
+// Split is a tree of child splits and the leaf node contains a window.
 // If the split type is Vertical all of it's children would be horizontal splits
 // or leaf nodes and vice versa.
 //
-// Note that the split is just the view of the panes in the 'tab.panes' array.
+// Note that the split is just the view of the window in the 'tab.window' array.
 class Split {
 
 public:
@@ -91,18 +91,18 @@ public:
   // given index is out of bounds in the child list.
   Split* GetChild(int index) const;
 
-  // Return the index of this pane on it's parent, this will fail an assertion
+  // Return the index of this window on it's parent, this will fail an assertion
   // if the parent is nullptr.
   int GetIndexInParent() const;
 
-  // Set the pane of a leaf node, this will fail an assertion if the split isn't
+  // Set the window of a leaf node, this will fail an assertion if the split isn't
   // a leaf, check before calling.
-  void SetPane(std::unique_ptr<Pane> pane);
+  void SetWindow(std::unique_ptr<Window> window);
 
-  // Return the undeling pane if available, otherwise it'll return nullptr.
+  // Return the undeling window if available, otherwise it'll return nullptr.
   // Both a leaf spit which is not initialized and a non-leaf split contains
-  // nullptr pane.
-  Pane* GetPane();
+  // nullptr window.
+  Window* GetWindow();
 
   // Return the root split, which is a split without a parent split. If the
   // split itself is the root simply return itself. Note that this method will
@@ -120,9 +120,9 @@ private:
   Split* parent = nullptr; // If parent is nullptr, its the root of the tab.
   std::vector<std::unique_ptr<Split>> children;
 
-  // A leaf node will have 0 children and the pane* will be available. However
-  // it could be nullptr if the pane is not initialized yet.
-  std::unique_ptr<Pane> pane = nullptr;
+  // A leaf node will have 0 children and the window* will be available. However
+  // it could be nullptr if the window is not initialized yet.
+  std::unique_ptr<Window> window = nullptr;
 
   friend class Tab;
   friend class Iterator;
@@ -167,13 +167,13 @@ private:
   void DrawSplit(FrameBuffer buff, Split* split, Position pos, Size area);
 
 public: // Actions.
-  static bool Action_NextPane(Tab* self);
+  static bool Action_NextWindow(Tab* self);
 
 };
 
 
 // -----------------------------------------------------------------------------
-// Window.
+// UI.
 // -----------------------------------------------------------------------------
 
 // WARNING:
@@ -185,9 +185,9 @@ public: // Actions.
 //
 // And that's why we're using EventHander* in the Action methods bellow. Unlike
 // other child classes of event handers.
-class Window : public IWindow, public EventHandler {
+class Ui : public IUi, public EventHandler {
 public:
-  Window();
+  Ui();
 
   bool HandleEvent(const Event& event);
   void Update();
@@ -205,7 +205,7 @@ public:
 
 private:
   std::unique_ptr<Tab> tab; // TODO: Make this a vector.
-  std::unique_ptr<Pane> popup;
+  std::unique_ptr<Window> popup;
 
   // FIXME(grep): This is temproary.
   std::string info_bar_text;
@@ -217,16 +217,16 @@ public: // Actions.
 
 
 // -----------------------------------------------------------------------------
-// Document Pane.
+// Document Window.
 // -----------------------------------------------------------------------------
 
-// BufferPane is the Pane that handles events and display the undeling buffer
+// DocumentWindow is the window that handles events and display the undeling buffer
 // it's more of a text editor with number line and scroll bar etc.
-class DocPane : public Pane, public DocumentListener {
+class DocumentWindow : public Window, public DocumentListener {
 
 public:
-  DocPane();
-  DocPane(std::shared_ptr<Document> document);
+  DocumentWindow();
+  DocumentWindow(std::shared_ptr<Document> document);
 
   void Update() override;
 
@@ -235,11 +235,11 @@ public:
   void OnFocusChanged(bool focus) override;
 
 private:
-  // The document we're editing on this pane.
+  // The document we're editing on this window.
   std::shared_ptr<Document> document;
 
   // We take a backup of the document's cursors when we lost the focus and re-apply
-  // when we gain again so if it changed by other docpanes it doesn't effect this.
+  // when we gain again so if it changed by other windows it doesn't effect this.
   MultiCursor cursors_backup;
 
   // The coordinate where we start drawing the buffer from, this will change
@@ -273,42 +273,42 @@ private:
 
 public: // Actions.
   static KeyTree keytree;
-  static bool Action_CursorUp(DocPane* self);
-  static bool Action_CursorDown(DocPane* self);
-  static bool Action_CursorLeft(DocPane* self);
-  static bool Action_CursorRight(DocPane* self);
-  static bool Action_CursorEnd(DocPane* self);
-  static bool Action_CursorHome(DocPane* self);
-  static bool Action_SelectRight(DocPane* self);
-  static bool Action_SelectLeft(DocPane* self);
-  static bool Action_SelectUp(DocPane* self);
-  static bool Action_SelectDown(DocPane* self);
-  static bool Action_SelectHome(DocPane* self);
-  static bool Action_SelectEnd(DocPane* self);
-  static bool Action_AddCursor_down(DocPane* self);
-  static bool Action_AddCursor_up(DocPane* self);
-  static bool Action_InsertSpace(DocPane* self);
-  static bool Action_InsertNewline(DocPane* self);
-  static bool Action_InsertTab(DocPane* self);
-  static bool Action_Backspace(DocPane* self);
-  static bool Action_Undo(DocPane* self);
-  static bool Action_Redo(DocPane* self);
-  static bool Action_TriggerCompletion(DocPane* self);
-  static bool Action_CycleCompletionList(DocPane* self);
-  static bool Action_CycleCompletionListReversed(DocPane* self);
-  static bool Action_Clear(DocPane* self);
+  static bool Action_CursorUp(DocumentWindow* self);
+  static bool Action_CursorDown(DocumentWindow* self);
+  static bool Action_CursorLeft(DocumentWindow* self);
+  static bool Action_CursorRight(DocumentWindow* self);
+  static bool Action_CursorEnd(DocumentWindow* self);
+  static bool Action_CursorHome(DocumentWindow* self);
+  static bool Action_SelectRight(DocumentWindow* self);
+  static bool Action_SelectLeft(DocumentWindow* self);
+  static bool Action_SelectUp(DocumentWindow* self);
+  static bool Action_SelectDown(DocumentWindow* self);
+  static bool Action_SelectHome(DocumentWindow* self);
+  static bool Action_SelectEnd(DocumentWindow* self);
+  static bool Action_AddCursor_down(DocumentWindow* self);
+  static bool Action_AddCursor_up(DocumentWindow* self);
+  static bool Action_InsertSpace(DocumentWindow* self);
+  static bool Action_InsertNewline(DocumentWindow* self);
+  static bool Action_InsertTab(DocumentWindow* self);
+  static bool Action_Backspace(DocumentWindow* self);
+  static bool Action_Undo(DocumentWindow* self);
+  static bool Action_Redo(DocumentWindow* self);
+  static bool Action_TriggerCompletion(DocumentWindow* self);
+  static bool Action_CycleCompletionList(DocumentWindow* self);
+  static bool Action_CycleCompletionListReversed(DocumentWindow* self);
+  static bool Action_Clear(DocumentWindow* self);
 };
 
 
 // -----------------------------------------------------------------------------
-// Find Pane.
+// Find Window.
 // -----------------------------------------------------------------------------
 
 
-class FindPane : public Pane {
+class FindWindow : public Window {
 
 public:
-  FindPane(std::unique_ptr<Finder> finder);
+  FindWindow(std::unique_ptr<Finder> finder);
 
   void Update() override;
 
@@ -344,15 +344,14 @@ private:
 
 public: // Actions.
   static KeyTree keytree;
-  static bool Action_CursorRight(FindPane* self);
-  static bool Action_CursorLeft(FindPane* self);
-  static bool Action_CursorHome(FindPane* self);
-  static bool Action_CursorEnd(FindPane* self);
-  static bool Action_Backspace(FindPane* self);
-  static bool Action_CycleSelection(FindPane* self);
-  static bool Action_CycleSelectionReversed(FindPane* self);
-  static bool Action_AcceptSelection(FindPane* self);
+  static bool Action_CursorRight(FindWindow* self);
+  static bool Action_CursorLeft(FindWindow* self);
+  static bool Action_CursorHome(FindWindow* self);
+  static bool Action_CursorEnd(FindWindow* self);
+  static bool Action_Backspace(FindWindow* self);
+  static bool Action_CycleSelection(FindWindow* self);
+  static bool Action_CycleSelectionReversed(FindWindow* self);
+  static bool Action_AcceptSelection(FindWindow* self);
 
 };
-
 
