@@ -83,9 +83,9 @@ public:
   };
 
   // The split method, make sure to call this on leaf nodes otherwise this will
-  // fail an assertion.
-  void Vsplit(bool right);
-  void Hsplit(bool bottom);
+  // fail an assertion. This will return a raw pointer to the created split instance.
+  Split* Vsplit(bool right);
+  Split* Hsplit(bool bottom);
 
   // Returns the child a the given index, this will fail an assertion if the
   // given index is out of bounds in the child list.
@@ -128,8 +128,9 @@ private:
   friend class Iterator;
 
 private:
-  // Insert a given split as a child for the current node.
-  void InsertChild(int index, std::unique_ptr<Split> child);
+  // Insert a given split as a child for the current node and return a raw pointer
+  // of the inserted split.
+  Split* InsertChild(int index, std::unique_ptr<Split> child);
 
 };
 

@@ -507,22 +507,39 @@ int main(int argc, char** argv) {
   doc->SetLanguage(lang);
   doc->SetLspClient(client);
 
+  std::unique_ptr<Split> root = std::make_unique<Split>();
+
+#if 0 // Split test.
   std::unique_ptr<DocPane> docpane1 = std::make_unique<DocPane>(doc);
   std::unique_ptr<DocPane> docpane2 = std::make_unique<DocPane>(doc);
   std::unique_ptr<DocPane> docpane3 = std::make_unique<DocPane>(doc);
 
-  std::unique_ptr<Split> root = std::make_unique<Split>();
+  auto s1 = root->Vsplit(true);
+  s1->Hsplit(true);
+  auto it = root->Iterate();
+  it.Get()->SetPane(std::move(docpane1));
+  it.Next();
+  it.Get()->SetPane(std::move(docpane2));
+  it.Next();
+  it.Get()->SetPane(std::move(docpane3));
+  it.Next();
+  ASSERT(it.Get() == nullptr, OOPS);
+#else
+  std::unique_ptr<DocPane> docpane = std::make_unique<DocPane>(doc);
+  root->SetPane(std::move(docpane));
+#endif
 
-  root->Vsplit(true);
-  root->GetChild(1)->Hsplit(true);
-
-  root->GetChild(0)->SetPane(std::move(docpane1));
-  root->GetChild(1)->GetChild(0)->SetPane(std::move(docpane2));
-  root->GetChild(1)->GetChild(1)->SetPane(std::move(docpane3));
+  // root->GetChild(1)->Vsplit(true);
+  // root->GetChild(1)->Hsplit(true);
+  // root->GetChild(1)->GetChild(1)->Hsplit(true);
+  // root->GetChild(0)->SetPane(std::move(docpane1));
+  // root->GetChild(1)->GetChild(0)->SetPane(std::move(docpane2));
+  // root->GetChild(1)->GetChild(1)->SetPane(std::move(docpane3));
+  // root->GetChild(1)->GetChild(2)->SetPane(std::move(docpane4));
+  // root->GetChild(2)->SetPane(std::move(docpane5));
 
   // Split* active = root->GetChild(1);
-  std::unique_ptr<Tab> tab = std::make_unique<Tab>(
-      std::move(root));
+  std::unique_ptr<Tab> tab = std::make_unique<Tab>(std::move(root));
 
   std::unique_ptr<Window> window = std::make_unique<Window>();
   window->AddTab(std::move(tab));

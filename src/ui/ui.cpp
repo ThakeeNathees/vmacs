@@ -61,14 +61,15 @@ void Pane::OnFocusChanged(bool focus) {}
 // -----------------------------------------------------------------------------
 
 
-void Split::InsertChild(int index, std::unique_ptr<Split> child) {
+Split* Split::InsertChild(int index, std::unique_ptr<Split> child) {
   ASSERT(index >= 0 && index <= children.size(), OOPS);
   child->parent = this;
   children.insert(children.begin() + index, std::move(child));
+  return children[index].get();
 }
 
 
-void Split::Vsplit(bool right) {
+Split* Split::Vsplit(bool right) {
   ASSERT(type == Type::LEAF, OOPS);
 
   if (parent == nullptr || parent->type == Type::HORIZONTAL) {
@@ -77,19 +78,19 @@ void Split::Vsplit(bool right) {
     auto r = std::make_unique<Split>();
     if (right) l->pane = std::move(pane);
     else r->pane = std::move(pane);
-    InsertChild(children.size(), std::move(l));
-    InsertChild(children.size(), std::move(r));
-    return;
+    Split* split_left  = InsertChild(children.size(), std::move(l));
+    Split* split_right = InsertChild(children.size(), std::move(r));
+    return right ? split_right : split_left;
   }
 
   ASSERT(parent->type == Type::VERTICAL, OOPS);
   int index = GetIndexInParent() + ((int)right);
   auto s = std::make_unique<Split>();
-  this->parent->InsertChild(index, std::move(s));
+  return this->parent->InsertChild(index, std::move(s));
 }
 
 
-void Split::Hsplit(bool bottom) {
+Split* Split::Hsplit(bool bottom) {
   ASSERT(type == Type::LEAF, OOPS);
 
   if (parent == nullptr || parent->type == Type::VERTICAL) {
@@ -98,15 +99,15 @@ void Split::Hsplit(bool bottom) {
     auto b = std::make_unique<Split>();
     if (bottom) t->pane = std::move(pane);
     else b->pane = std::move(pane);
-    InsertChild(children.size(), std::move(t));
-    InsertChild(children.size(), std::move(b));
-    return;
+    Split* split_top    = InsertChild(children.size(), std::move(t));
+    Split* split_bottom = InsertChild(children.size(), std::move(b));
+    return bottom ? split_bottom : split_top;
   }
 
   ASSERT(parent->type == Type::HORIZONTAL, OOPS);
   int index = GetIndexInParent() + ((int)bottom);
   auto s = std::make_unique<Split>();
-  this->parent->InsertChild(index, std::move(s));
+  return this->parent->InsertChild(index, std::move(s));
 }
 
 
