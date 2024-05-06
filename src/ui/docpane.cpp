@@ -95,7 +95,7 @@ void DocPane::EnsureCursorOnView() {
 
 void DocPane::_Draw(FrameBuffer buff, Position pos, Size area) {
   DrawBuffer(buff, pos, area);
-  DrawAutoCompletions(buff, pos);
+  if (IsActive()) DrawAutoCompletions(buff, pos, area);
 }
 
 
@@ -111,6 +111,8 @@ void DocPane::CheckCellStatus(int index, bool* in_cursor, bool* in_selection) {
       *in_selection = true;
     }
   }
+  // If it's not active we don't draw the cursor.
+  if (!IsActive()) *in_cursor = false;
 }
 
 
@@ -301,7 +303,7 @@ static const int completion_kind_count = sizeof completion_kind_nerd_icon / size
 
 
 // FIXME: This method is not clean.
-void DocPane::DrawAutoCompletions(FrameBuffer buff, Position docpos) {
+void DocPane::DrawAutoCompletions(FrameBuffer buff, Position docpos, Size docarea) {
 
   // FIXME: Cleanup this mess.-------------------------------------------------
   const Theme* theme = Editor::GetCurrentTheme();
@@ -380,6 +382,9 @@ void DocPane::DrawAutoCompletions(FrameBuffer buff, Position docpos) {
   pos = menu_start;
   pos.row += (drawing_bellow_cursor) ? 1 : (-count_dispaynig_items);
 
+  // Adjust the max len depends on available space.
+  max_len = MIN(max_len, docarea.width - (pos.col-docpos.col));
+
   for (int i = 0; i < count_dispaynig_items; i++) {
     auto& item = (*completion_items)[i];
     int icon_index = CLAMP(0, (int)item.kind-1, completion_kind_count);
@@ -387,7 +392,8 @@ void DocPane::DrawAutoCompletions(FrameBuffer buff, Position docpos) {
     Style style = (i == document->completion_selected) ? style_menu_selected : style_menu;
 
     // TODO: Draw a scroll bar.
-    // FIXME: The layout is hardcoded.
+    // FIXME: The layout is hardcoded. handle this properly (+2s)
+
     SET_CELL(
         buff,
         docpos.col + pos.col,
@@ -403,9 +409,9 @@ void DocPane::DrawAutoCompletions(FrameBuffer buff, Position docpos) {
     DrawTextLine(
         buff,
         item.label.c_str(),
-        docpos.col + pos.col + 2, // + becase we draw the icon above.
+        docpos.col + pos.col + 2, // +2 becase we draw the icon above.
         docpos.row + pos.row,
-        max_len,
+        max_len - 2,              // -2 because we draw the icon above.
         style,
         true);
     pos.row++;
@@ -434,27 +440,38 @@ void DocPane::DrawAutoCompletions(FrameBuffer buff, Position docpos) {
   pos = menu_start;
   pos.row += (drawing_bellow_cursor) ? 1 : -1;
 
+  // Adjust the max len depends on available space.
+  int label_max_len = MIN(si.label.size(), docarea.width - (pos.col-docpos.col));
+
+  // Draw the label.
   DrawTextLine(
       buff,
       si.label.c_str(),
       docpos.col + pos.col,
       docpos.row + pos.row,
-      si.label.size(),
+      label_max_len,
       style_menu,
       true);
 
   // Draw the current parameter highlighted.
   if (si.parameters.size() == 0) return; // No parameter to highlight.
   int param_index = CLAMP(0, signature_helps->active_parameter, si.parameters.size());
+
   const ParameterInformation& pi = si.parameters[param_index];
   if (pi.label.start < 0 || pi.label.end >= si.label.size() || pi.label.start > pi.label.end) return;
+
+  // Label starts after the width.
+  if (docarea.width <= pos.col+pi.label.start-docpos.col) return;
+
   std::string param_label = si.label.substr(pi.label.start, pi.label.end - pi.label.start + 1);
+  label_max_len = MIN(param_label.size(), docarea.width - (pos.col+pi.label.start-docpos.col));
+
   DrawTextLine(
       buff,
       param_label.c_str(),
       docpos.col + pos.col + pi.label.start,
       docpos.row + pos.row,
-      param_label.size(),
+      label_max_len,
       style_menu.Apply(style_active_param),
       true);
 }

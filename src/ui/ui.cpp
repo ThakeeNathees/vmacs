@@ -41,6 +41,17 @@ bool Pane::HandleEvent(const Event& event) {
 }
 
 
+// TOOD: Call OnActive callback on the inherited classes.
+void Pane::SetActive(bool active) {
+  this->active = active;
+}
+
+
+bool Pane::IsActive() const {
+  return active;
+}
+
+
 // -----------------------------------------------------------------------------
 // Split.
 // -----------------------------------------------------------------------------
@@ -197,6 +208,7 @@ void Split::Iterator::Next() {
 Tab::Tab(std::unique_ptr<Split> root_, Split* active_)
   : EventHandler(&keytree), root(std::move(root_)) {
 
+  // TODO: Validate the root and all of it's childs are met our invariant.
   ASSERT(root != nullptr, "Root split was nullptr.");
   if (active_ == nullptr) {
     active_ = root->Iterate().Get(); // Get the first leaf of the tree.
@@ -207,6 +219,11 @@ Tab::Tab(std::unique_ptr<Split> root_, Split* active_)
   ASSERT(active_->GetRoot() == root.get(), "Given active spit should be part of the given split tree.");
 
   this->active = active_;
+
+  Pane* pane = this->active->GetPane();
+  ASSERT(pane != nullptr, "A split with un-initialized pane did you forget to set one?");
+  pane->SetActive(true);
+
   SetMode("*");
 }
 
@@ -284,3 +301,22 @@ void Tab::DrawSplit(FrameBuffer buff, Split* split, Position pos, Size area) {
   }
 }
 
+
+
+bool Tab::Action_NextPane(Tab* self) {
+  ASSERT(self->active != nullptr, OOPS);
+  auto it = Split::Iterator(self->active);
+  ASSERT(it.Get() != nullptr, OOPS);
+  it.Next(); // Increment the leaf by one.
+
+  ASSERT(self->active->pane != nullptr, OOPS);
+  self->active->pane->SetActive(false);
+  if (it.Get() != nullptr) {
+    self->active = it.Get();
+  } else { // Reached the end of the tree.
+    self->active = self->root->Iterate().Get();
+  }
+  ASSERT(self->active->pane != nullptr, OOPS);
+  self->active->pane->SetActive(true);
+  return true;
+}

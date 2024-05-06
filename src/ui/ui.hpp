@@ -32,9 +32,17 @@ public:
   void Draw(FrameBuffer buff, Position pos, Size area);
   bool HandleEvent(const Event& event) final override;
 
+  // Set if this pane is active in it's tab, this will be called if the pane
+  // gained or lost focus.
+  void SetActive(bool active);
+  bool IsActive() const;
+
 private:
   Position pos = {0};
   Size area    = {0};
+
+  // Weather this pane is active in the tab.
+  bool active = false;
 
   virtual void _Draw(FrameBuffer buff, Position pos, Size area) = 0;
   virtual bool _HandleEvent(const Event& event) = 0;
@@ -154,6 +162,9 @@ private:
 private:
   void DrawSplit(FrameBuffer buff, Split* split, Position pos, Size area);
 
+public: // Actions.
+  static bool Action_NextPane(Tab* self);
+
 };
 
 
@@ -244,7 +255,7 @@ private:
   void EnsureCursorOnView();
 
   void DrawBuffer(FrameBuffer buff, Position pos, Size area);
-  void DrawAutoCompletions(FrameBuffer buff, Position docpos);
+  void DrawAutoCompletions(FrameBuffer buff, Position pos, Size area);
 
   // Check the given index is within selection or inside the cursor and sets the pointers.
   // This is needed to set the background color of a cell and re-usable.

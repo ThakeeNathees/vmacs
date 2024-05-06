@@ -401,6 +401,9 @@ int main(int argc, char** argv) {
   Window::keytree.RegisterBinding("*", "<esc>", "close_popup");
   Window::keytree.RegisterBinding("*", "<C-o>", "popup_files_finder");
 
+  Tab::keytree.RegisterAction("next_pane", (FuncAction) Tab::Action_NextPane);
+  Tab::keytree.RegisterBinding("*", "<C-w>w", "next_pane");
+  Tab::keytree.RegisterBinding("*", "<C-w><C-w>", "next_pane");
 
   DocPane::keytree.RegisterAction("cursor_up", (FuncAction) DocPane::Action_CursorUp);
   DocPane::keytree.RegisterAction("cursor_down", (FuncAction) DocPane::Action_CursorDown);
