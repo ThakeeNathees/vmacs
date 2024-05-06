@@ -496,14 +496,29 @@ int main(int argc, char** argv) {
   doc->SetThemeGetter([](){
       return Editor::GetCurrentTheme();
   });
-
   std::shared_ptr<const Language> lang = e->GetLanguage("cpp");
   ASSERT(lang != nullptr, OOPS);
   std::shared_ptr<LspClient> client = e->GetLspClient("clangd");
   ASSERT(client != nullptr, OOPS);
   doc->SetLanguage(lang);
   doc->SetLspClient(client);
-  std::unique_ptr<Tab> tab = Tab::FromPane(std::make_unique<DocPane>(doc));
+
+  std::unique_ptr<DocPane> docpane1 = std::make_unique<DocPane>(doc);
+  std::unique_ptr<DocPane> docpane2 = std::make_unique<DocPane>(doc);
+  std::unique_ptr<DocPane> docpane3 = std::make_unique<DocPane>(doc);
+
+  std::unique_ptr<Split> root = std::make_unique<Split>();
+
+  root->Vsplit(true);
+  root->GetChild(0)->SetPane(std::move(docpane1));
+
+  root->GetChild(1)->Hsplit(true);
+  root->GetChild(1)->GetChild(0)->SetPane(std::move(docpane2));
+  root->GetChild(1)->GetChild(1)->SetPane(std::move(docpane3));
+
+  // Split* active = root->GetChild(1);
+  std::unique_ptr<Tab> tab = std::make_unique<Tab>(
+      std::move(root));
 
   std::unique_ptr<Window> window = std::make_unique<Window>();
   window->AddTab(std::move(tab));

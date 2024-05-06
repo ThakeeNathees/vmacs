@@ -201,8 +201,21 @@ void DrawHorizontalLine(FrameBuffer buff, int x, int y, int width, Style style) 
   if (width <= 0) return;
 
   int HL = 0x2500;
-  for (int col = x+1; col < x+width-1; col++) {
+  for (int col = x; col < x+width; col++) {
     SET_CELL(buff, col, y, HL, style);
+  }
+}
+
+
+void DrawVerticalLine(FrameBuffer buff, int x, int y, int height, Style style) {
+  if (x < 0 || y < 0) return;
+  if (x >= buff.width || y >= buff.height) return;
+  if (y + height > buff.height) height = buff.height - y;
+  if (height <= 0) return;
+
+  int VL = 0x2502;
+  for (int row = y; row < y+height; row++) {
+    SET_CELL(buff, x, row, VL, style);
   }
 }
 

@@ -416,6 +416,7 @@ void DrawTextLine(
 void DrawRectangleFill(FrameBuffer buff, int x, int y, int width, int height, Style style);
 void DrawRectangleLine(FrameBuffer buff, int x, int y, int width, int height, Style style, bool fill=false);
 void DrawHorizontalLine(FrameBuffer buff, int x, int y, int width, Style style);
+void DrawVerticalLine(FrameBuffer buff, int x, int y, int height, Style style);
 
 
 // On a successfull parse, it'll return true and push all the keys are parsed

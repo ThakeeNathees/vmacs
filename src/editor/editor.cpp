@@ -96,7 +96,7 @@ Editor::Editor() {
     languages[result.language_id] = lang;
   }
 
-  // Register LSP clients. TODO(grep): load the config from RESLOAD.
+  // FIXME(mess): Register LSP clients. TODO(grep): load the config from RESLOAD.
   LspConfig config;
   config.id = "clangd";
   config.server_file = "clangd";

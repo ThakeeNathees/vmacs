@@ -59,6 +59,47 @@ public:
     HORIZONTAL = 2,
   };
 
+  // Split iterator.
+  class Iterator {
+  public:
+    Iterator(Split* root);
+    Split* Get() const; // Return the current leaf we're in.
+    void Next();        // Increment current node internaly.
+  private:
+    Split* LeftMostLeaf(Split* node) const; // It'll fall to the left most leaf of the given split.
+    Split* GetNextChild(Split* node) const; // Returns the next child from a node.
+    Split* curr = nullptr; // Current leaf node we're in (we always land on a leaf node).
+  };
+
+  // The split method, make sure to call this on leaf nodes otherwise this will
+  // fail an assertion.
+  void Vsplit(bool right);
+  void Hsplit(bool bottom);
+
+  // Returns the child a the given index, this will fail an assertion if the
+  // given index is out of bounds in the child list.
+  Split* GetChild(int index) const;
+
+  // Return the index of this pane on it's parent, this will fail an assertion
+  // if the parent is nullptr.
+  int GetIndexInParent() const;
+
+  // Set the pane of a leaf node, this will fail an assertion if the split isn't
+  // a leaf, check before calling.
+  void SetPane(std::unique_ptr<Pane> pane);
+
+  // Return the undeling pane if available, otherwise it'll return nullptr.
+  // Both a leaf spit which is not initialized and a non-leaf split contains
+  // nullptr pane.
+  Pane* GetPane();
+
+  // Return the root split, which is a split without a parent split. If the
+  // split itself is the root simply return itself. Note that this method will
+  // never return nullptr.
+  Split* GetRoot();
+
+  Iterator Iterate();
+
 private:
   Type type = Type::LEAF;
 
@@ -70,9 +111,15 @@ private:
 
   // A leaf node will have 0 children and the pane* will be available. However
   // it could be nullptr if the pane is not initialized yet.
-  Pane* pane = nullptr;
+  std::unique_ptr<Pane> pane = nullptr;
 
   friend class Tab;
+  friend class Iterator;
+
+private:
+  // Insert a given split as a child for the current node.
+  void InsertChild(int index, std::unique_ptr<Split> child);
+
 };
 
 
@@ -83,29 +130,26 @@ private:
 
 class Tab : public EventHandler {
 public:
-  Tab();
+
+  // Set the root split of the tab, and takes an optional active split (which
+  // should be part of the given tree). If active is nullptr, it'll takes the
+  // first leaf of the tree as active split.
+  Tab(std::unique_ptr<Split> root, Split* active=nullptr);
 
   bool HandleEvent(const Event& event) override;
   void Update();
   void Draw(FrameBuffer buff, Position pos, Size area);
 
-  // "Constructors".
-  static std::unique_ptr<Tab> FromPane(std::unique_ptr<Pane> pane);
 
   // Key tree is public so we can register action and bind to keys outside. I
   // don't like the OOP getters and setters (what's the point)?
   static KeyTree keytree;
 
 private:
-  Split root;
+  std::unique_ptr<Split> root;
 
-  // The panes in the splits, where each split will have a weak reference to the
-  // pane in this list.
-  std::vector<std::unique_ptr<Pane>> panes;
-
-  // Currently active pane in the split tree. If the popup is not nullptr, we'll
-  // prioratize the popup to handle the events and ignore the active pane.
-  Pane* active = nullptr;
+  // Currently active leaf split in the split tree.
+  Split* active = nullptr;
 
 private:
   void DrawSplit(FrameBuffer buff, Split* split, Position pos, Size area);
