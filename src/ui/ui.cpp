@@ -236,16 +236,16 @@ Tab::Tab(std::unique_ptr<Split> root_, Split* active_)
 
 bool Tab::HandleEvent(const Event& event) {
 
-#define return_handled do { ResetCursor(); return true; } while (false)
+  if (EventHandler::HandleEvent(event)) return true;
+
   // Send the event to the inner most child to handle if it cannot we do
   // event bubbling.
   if (active != nullptr && active->window != nullptr) {
-    if (active->window->HandleEvent(event)) return_handled;
+    if (active->window->HandleEvent(event)) return true;
   }
-#undef return_handled
 
-  // No one consumed the event, so we'll with the keytree.
-  return EventHandler::HandleEvent(event);
+  // No one consumed the event.
+  return false;
 }
 
 
@@ -343,18 +343,18 @@ Ui::Ui() : EventHandler(&keytree) {
 
 bool Ui::HandleEvent(const Event& event) {
 
-#define return_handled do { ResetCursor(); return true; } while (false)
+  if (EventHandler::HandleEvent(event)) return true;
+
   // Note that if the popup is available we won't send the event to the active
   // child split nodes.
   if (popup.get()) {
-    if (popup->HandleEvent(event)) return_handled;
+    if (popup->HandleEvent(event)) return true;
   } else if (tab && tab->HandleEvent(event)) {
-    return_handled;
+    return true;
   }
-#undef return_handled
 
-  // No one consumed the event, so we'll with the keytree.
-  return EventHandler::HandleEvent(event);
+  // No one consumed the event.
+  return false;
 }
 
 
