@@ -509,7 +509,7 @@ int main(int argc, char** argv) {
 
   std::unique_ptr<Split> root = std::make_unique<Split>();
 
-#if 0 // Split test.
+#if 1 // Split test.
   std::unique_ptr<DocumentWindow> docwindow1 = std::make_unique<DocumentWindow>(doc);
   std::unique_ptr<DocumentWindow> docwindow2 = std::make_unique<DocumentWindow>(doc);
   std::unique_ptr<DocumentWindow> docwindow3 = std::make_unique<DocumentWindow>(doc);
