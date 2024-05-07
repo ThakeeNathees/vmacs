@@ -39,7 +39,7 @@ bool FindWindow::_HandleEvent(const Event& event) {
 }
 
 
-void FindWindow::Update() {
+void FindWindow::_Update() {
   EnsureSelectionOnView();
 }
 

@@ -403,6 +403,7 @@ int Utf8CharLength(char c);
 int Utf8CharToUnicode(uint32_t *out, const char *c);
 int Utf8UnicodeToChar(char *out, uint32_t c);
 int Utf8Strlen(const char* str);
+std::string Utf8UnicodeToString(uint32_t c);
 
 // Draw a NULL terminated text (utf8) to the specified position and width.
 void DrawTextLine(
