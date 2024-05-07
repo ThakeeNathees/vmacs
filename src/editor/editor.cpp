@@ -67,7 +67,7 @@ void Editor::ReDraw() {
 
 // FIXME: This is temproary.
 const Theme* Editor::GetCurrentTheme() {
-  return Singleton()->themes["dark_plus"].get();
+  return Singleton()->themes["dracula"].get();
 }
 
 

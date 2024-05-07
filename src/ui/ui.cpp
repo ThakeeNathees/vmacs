@@ -352,7 +352,7 @@ bool Tab::Action_NextWindow(Tab* self) {
 
 
 // -----------------------------------------------------------------------------
-// Window.
+// Ui.
 // -----------------------------------------------------------------------------
 
 
@@ -374,8 +374,8 @@ bool Ui::HandleEvent(const Event& event) {
   #define return_true do { ResetCursor(); return true; } while (false)
   // Note that if the popup is available we won't send the event to the active
   // child split nodes.
-  if (popup.get()) {
-    if (popup->HandleEvent(event)) return_true;
+  if (popup && popup->HandleEvent(event)) {
+    return_true;
   } else if (tab && tab->HandleEvent(event)) {
     return_true;
   }
@@ -387,21 +387,96 @@ bool Ui::HandleEvent(const Event& event) {
 
 
 void Ui::Update() {
-  if (popup.get()) popup->Update();
-  tab->Update();
+  if (popup) popup->Update();
+  if (tab) tab->Update();
 }
 
 
+// FIXME(mess): Cleanup this mess.
 void Ui::Draw(FrameBuffer buff) {
-  // FIXME(mess): Cleanup this mess.
-  tab->Draw(buff, {0, 0}, {.width = buff.width, .height = buff.height-1});
-  if (popup.get()) popup->Draw(buff, {0, 0}, {.width = buff.width, .height = buff.height-1});
+
+  if (tab) {
+    tab->Draw(buff, {0, 0}, {.width = buff.width, .height = buff.height-1});
+
+  } else {
+    DrawHomeScreen(buff, {0, 0}, {.width = buff.width, .height = buff.height-1});
+  }
+
+  if (popup) {
+    popup->Draw(buff, {0, 0}, {.width = buff.width, .height = buff.height-1});
+  }
 
   Style style_text = Editor::GetCurrentTheme()->GetStyle("ui.text");
   Style style_bg   = Editor::GetCurrentTheme()->GetStyle("ui.background");
+  Style style      = style_bg.Apply(style_text);
+  DrawTextLine(buff, info_bar_text.c_str(), 0, buff.height-1, buff.width, style, true);
+}
+
+
+void Ui::DrawHomeScreen(FrameBuffer buff, Position pos, Size area) {
+  // FIXME: Move this to somewhere else.
+  // --------------------------------------------------------------------------
+  const Theme* theme = Editor::GetCurrentTheme();
+  // TODO: Use ui.cursor for secondary cursor same as selection.
+  Style style_text       = theme->GetStyle("ui.text");
+  Style style_bg         = theme->GetStyle("ui.background");
+  Style style_whitespace = theme->GetStyle("ui.virtual.whitespace");
+  Style style_cursor     = theme->GetStyle("ui.cursor.primary");
+  Style style_selection  = theme->GetStyle("ui.selection.primary");
+  Style style_error      = theme->GetStyle("error");
+  Style style_warning    = theme->GetStyle("warning");
+
+  //  : 0xf15b
+  //  : 0xe68f 
+  // 󰈞 : 0xf021e
+  // 󰈚 : 0xf021a
+  // 󰈭 : 0xf022d 
+  //  : 0xf02e
+  //  : 0xe22b
 
   Style style = style_bg.Apply(style_text);
-  DrawTextLine(buff, info_bar_text.c_str(), 0, buff.height-1, buff.width, style, true);
+  // Style style_copyright = style_bg.Apply(theme->GetStyle("keyword"));
+  Style style_copyright = style_bg.Apply(style_whitespace);
+  // --------------------------------------------------------------------------
+
+  std::vector<std::pair<std::string, std::string>> items;
+
+  items.push_back({ Utf8UnicodeToString(0xf15b)  + " New file",       "<C-n>" });
+  items.push_back({ Utf8UnicodeToString(0xe68f)  + " Find Files",     "<C-o>" });
+  items.push_back({ Utf8UnicodeToString(0xf021a) + " Recent Files",   "<C-r>" });
+  items.push_back({ Utf8UnicodeToString(0xf022d) + " Live Grep",      "<C-g>" });
+  // items.push_back({ Utf8UnicodeToString(0xf02e)  + " Bookmakrs",      "<C-b>" });
+  items.push_back({ Utf8UnicodeToString(0xe22b)  + " Themes",         "<C-t>" });
+
+
+  // Get the maximum length of the display text so we need the padding length.
+  size_t max_len_text = 0, max_len_bind = 0;
+  for (auto& pair : items) {
+    max_len_text = MAX(Utf8Strlen(pair.first.c_str()), max_len_text);
+    max_len_bind = MAX(Utf8Strlen(pair.second.c_str()), max_len_bind);
+  }
+
+  // FIXME: 10 is hardcoded here.
+  int spacing = MIN(10, area.width - (max_len_text+max_len_bind)); // Number of column spacing between text and the binding.
+  int display_width = max_len_text + spacing + max_len_bind; // for margin.
+  int display_height = items.size() * 2 - 1; // *2 space between two items, -1 remove last space.
+
+  Position curr; // Current drawing position.
+  curr.col = pos.col + (area.width - display_width) / 2;
+  curr.row = pos.row + (area.height - display_height) / 2;
+  for (auto& pair : items) {
+    size_t len_text = Utf8Strlen(pair.first.c_str());
+    size_t len_bind = Utf8Strlen(pair.second.c_str());
+    DrawTextLine(buff, pair.first.c_str(), curr.col, curr.row, len_text, style, false);
+    DrawTextLine(buff, pair.second.c_str(), curr.col + (max_len_text + spacing), curr.row, len_bind, style, false);
+    curr.row += 2;
+  }
+
+  std::string copyright = "Copyright (c) 2024 Thakee Nathees";
+  curr.row = pos.row + area.height - 1;
+  curr.col = pos.col + (area.width - copyright.size()) / 2;
+  DrawTextLine(buff, copyright.c_str(), curr.col, curr.row, copyright.size(), style_copyright, false);
+
 }
 
 

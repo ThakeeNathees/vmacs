@@ -508,13 +508,15 @@ int main(int argc, char** argv) {
   doc->SetLanguage(lang);
   doc->SetLspClient(client);
 
-  std::unique_ptr<Split> root = std::make_unique<Split>();
+  std::unique_ptr<Ui> window = std::make_unique<Ui>();
 
-#if 1 // Split test.
+#if 0 // Split test.
+
   std::unique_ptr<DocumentWindow> docwindow1 = std::make_unique<DocumentWindow>(doc);
   std::unique_ptr<DocumentWindow> docwindow2 = std::make_unique<DocumentWindow>(doc);
   std::unique_ptr<DocumentWindow> docwindow3 = std::make_unique<DocumentWindow>(doc);
 
+  std::unique_ptr<Split> root = std::make_unique<Split>();
   auto s1 = root->Vsplit(true);
   s1->Hsplit(true);
   auto it = root->Iterate();
@@ -525,12 +527,16 @@ int main(int argc, char** argv) {
   it.Get()->SetWindow(std::move(docwindow3));
   it.Next();
   ASSERT(it.Get() == nullptr, OOPS);
+
+  std::unique_ptr<Tab> tab = std::make_unique<Tab>(std::move(root));
+  window->AddTab(std::move(tab));
+
 #else
   // std::unique_ptr<DocumentWindow> docwindow = std::make_unique<DocumentWindow>(doc);
   // root->SetWindow(std::move(docwindow));
 
-  std::unique_ptr<IniWindow> win = std::make_unique<IniWindow>();
-  root->SetWindow(std::move(win));
+  // std::unique_ptr<IniWindow> win = std::make_unique<IniWindow>();
+  // root->SetWindow(std::move(win));
 #endif
 
   // root->GetChild(1)->Vsplit(true);
@@ -543,11 +549,6 @@ int main(int argc, char** argv) {
   // root->GetChild(2)->SetPane(std::move(docpane5));
 
   // Split* active = root->GetChild(1);
-  std::unique_ptr<Tab> tab = std::make_unique<Tab>(std::move(root));
-
-  std::unique_ptr<Ui> window = std::make_unique<Ui>();
-  window->AddTab(std::move(tab));
-
   e->SetWindow(std::move(window));
 
   e->MainLoop();

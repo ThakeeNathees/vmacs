@@ -210,26 +210,12 @@ private:
   // FIXME(grep): This is temproary.
   std::string info_bar_text;
 
+private:
+  void DrawHomeScreen(FrameBuffer buff, Position pos, Size area);
+
 public: // Actions.
   static bool Action_ClosePopup(EventHandler* self);
   static bool Action_PopupFilesFinder(EventHandler* self);
-};
-
-// -----------------------------------------------------------------------------
-// Initial Window.
-// -----------------------------------------------------------------------------
-
-
-class IniWindow: public Window {
-public:
-  IniWindow();
-
-  static KeyTree keytree;
-
-private:
-  void _Update() override;
-  bool _HandleEvent(const Event& event) override;
-  void _Draw(FrameBuffer buff, Position pos, Size area) override;
 };
 
 
