@@ -526,8 +526,11 @@ int main(int argc, char** argv) {
   it.Next();
   ASSERT(it.Get() == nullptr, OOPS);
 #else
-  std::unique_ptr<DocumentWindow> docwindow = std::make_unique<DocumentWindow>(doc);
-  root->SetWindow(std::move(docwindow));
+  // std::unique_ptr<DocumentWindow> docwindow = std::make_unique<DocumentWindow>(doc);
+  // root->SetWindow(std::move(docwindow));
+
+  std::unique_ptr<IniWindow> win = std::make_unique<IniWindow>();
+  root->SetWindow(std::move(win));
 #endif
 
   // root->GetChild(1)->Vsplit(true);

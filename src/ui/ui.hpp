@@ -25,12 +25,10 @@ public:
   Window(const KeyTree* keytree); // The static key tree registry of the child class.
   virtual ~Window() = default;
 
-  // The handler should return true if the event is consumed by the window.
-  virtual void Update() = 0;
-
   // This will internally call _Draw(), and the subclasses should override it.
-  void Draw(FrameBuffer buff, Position pos, Size area);
   bool HandleEvent(const Event& event) final override;
+  void Update();
+  void Draw(FrameBuffer buff, Position pos, Size area);
 
   // Set if this window is active in it's tab, this will be called if the window
   // gained or lost focus.
@@ -44,8 +42,10 @@ private:
   // Weather this window is active in the tab.
   bool active = false;
 
-  virtual void _Draw(FrameBuffer buff, Position pos, Size area) = 0;
+  // The handler should return true if the event is consumed by the window.
   virtual bool _HandleEvent(const Event& event) = 0;
+  virtual void _Update() = 0;
+  virtual void _Draw(FrameBuffer buff, Position pos, Size area) = 0;
 
   // Override this to handled this event.
   virtual void OnFocusChanged(bool focus);
@@ -215,6 +215,23 @@ public: // Actions.
   static bool Action_PopupFilesFinder(EventHandler* self);
 };
 
+// -----------------------------------------------------------------------------
+// Initial Window.
+// -----------------------------------------------------------------------------
+
+
+class IniWindow: public Window {
+public:
+  IniWindow();
+
+  static KeyTree keytree;
+
+private:
+  void _Update() override;
+  bool _HandleEvent(const Event& event) override;
+  void _Draw(FrameBuffer buff, Position pos, Size area) override;
+};
+
 
 // -----------------------------------------------------------------------------
 // Document Window.
@@ -228,7 +245,6 @@ public:
   DocumentWindow();
   DocumentWindow(std::shared_ptr<Document> document);
 
-  void Update() override;
 
   // Events.
   void OnDocumentChanged() override;
@@ -257,6 +273,7 @@ private:
   bool cursor_blink_show  = true;
 
 private:
+  void _Update() override;
   bool _HandleEvent(const Event& event) override;
   void _Draw(FrameBuffer buff, Position pos, Size area) override;
 
@@ -310,8 +327,6 @@ class FindWindow : public Window {
 public:
   FindWindow(std::unique_ptr<Finder> finder);
 
-  void Update() override;
-
 private:
   std::unique_ptr<Finder> finder;
 
@@ -327,6 +342,7 @@ private:
                             // selection is on the view.
 
 private:
+  void _Update() override;
   bool _HandleEvent(const Event& event) override;
   void _Draw(FrameBuffer buff, Position pos, Size area) override;
 

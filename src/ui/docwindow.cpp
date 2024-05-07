@@ -50,7 +50,7 @@ bool DocumentWindow::_HandleEvent(const Event& event) {
 }
 
 
-void DocumentWindow::Update() {
+void DocumentWindow::_Update() {
   // Update the cursor blink.
   if (cursor_blink_period > 0) {
     int now = GetElapsedTime();

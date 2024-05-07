@@ -20,6 +20,11 @@ KeyTree Ui::keytree;
 
 Window::Window(const KeyTree* keytree) : EventHandler(keytree) {}
 
+void Window::Update() {
+  _Update();
+}
+
+
 void Window::Draw(FrameBuffer buff, Position pos, Size area) {
   this->pos = pos;
   this->area = area;
