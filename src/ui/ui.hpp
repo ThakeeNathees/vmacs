@@ -17,6 +17,9 @@
 // Window.
 // -----------------------------------------------------------------------------
 
+class Split;
+class Tab;
+
 // Note that since Window is a subtype of event handler. And HandleEvent() is
 // already defined.
 class Window : public EventHandler {
@@ -35,13 +38,31 @@ public:
   void SetActive(bool active);
   bool IsActive() const;
 
+  // Setter and getter for for should_close.
+  void SetShouldClose();
+  bool IsShouldClose() const;
+
+  // This should return a copy of the current window to display in a split.
+  virtual std::unique_ptr<Window> Copy() const = 0;
+
 private:
+
+  // FIXME: The bellow values are used to check if the mouse event is in bound.
+  // refactor (remove if we can).
   Position pos = {0};
   Size area    = {0};
 
-  // Weather this window is active in the tab.
-  bool active = false;
+  // Set this to true if this window has to be closed by the owner of this
+  // window.
+  bool should_close = false;
 
+  // The split it belongs to.
+  Split* split = nullptr;
+
+  friend class Split;
+  friend class Tab;
+
+private:
   // The handler should return true if the event is consumed by the window.
   virtual bool _HandleEvent(const Event& event) = 0;
   virtual void _Update() = 0;
@@ -103,12 +124,19 @@ public:
   // Both a leaf spit which is not initialized and a non-leaf split contains
   // nullptr window.
   Window* GetWindow();
+  const Window* GetWindow() const;
 
   // Return the root split, which is a split without a parent split. If the
   // split itself is the root simply return itself. Note that this method will
   // never return nullptr.
   Split* GetRoot();
 
+  // Set the tab of this split and all of it's children. Note that since we can
+  // create the splits before adding it to a tab, we need to set the tab recursively
+  // for all the splits in the tree here.
+  void SetTab(Tab* tab);
+
+  // Returns an iterater which iterates on the leaf nodes.
   Iterator Iterate();
 
 private:
@@ -124,6 +152,10 @@ private:
   // it could be nullptr if the window is not initialized yet.
   std::unique_ptr<Window> window = nullptr;
 
+  // The tab it belongs to.
+  Tab* tab = nullptr;
+
+  friend class Window;
   friend class Tab;
   friend class Iterator;
 
@@ -152,6 +184,7 @@ public:
   void Update();
   void Draw(FrameBuffer buff, Position pos, Size area);
 
+  const Split* GetActiveSplit();
 
   // Key tree is public so we can register action and bind to keys outside. I
   // don't like the OOP getters and setters (what's the point)?
@@ -168,6 +201,8 @@ private:
 
 public: // Actions.
   static bool Action_NextWindow(Tab* self);
+  static bool Action_Vsplit(Tab* self);
+  static bool Action_Hsplit(Tab* self);
 
 };
 
@@ -204,7 +239,8 @@ public:
   static KeyTree keytree;
 
 private:
-  std::unique_ptr<Tab> tab; // TODO: Make this a vector.
+  int active_tab_index = -1; // Index of current active tab.
+  std::vector<std::unique_ptr<Tab>> tabs;
   std::unique_ptr<Window> popup;
 
   // FIXME(grep): This is temproary.
@@ -212,10 +248,13 @@ private:
 
 private:
   void DrawHomeScreen(FrameBuffer buff, Position pos, Size area);
+  void DrawTabsBar(FrameBuffer buff, Position pos, Size area);
 
 public: // Actions.
-  static bool Action_ClosePopup(EventHandler* self);
   static bool Action_PopupFilesFinder(EventHandler* self);
+  static bool Action_NewDocument(EventHandler* self);
+  static bool Action_TabNext(EventHandler* self);
+  static bool Action_TabPrev(EventHandler* self);
 };
 
 
@@ -231,10 +270,10 @@ public:
   DocumentWindow();
   DocumentWindow(std::shared_ptr<Document> document);
 
-
   // Events.
   void OnDocumentChanged() override;
   void OnFocusChanged(bool focus) override;
+  std::unique_ptr<Window> Copy() const override;
 
 private:
   // The document we're editing on this window.
@@ -313,6 +352,12 @@ class FindWindow : public Window {
 public:
   FindWindow(std::unique_ptr<Finder> finder);
 
+  // FIXME: Copy doesn't applied to FindWindow since it's a popup (TODO: implement
+  // popup window base class) and we shouldn't and cannot split popup. This feels
+  // like a bad design, figure out how to do it properly instead of "throwing"
+  // not implemented error.
+  std::unique_ptr<Window> Copy() const override;
+
 private:
   std::unique_ptr<Finder> finder;
 
@@ -354,6 +399,7 @@ public: // Actions.
   static bool Action_CycleSelection(FindWindow* self);
   static bool Action_CycleSelectionReversed(FindWindow* self);
   static bool Action_AcceptSelection(FindWindow* self);
+  static bool Action_Close(FindWindow* self);
 
 };
 

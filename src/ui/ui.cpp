@@ -54,15 +54,28 @@ bool Window::HandleEvent(const Event& event) {
 }
 
 
-// TOOD: Call OnActive callback on the inherited classes.
 void Window::SetActive(bool active) {
-  this->active = active;
   OnFocusChanged(active);
 }
 
 
 bool Window::IsActive() const {
-  return active;
+  ASSERT(split != nullptr, OOPS);
+  ASSERT(split->tab != nullptr, OOPS);
+  const Split* active_split = split->tab->GetActiveSplit();
+  ASSERT(active_split != nullptr, OOPS);
+  ASSERT(active_split->GetWindow() != nullptr, OOPS);
+  return active_split->GetWindow() == this;
+}
+
+
+void Window::SetShouldClose() {
+  should_close = true;
+}
+
+
+bool Window::IsShouldClose() const {
+  return should_close;
 }
 
 
@@ -77,6 +90,7 @@ void Window::OnFocusChanged(bool focus) {}
 Split* Split::InsertChild(int index, std::unique_ptr<Split> child) {
   ASSERT(index >= 0 && index <= children.size(), OOPS);
   child->parent = this;
+  child->tab = tab;
   children.insert(children.begin() + index, std::move(child));
   return children[index].get();
 }
@@ -141,12 +155,19 @@ int Split::GetIndexInParent() const {
 
 
 void Split::SetWindow(std::unique_ptr<Window> window) {
+  ASSERT(window != nullptr, OOPS);
   ASSERT(type == Type::LEAF, OOPS);
   this->window = std::move(window);
+  this->window->split = this;
 }
 
 
 Window* Split::GetWindow() {
+  return window.get();
+}
+
+
+const Window* Split::GetWindow() const {
   return window.get();
 }
 
@@ -157,6 +178,14 @@ Split* Split::GetRoot() {
     curr = curr->parent;
   }
   return curr;
+}
+
+
+void Split::SetTab(Tab* tab) {
+  this->tab = tab;
+  for (std::unique_ptr<Split>& child: children) {
+    child->SetTab(tab);
+  }
 }
 
 
@@ -228,6 +257,7 @@ Tab::Tab(std::unique_ptr<Split> root_, Split* active_)
 
   // TODO: Validate the root and all of it's childs are met our invariant.
   ASSERT(root != nullptr, "Root split was nullptr.");
+
   if (active_ == nullptr) {
     active_ = root->Iterate().Get(); // Get the first leaf of the tree.
   }
@@ -236,6 +266,7 @@ Tab::Tab(std::unique_ptr<Split> root_, Split* active_)
   ASSERT(active_->type == Split::Type::LEAF, OOPS);
   ASSERT(active_->GetRoot() == root.get(), "Given active spit should be part of the given split tree.");
 
+  root->SetTab(this);
   this->active = active_;
 
   Window* window = this->active->GetWindow();
@@ -276,6 +307,11 @@ void Tab::Update() {
     if (window == nullptr) continue;
     window->Update();
   }
+}
+
+
+const Split* Tab::GetActiveSplit() {
+  return active;
 }
 
 
@@ -331,22 +367,53 @@ void Tab::DrawSplit(FrameBuffer buff, Split* split, Position pos, Size area) {
 }
 
 
-
 bool Tab::Action_NextWindow(Tab* self) {
   ASSERT(self->active != nullptr, OOPS);
   auto it = Split::Iterator(self->active);
   ASSERT(it.Get() != nullptr, OOPS);
   it.Next(); // Increment the leaf by one.
 
-  ASSERT(self->active->window != nullptr, OOPS);
-  self->active->window->SetActive(false);
+  ASSERT(self->active->GetWindow() != nullptr, OOPS);
+  self->active->GetWindow()->SetActive(false);
   if (it.Get() != nullptr) {
     self->active = it.Get();
   } else { // Reached the end of the tree.
     self->active = self->root->Iterate().Get();
   }
-  ASSERT(self->active->window != nullptr, OOPS);
-  self->active->window->SetActive(true);
+  ASSERT(self->active->GetWindow() != nullptr, OOPS);
+  self->active->GetWindow()->SetActive(true);
+  return true;
+}
+
+
+bool Tab::Action_Vsplit(Tab* self) {
+  ASSERT(self->active != nullptr, OOPS);
+  ASSERT(self->active->type == Split::Type::LEAF, OOPS);
+  bool right = true; // TODO: Get split pos from config like vim.
+  std::unique_ptr<Window> copy = self->active->GetWindow()->Copy();
+
+  self->active->GetWindow()->SetActive(false);
+  {
+    self->active = self->active->Vsplit(right);
+    self->active->SetWindow(std::move(copy));
+  }
+  self->active->GetWindow()->SetActive(true);
+  return true;
+}
+
+
+bool Tab::Action_Hsplit(Tab* self) {
+  ASSERT(self->active != nullptr, OOPS);
+  ASSERT(self->active->type == Split::Type::LEAF, OOPS);
+  bool bottom = true; // TODO: Get split pos from config like vim.
+  std::unique_ptr<Window> copy = self->active->GetWindow()->Copy();
+
+  self->active->GetWindow()->SetActive(false);
+  {
+    self->active = self->active->Hsplit(bottom);
+    self->active->SetWindow(std::move(copy));
+  }
+  self->active->GetWindow()->SetActive(true);
   return true;
 }
 
@@ -375,9 +442,11 @@ bool Ui::HandleEvent(const Event& event) {
   // Note that if the popup is available we won't send the event to the active
   // child split nodes.
   if (popup && popup->HandleEvent(event)) {
+    if (popup->IsShouldClose()) popup = nullptr; // This will destroy the popup.
     return_true;
-  } else if (tab && tab->HandleEvent(event)) {
-    return_true;
+  } else if (active_tab_index >= 0) {
+    ASSERT_INDEX(active_tab_index, tabs.size());
+    if (tabs[active_tab_index]->HandleEvent(event)) return_true;
   }
   #undef return_true
 
@@ -388,22 +457,35 @@ bool Ui::HandleEvent(const Event& event) {
 
 void Ui::Update() {
   if (popup) popup->Update();
-  if (tab) tab->Update();
+  for (auto& tab : tabs) tab->Update();
 }
 
 
 // FIXME(mess): Cleanup this mess.
 void Ui::Draw(FrameBuffer buff) {
 
-  if (tab) {
-    tab->Draw(buff, {0, 0}, {.width = buff.width, .height = buff.height-1});
+  Position pos = {0, 0};
+  Size area = {.width = buff.width, .height = buff.height-1};
+
+  if (tabs.size()) {
+    ASSERT_INDEX(active_tab_index, tabs.size());
+    std::unique_ptr<Tab>& tab = tabs[active_tab_index];
+
+    Position curr_pos = pos;
+    Size curr_area    = area;
+    if (tabs.size() >= 2) {
+      DrawTabsBar(buff, pos, area);
+      curr_pos.row += 1;
+      curr_area.height -= 1;
+    }
+    tab->Draw(buff, curr_pos, curr_area);
 
   } else {
-    DrawHomeScreen(buff, {0, 0}, {.width = buff.width, .height = buff.height-1});
+    DrawHomeScreen(buff, pos, area);
   }
 
   if (popup) {
-    popup->Draw(buff, {0, 0}, {.width = buff.width, .height = buff.height-1});
+    popup->Draw(buff, pos, area);
   }
 
   Style style_text = Editor::GetCurrentTheme()->GetStyle("ui.text");
@@ -437,7 +519,6 @@ void Ui::DrawHomeScreen(FrameBuffer buff, Position pos, Size area) {
   Style style = style_bg.Apply(style_text);
   // Style style_copyright = style_bg.Apply(theme->GetStyle("keyword"));
   Style style_copyright = style_bg.Apply(style_whitespace);
-  // --------------------------------------------------------------------------
 
   std::vector<std::pair<std::string, std::string>> items;
 
@@ -447,6 +528,7 @@ void Ui::DrawHomeScreen(FrameBuffer buff, Position pos, Size area) {
   items.push_back({ Utf8UnicodeToString(0xf022d) + " Live Grep",      "<C-g>" });
   // items.push_back({ Utf8UnicodeToString(0xf02e)  + " Bookmakrs",      "<C-b>" });
   items.push_back({ Utf8UnicodeToString(0xe22b)  + " Themes",         "<C-t>" });
+  // --------------------------------------------------------------------------
 
 
   // Get the maximum length of the display text so we need the padding length.
@@ -472,11 +554,68 @@ void Ui::DrawHomeScreen(FrameBuffer buff, Position pos, Size area) {
     curr.row += 2;
   }
 
+  // FIXME: Store this and the version somewhere global.
   std::string copyright = "Copyright (c) 2024 Thakee Nathees";
   curr.row = pos.row + area.height - 1;
   curr.col = pos.col + (area.width - copyright.size()) / 2;
   DrawTextLine(buff, copyright.c_str(), curr.col, curr.row, copyright.size(), style_copyright, false);
 
+}
+
+
+// TODO: Add multiple tabs and scroll and ensure active tab is in view.
+void Ui::DrawTabsBar(FrameBuffer buff, Position pos, Size area) {
+  ASSERT(tabs.size() > 0, OOPS);
+
+  // FIXME: Move this.
+  // --------------------------------------------------------------------------
+  const Theme* theme = Editor::GetCurrentTheme();
+  Style style_text       = theme->GetStyle("ui.text");
+  Style style_bg         = theme->GetStyle("ui.background");
+  Style style_whitespace = theme->GetStyle("ui.virtual.whitespace");
+  Style style_cursor     = theme->GetStyle("ui.cursor.primary");
+  Style style_selection  = theme->GetStyle("ui.selection.primary");
+  Style style_error      = theme->GetStyle("error");
+  Style style_warning    = theme->GetStyle("warning");
+
+  // Style style_active = style_bg.Apply(style_text); // FIXME:
+  // Style style_not_active = style_active;
+  // style_not_active.attrib |= VMACS_CELL_REVERSE;
+
+  Style style_menu     = theme->GetStyle("ui.menu");
+  Style style_menu_sel = theme->GetStyle("ui.menu.selected");
+
+  Style style_not_active = style_menu;
+  Style style_active = style_menu_sel.Apply(style_bg);
+  Style style_split = style_not_active;
+  style_split.fg = style_active.bg;
+
+  // --------------------------------------------------------------------------
+
+  Position curr = pos;
+  DrawRectangleFill(buff, curr.col, curr.row, area.width, 1, style_not_active);
+
+  // FIXME(grep): Tab naming.
+  for (int i = 0; i < tabs.size(); i++) {
+    auto& tab = tabs[i];
+    std::string tab_name = "tab"; // FIXME:
+
+    // TODO: If current file modified we put an indicator (+).
+    // This will be the displaied text of the tab bar including the padding.
+    std::string tab_bar_display = std::string(" ") + tab_name + " ";
+
+    Style& style = (i == active_tab_index) ? style_active : style_not_active;
+    DrawTextLine(buff, tab_bar_display.c_str(), curr.col, curr.row, tab_bar_display.size(), style, true);
+    curr.col += tab_bar_display.size();
+
+    if (i == active_tab_index || (i+1) == active_tab_index) {
+      SET_CELL(buff, curr.col, curr.row, ' ', style_active);
+    } else {
+      DrawVerticalLine(buff, curr.col, curr.row, 1, style_split);
+    }
+
+    curr.col++;  // +1 for vertical split.
+  }
 }
 
 
@@ -501,23 +640,49 @@ void Ui::Error(const std::string& msg) {
 
 
 void Ui::AddTab(std::unique_ptr<Tab> tab) {
-  this->tab = std::move(tab);
+  active_tab_index = tabs.size();
+  tabs.push_back(std::move(tab));
 }
 
 
-bool Ui::Action_ClosePopup(EventHandler* eh) {
+bool Ui::Action_PopupFilesFinder(EventHandler* eh) {
   Ui* self = (Ui*) eh;
-  if (self->popup.get()) {
-    self->popup = nullptr; // This will destroy.
-    return true;
-  }
-  return false;
+  if (self->popup != nullptr) return false;
+  self->popup = std::make_unique<FindWindow>(std::make_unique<FilesFinder>());
+  return true;
 }
 
 
-bool Ui::Action_PopupFilesFinder(EventHandler* self) {
-  Ui* w = (Ui*) self;
-  if (w->popup != nullptr) return false;
-  w->popup = std::make_unique<FindWindow>(std::make_unique<FilesFinder>());
+bool Ui::Action_NewDocument(EventHandler* eh) {
+  Ui* self = (Ui*) eh;
+  // FIXME: Do I need to register the document at the editor registry, In that case
+  // what path should i use?
+  std::shared_ptr<Document> document = std::make_shared<Document>();
+  std::unique_ptr<DocumentWindow> docwindow = std::make_unique<DocumentWindow>(document);
+  std::unique_ptr<Split> root = std::make_unique<Split>();
+  root->SetWindow(std::move(docwindow));
+  std::unique_ptr<Tab> tab = std::make_unique<Tab>(std::move(root));
+  self->AddTab(std::move(tab));
+  return true;
+}
+
+
+bool Ui::Action_TabNext(EventHandler* eh) {
+  Ui* self = (Ui*) eh;
+  if (self->tabs.size() == 0) return false;
+  self->active_tab_index++;
+  self->active_tab_index %= self->tabs.size();
+  return true;
+}
+
+
+bool Ui::Action_TabPrev(EventHandler* eh) {
+  Ui* self = (Ui*) eh;
+  if (self->tabs.size() == 0) return false;
+  if (self->active_tab_index == 0) {
+    self->active_tab_index = self->tabs.size() - 1;
+  } else {
+    self->active_tab_index--;
+  }
   return true;
 }

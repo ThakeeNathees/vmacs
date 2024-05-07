@@ -17,7 +17,7 @@ DocumentWindow::DocumentWindow() : DocumentWindow(std::make_shared<Document>()) 
 
 
 DocumentWindow::DocumentWindow(std::shared_ptr<Document> document_)
-  : Window(&keytree), document(document_) {
+  : Window(&keytree), document(document_), cursors_backup(document->buffer.get()) {
 
   cursors_backup = document->cursors;
   SetMode("*"); // FIXME:
@@ -69,7 +69,6 @@ void DocumentWindow::OnFocusChanged(bool focus) {
 
   document->ClearCompletionItems();
 
-  // FIXME(mess): Use getter and setter to handle this properly.
   // If we lost focus, take a backup of the cursors.
   if (!focus) {
     cursors_backup = document->GetCursors();
@@ -104,6 +103,13 @@ void DocumentWindow::EnsureCursorOnView() {
   } else if (view_start.row + text_area.height <= row) {
     view_start.row = row - text_area.height + 1;
   }
+}
+
+
+std::unique_ptr<Window> DocumentWindow::Copy() const {
+  std::unique_ptr<DocumentWindow> ret = std::make_unique<DocumentWindow>(*this);
+  ret->SetActive(false); // FIXME: Remove this after 'active' removed.
+  return std::move(ret);
 }
 
 
@@ -525,7 +531,23 @@ bool DocumentWindow::Action_Backspace(DocumentWindow* self) { self->document->Ba
 bool DocumentWindow::Action_Undo(DocumentWindow* self) { self->document->Undo(); COMMON_ACTION_END(); }
 bool DocumentWindow::Action_Redo(DocumentWindow* self) { self->document->Redo(); COMMON_ACTION_END(); }
 bool DocumentWindow::Action_TriggerCompletion(DocumentWindow* self) { self->document->TriggerCompletion(); COMMON_ACTION_END(); }
-bool DocumentWindow::Action_CycleCompletionList(DocumentWindow* self) { self->document->CycleCompletionList(); self->document->SelectCompletionItem(); COMMON_ACTION_END(); }
-bool DocumentWindow::Action_CycleCompletionListReversed(DocumentWindow* self) { self->document->CycleCompletionListReversed(); self->document->SelectCompletionItem(); COMMON_ACTION_END(); }
-bool DocumentWindow::Action_Clear(DocumentWindow* self) { self->document->ClearCompletionItems(); self->document->cursors.ClearMultiCursors(); self->document->cursors.ClearSelections(); COMMON_ACTION_END(); }
+
+bool DocumentWindow::Action_CycleCompletionList(DocumentWindow* self) {
+  if (!self->document->CycleCompletionList()) return false;
+  self->document->SelectCompletionItem();
+  COMMON_ACTION_END();
+}
+
+bool DocumentWindow::Action_CycleCompletionListReversed(DocumentWindow* self) {
+  if (!self->document->CycleCompletionListReversed()) return false;
+  self->document->SelectCompletionItem();
+  COMMON_ACTION_END();
+}
+
+bool DocumentWindow::Action_Clear(DocumentWindow* self) {
+  self->document->ClearCompletionItems();
+  self->document->cursors.ClearMultiCursors();
+  self->document->cursors.ClearSelections();
+  COMMON_ACTION_END();
+}
 

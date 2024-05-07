@@ -99,14 +99,14 @@ std::vector<Event> Raylib::GetEvents() {
 
   if (WindowShouldClose()) events.push_back(Event(Event::Type::CLOSE));
 
-  do {
+  if (IsWindowResized()) {
+    Event e(Event::Type::RESIZE);
+    e.resize.width = GetScreenWidth();
+    e.resize.height = GetScreenHeight();
+    events.push_back(e);
+  }
 
-    if (IsWindowResized()) {
-      Event e(Event::Type::RESIZE);
-      e.resize.width = GetScreenWidth();
-      e.resize.height = GetScreenHeight();
-      events.push_back(e);
-    }
+  do {
 
     // Ignore all the ctrl, shift, alt, super keys. (handled by the modifiers).
     int key = GetKeyPressed();

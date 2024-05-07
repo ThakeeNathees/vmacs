@@ -33,30 +33,30 @@ std::shared_ptr<Editor> Editor::Singleton() {
 
 
 void Editor::Info(const std::string& msg) {
-  IUi* window = Singleton()->window.get();
-  ASSERT(window != nullptr, "Editor::singleton.window was nullptr, did you forget to initialize one?");
-  window->Info(msg);
+  IUi* ui = Singleton()->ui.get();
+  ASSERT(ui != nullptr, "Editor::singleton.ui was nullptr, did you forget to initialize one?");
+  ui->Info(msg);
 }
 
 
 void Editor::Success(const std::string& msg) {
-  IUi* window = Singleton()->window.get();
-  ASSERT(window != nullptr, "Editor::singleton.window was nullptr, did you forget to initialize one?");
-  window->Success(msg);
+  IUi* ui = Singleton()->ui.get();
+  ASSERT(ui != nullptr, "Editor::singleton.ui was nullptr, did you forget to initialize one?");
+  ui->Success(msg);
 }
 
 
 void Editor::Warning(const std::string& msg) {
-  IUi* window = Singleton()->window.get();
-  ASSERT(window != nullptr, "Editor::singleton.window was nullptr, did you forget to initialize one?");
-  window->Warning(msg);
+  IUi* ui = Singleton()->ui.get();
+  ASSERT(ui != nullptr, "Editor::singleton.ui was nullptr, did you forget to initialize one?");
+  ui->Warning(msg);
 }
 
 
 void Editor::Error(const std::string& error) {
-  IUi* window = Singleton()->window.get();
-  ASSERT(window != nullptr, "Editor::singleton.window was nullptr, did you forget to initialize one?");
-  window->Error(error);
+  IUi* ui = Singleton()->ui.get();
+  ASSERT(ui != nullptr, "Editor::singleton.ui was nullptr, did you forget to initialize one?");
+  ui->Error(error);
 }
 
 
@@ -67,7 +67,7 @@ void Editor::ReDraw() {
 
 // FIXME: This is temproary.
 const Theme* Editor::GetCurrentTheme() {
-  return Singleton()->themes["dracula"].get();
+  return Singleton()->themes["gruvbox"].get();
 }
 
 
@@ -112,8 +112,13 @@ void Editor::SetFrontEnd(std::unique_ptr<FrontEnd> frontend) {
 }
 
 
-void Editor::SetWindow(std::unique_ptr<IUi> window) {
-  this->window = std::move(window);
+void Editor::SetUi(std::unique_ptr<IUi> ui) {
+  this->ui = std::move(ui);
+}
+
+
+IUi* Editor::GetUi() {
+  return ui.get();
 }
 
 
@@ -133,7 +138,7 @@ int Editor::MainLoop() {
   ASSERT(frontend != nullptr, "No frontend is available. Did you forgot to "
                               "call IEditor::SetFrontEnd() ?");
 
-  ASSERT(window != nullptr, "window is nullptr. Did you forget to set one?");
+  ASSERT(ui != nullptr, "ui is nullptr. Did you forget to set one?");
 
   if (!frontend->Initialize()) {
     fprintf(stdout, "Editor initialize failed.\n");
@@ -164,12 +169,12 @@ int Editor::MainLoop() {
       if (event.type == Event::Type::CLOSE) {
         running = false;
       }
-      window->HandleEvent(event);
+      ui->HandleEvent(event);
       redraw = true;
     }
 
     // Update call.
-    window->Update();
+    ui->Update();
 
     // FIXME: Because of raylib we can't do this. The fron end should own the main
     // loop and use the eidtor as a instance to run at each iteration.
@@ -217,7 +222,7 @@ void Editor::Draw() {
     SET_CELL_I(buff, i, ' ', style_bg);
   }
 
-  window->Draw(buff);
+  ui->Draw(buff);
   // FIXME(grep): Move this insde window.
   frontend->Display(style_bg.bg.value_or(0xffffff)); // FIXME: background color for raylib.
 }
@@ -235,8 +240,9 @@ std::shared_ptr<Document> Editor::OpenDocument(const Path& path) {
 
   std::shared_ptr<Buffer> buff = std::make_shared<Buffer>(text);
   std::shared_ptr<Document> document = std::make_shared<Document>(path, buff);
-  documents[path] = document;
+  document->SetThemeGetter([](){ return GetCurrentTheme(); });
 
+  documents[path] = document;
   return document;
 }
 

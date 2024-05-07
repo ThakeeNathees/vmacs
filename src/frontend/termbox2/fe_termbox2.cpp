@@ -131,7 +131,7 @@ std::vector<Event> Termbox2::GetEvents() {
         case TB_KEY_CTRL_G           : e.key.code = Event::KEY_G; break;
 
         // case TB_KEY_BACKSPACE     :
-        case TB_KEY_CTRL_H           : e.key.ctrl = false; e.key.code = Event::KEY_H; break;
+        case TB_KEY_CTRL_H           : e.key.code = Event::KEY_H; break;
 
         // case TB_KEY_TAB           :
         case TB_KEY_CTRL_I           : e.key.ctrl = false; e.key.code = Event::KEY_TAB; break;

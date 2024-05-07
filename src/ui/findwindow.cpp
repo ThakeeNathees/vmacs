@@ -26,6 +26,12 @@ FindWindow::FindWindow(std::unique_ptr<Finder> finder_)
 }
 
 
+std::unique_ptr<Window> FindWindow::Copy() const {
+  ASSERT(false, "Copy constructor doesn't applied to FindWindow and shouldn't be called.");
+  return nullptr;
+}
+
+
 bool FindWindow::_HandleEvent(const Event& event) {
   if (event.type == Event::Type::KEY && event.key.unicode != 0) {
     char c = (char) event.key.unicode;
@@ -233,13 +239,44 @@ bool FindWindow::Action_Backspace(FindWindow* self) {
   return true;
 }
 
+
 // FIXME(mess): This is temproary.
 bool FindWindow::Action_AcceptSelection(FindWindow* self) {
-  Path path(self->GetSelectedItem());
+  std::string selected = self->GetSelectedItem();
+  if (selected.empty()) return false;
+
+  Path path(selected);
   if (!path.Exists()) {
     // TODO: Error to editor.
+    return false;
   }
-  Editor::Info(path.String());
-  // e->ClosePopup(); // Will destroy this, can't.
+
+  // FIXME(mess): Complete mess.
+  Editor* e = Editor::Singleton().get();
+  std::shared_ptr<Document> doc = e->OpenDocument(path);
+  ASSERT(doc != nullptr, OOPS);
+  std::shared_ptr<const Language> lang = e->GetLanguage("cpp");
+  ASSERT(lang != nullptr, OOPS);
+  std::shared_ptr<LspClient> client = e->GetLspClient("clangd");
+  ASSERT(client != nullptr, OOPS);
+  doc->SetLanguage(lang);
+  doc->SetLspClient(client);
+
+  // TODO: Implement tab from window and call it here.
+  std::unique_ptr<DocumentWindow> docwin = std::make_unique<DocumentWindow>(doc);
+  std::unique_ptr<Split> root = std::make_unique<Split>();
+  root->SetWindow(std::move(docwin));
+
+  std::unique_ptr<Tab> tab = std::make_unique<Tab>(std::move(root));
+  ((Ui*)e->GetUi())->AddTab(std::move(tab));
+
+  // Editor::Info(path.String());
+  self->SetShouldClose();
+  return true;
+}
+
+
+bool FindWindow::Action_Close(FindWindow* self) {
+  self->SetShouldClose();
   return true;
 }

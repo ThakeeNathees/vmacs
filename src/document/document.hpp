@@ -516,9 +516,12 @@ public:
   // doesn't clear the completion popup (like if you press enter on vscode),
   // if needed call ClearCompletionItems after It's designed in this way so the
   // one using this class can create their desired behavior.
-  void CycleCompletionList();
-  void CycleCompletionListReversed();
-  void SelectCompletionItem();
+  //
+  // Note that the bellow functions will return true if it cycled/selected items.
+  // Needed to verify if the event is handled by the key binding.
+  bool CycleCompletionList();
+  bool CycleCompletionListReversed();
+  bool SelectCompletionItem();
 
 private:
 

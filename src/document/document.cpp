@@ -11,7 +11,7 @@
 #include "document.hpp"
 
 
-Document::Document() : buffer(std::make_shared<Buffer>()), history(buffer) {}
+Document::Document() : Document(Path(), std::make_shared<Buffer>()) {}
 
 
 Document::Document(const Path& path, std::shared_ptr<Buffer> buffer)
@@ -161,7 +161,7 @@ std::unique_lock<std::mutex> Document::GetSignatureHelp(SignatureItems** items) 
 
 
 void Document::SetLspClient(std::shared_ptr<LspClient> client) {
-  if (language == nullptr) return;
+  if (language == nullptr) return; // TODO: Notify an error to the editor.
   lsp_client = client;
   lsp_client->DidOpen(path, buffer->GetData(), language->id);
 }
@@ -625,48 +625,52 @@ void Document::AddCursorUp() {
 
 
 void Document::TriggerCompletion() {
-  if (lsp_client) {
-    lsp_client->Completion(path, cursors.GetPrimaryCursor().GetCoord());
-  }
+  if (!lsp_client) return;
+  lsp_client->Completion(path, cursors.GetPrimaryCursor().GetCoord());
 }
 
 
 void Document::TriggerSignatureHelp() {
-  if (lsp_client) {
-    lsp_client->SignatureHelp(path, cursors.GetPrimaryCursor().GetCoord());
-  }
+  if (!lsp_client) return;
+  lsp_client->SignatureHelp(path, cursors.GetPrimaryCursor().GetCoord());
 }
 
 
-void Document::CycleCompletionList() {
+bool Document::CycleCompletionList() {
   {
     std::lock_guard<std::mutex> lock(mutex_completions);
-    if (completion_items.size() == 0) completion_selected = -1;
-    else {
+    if (completion_items.size() == 0) {
+      completion_selected = -1;
+      return false;
+    } else {
       completion_selected = (completion_selected + 1) % completion_items.size();
     }
   }
+  return true;
 }
 
 
-void Document::CycleCompletionListReversed() {
+bool Document::CycleCompletionListReversed() {
   {
     std::lock_guard<std::mutex> lock(mutex_completions);
-    if (completion_items.size() == 0) completion_selected = -1;
-    else {
+    if (completion_items.size() == 0) {
+      completion_selected = -1;
+      return false;
+    } else {
       completion_selected--;
       if (completion_selected < 0) {
         completion_selected = completion_items.size() - 1;
       }
     }
   }
+  return true;
 }
 
 
-void Document::SelectCompletionItem() {
+bool Document::SelectCompletionItem() {
   {
     std::lock_guard<std::mutex> lock(mutex_completions);
-    if (completion_items.size() == 0 || !BETWEEN(0, completion_selected, completion_items.size()-1)) return;
+    if (completion_items.size() == 0 || !BETWEEN(0, completion_selected, completion_items.size()-1)) return false;
     const CompletionItem& item = completion_items[completion_selected];
 
     Cursor& cursor = cursors.GetPrimaryCursor();
@@ -683,7 +687,8 @@ void Document::SelectCompletionItem() {
     if (!item.insert_text.empty()) InsertText(item.insert_text);
     else if (!item.text_edit.text.empty()) InsertText(item.text_edit.text);
     else InsertText(item.label);
-
   }
+
+  return true;
 }
 

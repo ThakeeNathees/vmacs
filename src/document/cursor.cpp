@@ -128,6 +128,8 @@ void MultiCursor::AddCursor(const Cursor& cursor) {
 
 
 void MultiCursor::AddCursorDown() {
+  ASSERT(buffer != nullptr, OOPS);
+
   if (reversed) {
     if (cursors.size() == 1) reversed = false;
     else { // Just remove the first cursor.
@@ -198,6 +200,7 @@ void MultiCursor::ClearSelections() {
 void MultiCursor::Changed() {
   // Clamp the cursor indexes if it goes out of range. This is possible if the
   // buffer changed without our influence or in a different split.
+  ASSERT(buffer != nullptr, OOPS);
   size_t buffsize = buffer->GetSize();
   for (Cursor& cursor : cursors) {
     int cursor_index = cursor.GetIndex();

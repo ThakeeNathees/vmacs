@@ -57,7 +57,9 @@ public:
   int MainLoop() override;
 
   void SetFrontEnd(std::unique_ptr<FrontEnd> frontend) override;
-  void SetWindow(std::unique_ptr<IUi> window);
+
+  void SetUi(std::unique_ptr<IUi> window);
+  IUi* GetUi();
 
   std::shared_ptr<Document> OpenDocument(const Path& path);
   std::shared_ptr<const Language> GetLanguage(const LanguageId& id) const;
@@ -67,7 +69,7 @@ private:
 
   static std::shared_ptr<Editor> singleton;
 
-  std::unique_ptr<IUi> window; // The ui root element.
+  std::unique_ptr<IUi> ui; // The ui root element.
   std::unique_ptr<FrontEnd> frontend;
 
   std::atomic<bool> redraw = true;

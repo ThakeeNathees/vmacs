@@ -245,6 +245,9 @@ void tree_sitter_test() {
 //
 //
 // Pending:
+//   open document in editor where language and lsp are solved from the path.
+//   check lsp for un saved (not in path) files.
+//   glue split positions (viw shouldn't move and the selection wont' change after modify in another split)
 //   check what happens with empty Path with lsp server and handle.
 //   open empty, search for a file with file picker.
 //   Add another language server client and test. show errors and ask inputs.
@@ -292,6 +295,7 @@ void tree_sitter_test() {
 //   the signature help contains multiple signatures only send the active signature to the caller not an array.
 //
 // BUG:
+//   opening the same file twise from finder will create another tab (it shoud just show the already opened tab).
 //   not scrolling if not focused
 //   draw auto completion popup only in the current focused window.
 //   drawing popup needs to be reviewed since if it goes out of the window, we just trim it but it needs to be pushed inside. (better draw primitives required)
@@ -320,6 +324,11 @@ void tree_sitter_test() {
 //     (file, rgrep, diagnos, buffer, symbols(treesitter))
 //     preview.
 //     actoin selection.
+//   Tab/split:
+//     Tab name.
+//     Tab scrolling if we have too many tabs.
+//     Closing tabs (closing duplicats etc).
+//     split size are fixed.
 //
 // Pending:
 //   <S-tab> is not bindable (but should be. "\x1b[Z")
@@ -397,15 +406,26 @@ int main(int argc, char** argv) {
 
   // FIXME: This shoul be called after the editor is initialized to send errors.
 
-  Ui::keytree.RegisterAction("close_popup",  Ui::Action_ClosePopup);
   Ui::keytree.RegisterAction("popup_files_finder",  Ui::Action_PopupFilesFinder);
+  Ui::keytree.RegisterAction("new_file",  Ui::Action_NewDocument);
+  Ui::keytree.RegisterAction("tab_next",  Ui::Action_TabNext);
+  Ui::keytree.RegisterAction("tab_prev",  Ui::Action_TabPrev);
 
   Ui::keytree.RegisterBinding("*", "<esc>", "close_popup");
   Ui::keytree.RegisterBinding("*", "<C-o>", "popup_files_finder");
+  Ui::keytree.RegisterBinding("*", "<C-n>", "new_file");
+  Ui::keytree.RegisterBinding("*", "<C-l>", "tab_next");
+  Ui::keytree.RegisterBinding("*", "<C-h>", "tab_prev");
+
 
   Tab::keytree.RegisterAction("next_window", (FuncAction) Tab::Action_NextWindow);
+  Tab::keytree.RegisterAction("vsplit", (FuncAction) Tab::Action_Vsplit);
+  Tab::keytree.RegisterAction("hsplit", (FuncAction) Tab::Action_Hsplit);
+
   Tab::keytree.RegisterBinding("*", "<C-w>w", "next_window");
   Tab::keytree.RegisterBinding("*", "<C-w><C-w>", "next_window");
+  Tab::keytree.RegisterBinding("*", "<C-w><C-v>", "vsplit");
+  Tab::keytree.RegisterBinding("*", "<C-w><C-h>", "hsplit");
 
   DocumentWindow::keytree.RegisterAction("cursor_up", (FuncAction) DocumentWindow::Action_CursorUp);
   DocumentWindow::keytree.RegisterAction("cursor_down", (FuncAction) DocumentWindow::Action_CursorDown);
@@ -467,6 +487,7 @@ int main(int argc, char** argv) {
   FindWindow::keytree.RegisterAction("cycle_selection", (FuncAction) FindWindow::Action_CycleSelection);
   FindWindow::keytree.RegisterAction("cycle_selection_reversed", (FuncAction) FindWindow::Action_CycleSelectionReversed);
   FindWindow::keytree.RegisterAction("accept_selection", (FuncAction) FindWindow::Action_AcceptSelection);
+  FindWindow::keytree.RegisterAction("close", (FuncAction) FindWindow::Action_Close);
 
   FindWindow::keytree.RegisterBinding("*", "<right>", "cursor_right");
   FindWindow::keytree.RegisterBinding("*", "<left>",  "cursor_left");
@@ -480,6 +501,7 @@ int main(int argc, char** argv) {
   FindWindow::keytree.RegisterBinding("*", "<tab>",  "cycle_selection");
   FindWindow::keytree.RegisterBinding("*", "<S-tab>", "cycle_selection_reversed");
   FindWindow::keytree.RegisterBinding("*", "<enter>", "accept_selection");
+  FindWindow::keytree.RegisterBinding("*", "<esc>", "close");
 
 
 
@@ -492,25 +514,20 @@ int main(int argc, char** argv) {
   editor->SetFrontEnd(std::move(fe));
 
   Editor* e = (Editor*) editor.get();
+  std::unique_ptr<Ui> ui = std::make_unique<Ui>();
 
+#if 0 // Split test.
 
   // FIXME:
   Path path("/Users/thakeenathees/Desktop/thakee/repos/vmacs/build/main.cpp");
   std::shared_ptr<Document> doc = e->OpenDocument(path);
   ASSERT(doc != nullptr, OOPS);
-  doc->SetThemeGetter([](){
-      return Editor::GetCurrentTheme();
-  });
   std::shared_ptr<const Language> lang = e->GetLanguage("cpp");
   ASSERT(lang != nullptr, OOPS);
   std::shared_ptr<LspClient> client = e->GetLspClient("clangd");
   ASSERT(client != nullptr, OOPS);
   doc->SetLanguage(lang);
   doc->SetLspClient(client);
-
-  std::unique_ptr<Ui> window = std::make_unique<Ui>();
-
-#if 0 // Split test.
 
   std::unique_ptr<DocumentWindow> docwindow1 = std::make_unique<DocumentWindow>(doc);
   std::unique_ptr<DocumentWindow> docwindow2 = std::make_unique<DocumentWindow>(doc);
@@ -529,7 +546,7 @@ int main(int argc, char** argv) {
   ASSERT(it.Get() == nullptr, OOPS);
 
   std::unique_ptr<Tab> tab = std::make_unique<Tab>(std::move(root));
-  window->AddTab(std::move(tab));
+  ui->AddTab(std::move(tab));
 
 #else
   // std::unique_ptr<DocumentWindow> docwindow = std::make_unique<DocumentWindow>(doc);
@@ -539,17 +556,7 @@ int main(int argc, char** argv) {
   // root->SetWindow(std::move(win));
 #endif
 
-  // root->GetChild(1)->Vsplit(true);
-  // root->GetChild(1)->Hsplit(true);
-  // root->GetChild(1)->GetChild(1)->Hsplit(true);
-  // root->GetChild(0)->SetPane(std::move(docpane1));
-  // root->GetChild(1)->GetChild(0)->SetPane(std::move(docpane2));
-  // root->GetChild(1)->GetChild(1)->SetPane(std::move(docpane3));
-  // root->GetChild(1)->GetChild(2)->SetPane(std::move(docpane4));
-  // root->GetChild(2)->SetPane(std::move(docpane5));
-
-  // Split* active = root->GetChild(1);
-  e->SetWindow(std::move(window));
+  e->SetUi(std::move(ui));
 
   e->MainLoop();
   return 0;
