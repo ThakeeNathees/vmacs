@@ -181,9 +181,9 @@ void MultiCursor::AddCursorUp() {
 
 void MultiCursor::ClearMultiCursors() {
   if (reversed) {
-    cursors.erase(cursors.begin(), cursors.end() - 1);
-  } else {
     cursors.erase(cursors.begin() + 1, cursors.end());
+  } else {
+    cursors.erase(cursors.begin(), cursors.end() - 1);
   }
 }
 

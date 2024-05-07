@@ -27,7 +27,6 @@ FindWindow::FindWindow(std::unique_ptr<Finder> finder_)
 
 
 bool FindWindow::_HandleEvent(const Event& event) {
-  if (EventHandler::HandleEvent(event)) return true;
   if (event.type == Event::Type::KEY && event.key.unicode != 0) {
     char c = (char) event.key.unicode;
     input_text.insert(cursor_index, std::string(1, event.key.unicode));

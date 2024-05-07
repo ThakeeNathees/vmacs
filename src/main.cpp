@@ -444,8 +444,8 @@ int main(int argc, char** argv) {
   DocumentWindow::keytree.RegisterBinding("*", "<S-down>",    "select_down");
   DocumentWindow::keytree.RegisterBinding("*", "<S-home>",    "select_home");
   DocumentWindow::keytree.RegisterBinding("*", "<S-end>",     "select_end");
-  DocumentWindow::keytree.RegisterBinding("*", "<M-down>",    "add_cursor_down");
-  DocumentWindow::keytree.RegisterBinding("*", "<M-up>",      "add_cursor_up");
+  DocumentWindow::keytree.RegisterBinding("*", "<A-down>",    "add_cursor_down");
+  DocumentWindow::keytree.RegisterBinding("*", "<A-up>",      "add_cursor_up");
   DocumentWindow::keytree.RegisterBinding("*", "<space>",     "insert_space");
   DocumentWindow::keytree.RegisterBinding("*", "<enter>",     "insert_newline");
   DocumentWindow::keytree.RegisterBinding("*", "<tab>",       "insert_tab");

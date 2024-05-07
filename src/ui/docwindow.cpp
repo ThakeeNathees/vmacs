@@ -25,8 +25,6 @@ DocumentWindow::DocumentWindow(std::shared_ptr<Document> document_)
 
 
 bool DocumentWindow::_HandleEvent(const Event& event) {
-  if (EventHandler::HandleEvent(event)) return true;
-
   if (event.type == Event::Type::KEY && event.key.unicode != 0) {
     char c = (char) event.key.unicode;
     document->EnterCharacter(c);
@@ -529,5 +527,5 @@ bool DocumentWindow::Action_Redo(DocumentWindow* self) { self->document->Redo();
 bool DocumentWindow::Action_TriggerCompletion(DocumentWindow* self) { self->document->TriggerCompletion(); COMMON_ACTION_END(); }
 bool DocumentWindow::Action_CycleCompletionList(DocumentWindow* self) { self->document->CycleCompletionList(); self->document->SelectCompletionItem(); COMMON_ACTION_END(); }
 bool DocumentWindow::Action_CycleCompletionListReversed(DocumentWindow* self) { self->document->CycleCompletionListReversed(); self->document->SelectCompletionItem(); COMMON_ACTION_END(); }
-bool DocumentWindow::Action_Clear(DocumentWindow* self) { self->document->ClearCompletionItems(); self->document->cursors.ClearMultiCursors(); COMMON_ACTION_END(); }
+bool DocumentWindow::Action_Clear(DocumentWindow* self) { self->document->ClearCompletionItems(); self->document->cursors.ClearMultiCursors(); self->document->cursors.ClearSelections(); COMMON_ACTION_END(); }
 

@@ -286,6 +286,10 @@ public:
   // Clear all the tracks of cursor and set back to the root node.
   void ResetCursor();
 
+  // Returns true if the cursor is at the root node and not listening to any key
+  // sequences at the moment.
+  bool IsCursorRoot() const;
+
 private:
   const KeyTree* tree = nullptr; // The tree we're traversing.
   std::string mode;              // Current mode we're in.
@@ -294,10 +298,6 @@ private:
   std::vector<event_t> recorded_events; // Previous events which leads here.
 
 private:
-  // Returns true if the cursor is at the root node and not listening to any key
-  // sequences at the moment.
-  bool IsCursorRoot() const;
-
   // When an event is encountered we feed that event to the keytree here to
   // update it's internal cursor, this will return the action for this event
   // if exists otherwise nullptr.
@@ -322,6 +322,10 @@ public:
 
   // Reset the cursor if we're already listening to some key combinations.
   void ResetCursor();
+
+  // This will return true if we're at the middle of listening an event
+  // combination like "<C-w><C-l>" etc.
+  bool ListeningCombination() const;
 
   void SetMode(const std::string& mode);
 

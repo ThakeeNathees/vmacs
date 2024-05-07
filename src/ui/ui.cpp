@@ -32,7 +32,11 @@ void Window::Draw(FrameBuffer buff, Position pos, Size area) {
 }
 
 
+// FIXME: The logic is incomplete.
 bool Window::HandleEvent(const Event& event) {
+
+  // FIXME: scroll and mouse clicks shold be handled properly and needs to be
+  // sent to the correct windows.
   if (event.type == Event::Type::MOUSE) {
     if (event.mouse.button == Event::MouseButton::MOUSE_WHEEL_UP ||
         event.mouse.button == Event::MouseButton::MOUSE_WHEEL_DOWN) {
@@ -42,7 +46,10 @@ bool Window::HandleEvent(const Event& event) {
       if (y < pos.row || y >= pos.row + area.height) return false;
     }
   }
-  // TODO: If mouse wheel event, check bounds.
+
+  // We'll true handle the event from the key bindings and if there isn't any
+  // key is binded to the event we'll pass that to the child window.
+  if (EventHandler::HandleEvent(event)) return true;
   return _HandleEvent(event);
 }
 
@@ -241,16 +248,24 @@ Tab::Tab(std::unique_ptr<Split> root_, Split* active_)
 
 bool Tab::HandleEvent(const Event& event) {
 
-  if (EventHandler::HandleEvent(event)) return true;
+  // If we're at the middle of listening key combination don't send the event
+  // to the bellow layers.
+  if (ListeningCombination()) {
+    bool ret = EventHandler::HandleEvent(event);
+    ASSERT(ret == true, OOPS);
+    return ret;
+  }
 
+  #define return_true do { ResetCursor(); return true; } while (false)
   // Send the event to the inner most child to handle if it cannot we do
   // event bubbling.
   if (active != nullptr && active->window != nullptr) {
-    if (active->window->HandleEvent(event)) return true;
+    if (active->window->HandleEvent(event)) return_true;
   }
+  #undef return_true
 
-  // No one consumed the event.
-  return false;
+  // No one consumed the event, we'll handle ourself.
+  return EventHandler::HandleEvent(event);
 }
 
 
@@ -348,18 +363,26 @@ Ui::Ui() : EventHandler(&keytree) {
 
 bool Ui::HandleEvent(const Event& event) {
 
-  if (EventHandler::HandleEvent(event)) return true;
+  // If we're at the middle of listening key combination don't send the event
+  // to the bellow layers.
+  if (ListeningCombination()) {
+    bool ret = EventHandler::HandleEvent(event);
+    ASSERT(ret == true, OOPS);
+    return ret;
+  }
 
+  #define return_true do { ResetCursor(); return true; } while (false)
   // Note that if the popup is available we won't send the event to the active
   // child split nodes.
   if (popup.get()) {
-    if (popup->HandleEvent(event)) return true;
+    if (popup->HandleEvent(event)) return_true;
   } else if (tab && tab->HandleEvent(event)) {
-    return true;
+    return_true;
   }
+  #undef return_true
 
   // No one consumed the event.
-  return false;
+  return EventHandler::HandleEvent(event);
 }
 
 
@@ -407,10 +430,10 @@ void Ui::AddTab(std::unique_ptr<Tab> tab) {
 }
 
 
-bool Ui::Action_ClosePopup(EventHandler* self) {
-  Ui* w = (Ui*) self;
-  if (w->popup.get()) {
-    w->popup = nullptr; // This will destroy.
+bool Ui::Action_ClosePopup(EventHandler* eh) {
+  Ui* self = (Ui*) eh;
+  if (self->popup.get()) {
+    self->popup = nullptr; // This will destroy.
     return true;
   }
   return false;

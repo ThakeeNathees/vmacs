@@ -103,9 +103,9 @@ bool KeyTreeCursor::TryEvent(EventHandler* handler, const Event& event) {
   // if (action && more) { } // TODO: Timeout and perform action.
 
   if (action) {
-    action(handler);
+    bool ret = action(handler);
     ResetCursor();
-    return true;
+    return ret;
   }
 
   // Don't do anything, just wait for the next keystroke and perform on it.
@@ -137,6 +137,11 @@ bool EventHandler::HandleEvent(const Event& event) {
 
 void EventHandler::ResetCursor() {
   cursor.ResetCursor();
+}
+
+
+bool EventHandler::ListeningCombination() const {
+  return !cursor.IsCursorRoot();
 }
 
 
