@@ -6,7 +6,7 @@
 // Copyright (c) 2024 Thakee Nathees
 // Licenced under: MIT
 
-#include "fe_termbox2.hpp"
+#include "frontend.hpp"
 
 
 bool Termbox2::Initialize() {

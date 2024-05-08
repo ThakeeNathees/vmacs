@@ -24,8 +24,7 @@
 #include "lsp/client.hpp"
 #include "ui/ui.hpp"
 
-#include "frontend/raylib/fe_raylib.hpp"
-#include "frontend/termbox2/fe_termbox2.hpp"
+#include "frontend/frontend.hpp"
 
 #include "editor/editor.hpp"
 #include <tree_sitter/api.h>
@@ -478,7 +477,6 @@ int main(int argc, char** argv) {
   DocumentWindow::keytree.RegisterBinding("*", "<esc>",       "clear");
 
 
-
   FindWindow::keytree.RegisterAction("cursor_right", (FuncAction) FindWindow::Action_CursorRight);
   FindWindow::keytree.RegisterAction("cursor_left", (FuncAction) FindWindow::Action_CursorLeft);
   FindWindow::keytree.RegisterAction("cursor_home", (FuncAction) FindWindow::Action_CursorHome);
@@ -505,13 +503,9 @@ int main(int argc, char** argv) {
 
 
 
-  std::unique_ptr<FrontEnd> fe;
-
-  if (argc == 2) fe = std::make_unique<Termbox2>();
-  else           fe = std::make_unique<Raylib>();
-
   std::shared_ptr<IEditor> editor = IEditor::Singleton();
-  editor->SetFrontEnd(std::move(fe));
+  std::unique_ptr<FrontEnd> frontend = std::make_unique<Termbox2>();
+  editor->SetFrontEnd(std::move(frontend));
 
   Editor* e = (Editor*) editor.get();
   std::unique_ptr<Ui> ui = std::make_unique<Ui>();
