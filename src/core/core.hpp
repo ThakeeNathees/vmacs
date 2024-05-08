@@ -262,6 +262,9 @@ public:
 
   // Before calling register binding, the action must be registered with the given name.
   void RegisterAction(const std::string& action_name, FuncAction action);
+
+  // If registered without specifing a mode an empty string will be used as the mode.
+  void RegisterBinding(const std::string& key_combination, const std::string& action_name);
   void RegisterBinding(const std::string& mode, const std::string& key_combination, const std::string& action_name);
 
 private:

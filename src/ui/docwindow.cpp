@@ -20,7 +20,9 @@ DocumentWindow::DocumentWindow(std::shared_ptr<Document> document_)
   : Window(&keytree), document(document_), cursors_backup(document->buffer.get()) {
 
   cursors_backup = document->cursors;
-  SetMode("*"); // FIXME:
+
+  // FIXME: Get the default mode from the config.
+  SetMode("insert");
 }
 
 

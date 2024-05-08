@@ -20,9 +20,6 @@ FindWindow::FindWindow(std::unique_ptr<Finder> finder_)
   finder->RegisterItemsChangeListener([&](){
     this->OnFilteredItemsChanged();
   });
-
-  // FIXME: Initial mode.
-  SetMode("*");
 }
 
 

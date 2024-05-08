@@ -272,8 +272,6 @@ Tab::Tab(std::unique_ptr<Split> root_, Split* active_)
   Window* window = this->active->GetWindow();
   ASSERT(window != nullptr, "A split with un-initialized window did you forget to set one?");
   window->SetActive(true);
-
-  SetMode("*");
 }
 
 
@@ -424,7 +422,6 @@ bool Tab::Action_Hsplit(Tab* self) {
 
 
 Ui::Ui() : EventHandler(&keytree) {
-  SetMode("*");
 }
 
 

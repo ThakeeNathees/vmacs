@@ -19,6 +19,11 @@ void KeyTree::RegisterAction(const std::string& action_name, FuncAction action) 
 }
 
 
+void KeyTree::RegisterBinding(const std::string& key_combination, const std::string& action_name) {
+  RegisterBinding("", key_combination, action_name);
+}
+
+
 void KeyTree::RegisterBinding(const std::string& mode, const std::string& key_combination, const std::string& action_name) {
   std::vector<event_t> events;
 
