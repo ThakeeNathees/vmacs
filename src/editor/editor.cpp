@@ -96,7 +96,7 @@ Editor::Editor() {
     languages[result.language_id] = lang;
   }
 
-  // FIXME(mess): Register LSP clients. TODO(grep): load the config from RESLOAD.
+  // FIXME(mess,registry): Register LSP clients. TODO(grep): load the config from RESLOAD.
   LspConfig config;
   config.id = "clangd";
   config.server_file = "clangd";
@@ -145,9 +145,6 @@ int Editor::MainLoop() {
     return 1;
   }
 
-  // What a mess.
-  // OpenDocument("/Users/thakeenathees/Desktop/thakee/repos/vmacs/build/main.cpp");
-
   // Async run event loop.
   std::thread event_loop([this]() { EventLoop(); });
 
@@ -155,6 +152,7 @@ int Editor::MainLoop() {
   // while we sleep.
   int time_ms = GetElapsedTime();
 
+  // FIXME(mess,config): move this to config.
   // 30 FPS : 33 milliseconds
   // 60 FPS : 16 milliseconds
   const int WAIT_TIME_MS = 33;

@@ -134,5 +134,3 @@ struct SignatureItems {
   int active_parameter = -1; // If not in range ommit.
 };
 
-
-

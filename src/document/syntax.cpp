@@ -189,7 +189,7 @@ static bool TreeSitterCheckPredicate(const char* source, const TSQuery* query, T
 //
 //    case "is-not?"_hash:
 //    } break;
-    
+
   }
 
   return true;

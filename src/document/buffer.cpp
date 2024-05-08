@@ -132,6 +132,7 @@ int Buffer::CoordToIndex(Coord coord) const {
   return lines.Get()[coord.line].start + coord.character;
 }
 
+
 int Buffer::ColumnToIndex(int column, int line_num, int* col_delta) const {
   // tab_width will degrease for each character and if reached 0, will reset to
   // the tabsize again.

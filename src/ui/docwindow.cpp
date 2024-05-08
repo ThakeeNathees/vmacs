@@ -33,14 +33,18 @@ bool DocumentWindow::_HandleEvent(const Event& event) {
     return true;
 
   } else if (event.type == Event::Type::MOUSE) {
+
+    // TODO: These are hardcoded values.
+    const int scroll_speed = 3; // 3 lines when scrolling.
+    const int visible_end  = 2; // 2 lines visible at the bottom after scroll.
+
     if (event.mouse.button == Event::MouseButton::MOUSE_WHEEL_UP) {
-      view_start.row = MAX(0, view_start.row-3); // FIXME: 3 is hardcoded here.
+      view_start.row = MAX(0, view_start.row-scroll_speed);
       return true;
     }
     if (event.mouse.button == Event::MouseButton::MOUSE_WHEEL_DOWN) {
       int lines_count = document->buffer->GetLineCount();
-      // FIXME: 3 (scroll speed), 2 (visible lines at end) is hardcoded here.
-      view_start.row = MIN(MAX(lines_count-2, 0), view_start.row + 3);
+      view_start.row = MIN(MAX(lines_count-visible_end, 0), view_start.row + scroll_speed);
       return true;
     }
   }
@@ -108,7 +112,6 @@ void DocumentWindow::EnsureCursorOnView() {
 
 std::unique_ptr<Window> DocumentWindow::Copy() const {
   std::unique_ptr<DocumentWindow> ret = std::make_unique<DocumentWindow>(*this);
-  ret->SetActive(false); // FIXME: Remove this after 'active' removed.
   return std::move(ret);
 }
 
@@ -324,7 +327,6 @@ static const int completion_kind_nerd_icon[] = {
 static const int completion_kind_count = sizeof completion_kind_nerd_icon / sizeof *completion_kind_nerd_icon;
 
 
-// FIXME: This method is not clean.
 void DocumentWindow::DrawAutoCompletions(FrameBuffer buff, Position docpos, Size docarea) {
 
   // FIXME: Cleanup this mess.-------------------------------------------------
@@ -333,7 +335,6 @@ void DocumentWindow::DrawAutoCompletions(FrameBuffer buff, Position docpos, Size
   Style style_menu_selected = theme->GetStyle("ui.menu.selected");
   Style style_active_param  = theme->GetStyle("type"); // FIXME: Not the correct one.
   //---------------------------------------------------------------------------
-
 
   // Get the completion items.
   std::vector<CompletionItem>* completion_items = nullptr;

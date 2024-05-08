@@ -222,7 +222,7 @@ MultiCursor History::CommitRemoveText(const MultiCursor& cursors_, int direction
       lsp_changes.push_back(lsp_change);
 
       // Update the buffer.
-      buffer->RemoveText(selection.start, count); 
+      buffer->RemoveText(selection.start, count);
       history_changed = true;
       delta_next_cursor -= count;
 

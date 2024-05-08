@@ -111,9 +111,9 @@ void DrawTextLine(FrameBuffer buff, const char* text, int x, int y, int width, S
   // Current x position we're drawing.
   int curr = x;
 
-  // FIXME: Move this somewhere general.
+  // FIXME(mess,icon): Move this somewhere general.
   // We draw an indicator that the text is trimmed with three dot unicode.
-  // 0x2026 : '…' 
+  // 0x2026 : '…'
   int trim_indicator = 0x2026;
 
   int length = Utf8Strlen(text);
@@ -326,6 +326,7 @@ bool IsCharWhitespace(int c) {
 // Key combination parsing.
 // ----------------------------------------------------------------------------
 
+
 // Copied from: https://stackoverflow.com/a/42844629/10846399
 bool EndsWith(std::string_view str, std::string_view suffix) {
     return str.size() >= suffix.size() && str.compare(str.size()-suffix.size(), suffix.size(), suffix) == 0;
@@ -369,7 +370,7 @@ bool ParseKeyBindingString(std::vector<event_t>& events, const char* binding) {
     char c = *ptr++;
 
     // Escape '<' and '\\'.
-    // if (c == '\\') { TODO; continue; } 
+    // if (c == '\\') { TODO; continue; }
 
     // Parse special key or modifiers.
     if (c == '<') {
@@ -436,7 +437,7 @@ bool ParseKeyBindingString(std::vector<event_t>& events, const char* binding) {
       #undef CONSUME_RANGE
 
       continue;
-    } 
+    }
 
     // Capture single character.
     #define CONSUME_CHARACTER(character) \

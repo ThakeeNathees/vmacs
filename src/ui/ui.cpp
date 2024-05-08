@@ -13,6 +13,7 @@
 KeyTree Tab::keytree;
 KeyTree Ui::keytree;
 
+
 // -----------------------------------------------------------------------------
 // Window.
 // -----------------------------------------------------------------------------
@@ -32,7 +33,6 @@ void Window::Draw(FrameBuffer buff, Position pos, Size area) {
 }
 
 
-// FIXME: The logic is incomplete.
 bool Window::HandleEvent(const Event& event) {
 
   // FIXME: scroll and mouse clicks shold be handled properly and needs to be
@@ -349,7 +349,7 @@ void Tab::DrawSplit(FrameBuffer buff, Split* split, Position pos, Size area) {
       int width = (area.width / child_count) + ((is_last) ? (area.width % child_count) : 0);
       if (!is_last) width--;
       DrawSplit(buff, child, {.col = x, .row = y}, {.width = width, .height = area.height});
-      if (!is_last) { 
+      if (!is_last) {
         DrawVerticalLine(buff, x+width, y, area.height, style);
       }
       x += width+1; // +1 for split line.
@@ -358,7 +358,7 @@ void Tab::DrawSplit(FrameBuffer buff, Split* split, Position pos, Size area) {
       int height = (area.height / child_count) + ((is_last) ? (area.height % child_count) : 0);
       if (!is_last) height--; // We'll use one row for drawing the split.
       DrawSplit(buff, child, {.col = x, .row = y}, {.width = area.width, .height = height});
-      if (!is_last) { 
+      if (!is_last) {
         DrawHorizontalLine(buff, x, y+height, area.width, style);
       }
       y += height+1; // +1 for split line.
@@ -488,6 +488,7 @@ void Ui::Draw(FrameBuffer buff) {
     popup->Draw(buff, pos, area);
   }
 
+  // FIXME:
   Style style_text = Editor::GetCurrentTheme()->GetStyle("ui.text");
   Style style_bg   = Editor::GetCurrentTheme()->GetStyle("ui.background");
   Style style      = style_bg.Apply(style_text);
@@ -578,10 +579,6 @@ void Ui::DrawTabsBar(FrameBuffer buff, Position pos, Size area) {
   Style style_error      = theme->GetStyle("error");
   Style style_warning    = theme->GetStyle("warning");
 
-  // Style style_active = style_bg.Apply(style_text); // FIXME:
-  // Style style_not_active = style_active;
-  // style_not_active.attrib |= VMACS_CELL_REVERSE;
-
   Style style_menu     = theme->GetStyle("ui.menu");
   Style style_menu_sel = theme->GetStyle("ui.menu.selected");
 
@@ -595,10 +592,10 @@ void Ui::DrawTabsBar(FrameBuffer buff, Position pos, Size area) {
   Position curr = pos;
   DrawRectangleFill(buff, curr.col, curr.row, area.width, 1, style_not_active);
 
-  // FIXME(grep): Tab naming.
   for (int i = 0; i < tabs.size(); i++) {
     auto& tab = tabs[i];
-    std::string tab_name = "tab"; // FIXME:
+    // FIXME: Tab naming.
+    std::string tab_name = "tab " + std::to_string(i+1);
 
     // TODO: If current file modified we put an indicator (+).
     // This will be the displaied text of the tab bar including the padding.
@@ -655,8 +652,8 @@ bool Ui::Action_PopupFilesFinder(EventHandler* eh) {
 
 bool Ui::Action_NewDocument(EventHandler* eh) {
   Ui* self = (Ui*) eh;
-  // FIXME: Do I need to register the document at the editor registry, In that case
-  // what path should i use?
+  // FIXME: Do I need to register the document at the editor registry, In that
+  // case what path should i use?
   std::shared_ptr<Document> document = std::make_shared<Document>();
   std::unique_ptr<DocumentWindow> docwindow = std::make_unique<DocumentWindow>(document);
   std::unique_ptr<Split> root = std::make_unique<Split>();

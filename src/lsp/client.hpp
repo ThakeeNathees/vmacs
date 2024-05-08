@@ -6,7 +6,6 @@
 // Copyright (c) 2024 Thakee Nathees
 // Licenced under: MIT
 
-
 #pragma once
 
 #include "types.hpp"
@@ -124,7 +123,7 @@ private:
   // response is arrived.
   std::map<RequestId, ResponseContext> pending_requests;
   std::mutex mutex_pending_requests;
-  
+
 private:
   static void StdoutCallback(void* user_data, const char* buff, size_t length);
   static void StderrCallback(void* user_data, const char* buff, size_t length);

@@ -108,7 +108,7 @@ bool ShellExec(exec_options_t opt, pid_t* pid, std::atomic<bool>& loop_stop) {
       )) {
     return false;
   }
-  
+
   // Blocking IO loop.
   while (true) {
 
@@ -221,9 +221,9 @@ l_loop_end:
   return true;
 }
 
-/*******************************************************************************
- * Inter Process Communication
- ******************************************************************************/
+//------------------------------------------------------------------------------
+// Inter Process Communication
+//------------------------------------------------------------------------------
 
 class IpcPosix : public IPC {
 

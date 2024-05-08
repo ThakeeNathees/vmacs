@@ -156,7 +156,7 @@ void FindWindow::_Draw(FrameBuffer buff, Position pos_windows, Size area) {
 
   // TODO: If the line is too long, draw the tail only.
   //
-  // TODO: handle if the "returned" list is nullptr this may not be assered since
+  // TODO: Handle if the "returned" list is nullptr this may not be assered since
   // the user plugins can also return this and we don't want to crash on it.
   if (input_text.empty()) {
     const std::vector<std::string>* total = nullptr;
@@ -262,7 +262,7 @@ bool FindWindow::Action_AcceptSelection(FindWindow* self) {
   doc->SetLanguage(lang);
   doc->SetLspClient(client);
 
-  // TODO: Implement tab from window and call it here.
+  // FIXME(grep): Implement tab from window and call it here.
   std::unique_ptr<DocumentWindow> docwin = std::make_unique<DocumentWindow>(doc);
   std::unique_ptr<Split> root = std::make_unique<Split>();
   root->SetWindow(std::move(docwin));
@@ -270,7 +270,6 @@ bool FindWindow::Action_AcceptSelection(FindWindow* self) {
   std::unique_ptr<Tab> tab = std::make_unique<Tab>(std::move(root));
   ((Ui*)e->GetUi())->AddTab(std::move(tab));
 
-  // Editor::Info(path.String());
   self->SetShouldClose();
   return true;
 }

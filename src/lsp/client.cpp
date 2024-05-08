@@ -10,9 +10,6 @@
 
 #include <future>
 
-// FIXME: Remove this (mess), for debugging.
-// #define DUMP_TO_TERM
-
 #define CEHCK_JSON(json, key, is_type) \
   ((json).contains(key)) && (json)[key].is_type()
 
@@ -339,7 +336,7 @@ void LspClient::HandleNotify(const std::string& method, const Json& params) {
       diagnostic.start.character = diag["range"]["start"]["character"].template get<int>();
       diagnostic.end.line        = diag["range"]["end"]["line"].template get<int>();
       diagnostic.end.character   = diag["range"]["end"]["character"].template get<int>();
-      
+
       diagnostic.severity  = GET_INT_OR(diag, "severity", 3);
       diagnostic.code      = GET_STRING_OR(diag, "code", "");
       diagnostic.source    = GET_STRING_OR(diag, "source", "");
@@ -414,7 +411,7 @@ void LspClient::HandleResponse(RequestId id, const Json& result) {
 
      } break; // case RESP_COMPLETION
 
-    case RESP_SIGNATURE_HELP: 
+    case RESP_SIGNATURE_HELP:
      {
        if (cb_signature_help == nullptr) return;
        if (result.is_null()) return;
@@ -481,10 +478,6 @@ void LspClient::HandleError(RequestId id, const Json& error) {
 void LspClient::ParseAndHandleResponse(LspClient* self, std::string_view json_string) {
   try {
     Json content = Json::parse(json_string);
-#ifdef DUMP_TO_TERM
-    printf("%s\n", content.dump(2).c_str());
-#endif
-
     self->HandleServerContent(content);
 
   } catch (std::exception) {}
@@ -587,16 +580,9 @@ void LspClient::StdoutCallback(void* user_data, const char* buff, size_t length)
 }
 
 
-// FIXME: Clean up this mess.
 void LspClient::StderrCallback(void* user_data, const char* buff, size_t length) {
-  // printf(" [lsp-stderr] %*s\n", (int) length, buff);
-#ifdef DUMP_TO_TERM
-  printf("%*s", (int) length, buff);
-#endif
 }
 
 
 void LspClient::ExitCallback(void* user_data, int exit_code) {
-  // FIXME: this is temproary.
-  printf(" [lsp-client] exit_code=%i\n", exit_code);
 }

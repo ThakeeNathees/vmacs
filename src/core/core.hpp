@@ -233,9 +233,11 @@ struct Style {
   void ApplyInplace(const Style& other);
 };
 
+
 // -----------------------------------------------------------------------------
 // KeyTree.
 // -----------------------------------------------------------------------------
+
 
 // Actions are functions which are "bindable" to keys, and associated with a
 // key/key combination that invoke the action. The function should return true
@@ -341,6 +343,7 @@ private:
 // Theme.
 // -----------------------------------------------------------------------------
 
+
 class Theme {
 
 public:
@@ -436,5 +439,4 @@ void DrawVerticalLine(FrameBuffer buff, int x, int y, int height, Style style);
 // - Note that an empty string is valid here and result empty events.
 //
 bool ParseKeyBindingString(std::vector<event_t>& events, const char* binding);
-
 

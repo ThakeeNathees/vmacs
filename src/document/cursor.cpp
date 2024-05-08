@@ -94,9 +94,9 @@ bool Cursor::Equals(const Cursor& other) const {
 }
 
 
-/******************************************************************************
- * MultiCursor
- ******************************************************************************/
+// -----------------------------------------------------------------------------
+// MultiCursor
+// -----------------------------------------------------------------------------
 
 
 MultiCursor::MultiCursor(Buffer* buffer) : buffer(buffer) {
@@ -145,7 +145,7 @@ void MultiCursor::AddCursorDown() {
   int intended_col = cursors[0].GetIntendedColumn();
   const Slice& next = buffer->GetLine(coord.line + 1);
   int index = buffer->ColumnToIndex(intended_col, coord.line+1);
-  
+
   Cursor new_cursor(buffer);
   new_cursor.SetIndex(index);
   new_cursor.UpdateIntendedColumn();

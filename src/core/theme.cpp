@@ -67,7 +67,7 @@ Theme::Theme(const Json& json) {
     // Value can be either color string or a table.
 
     { // Check if string.
-      
+
       if (it.value().is_string()) {
         std::string name = it.value().template get<std::string>();
         Color rgb;

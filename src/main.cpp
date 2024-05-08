@@ -7,6 +7,171 @@
 // Licenced under: MIT
 
 
+
+
+
+// TODO:
+// The goal should be all pack together in as a single binary but also supports
+// loading resources from file (mainly theme and treesitter language).
+//
+// Mess,CodeQ:
+//   - Register themes, languages, lsp clients keybindings etc somewhere comon.
+//   - FIXME(mess,config):
+//       create a global config (fps, theme, tabsize, etc)
+//       Icons api, provide nerd/unicode/ascii icons based on config.
+//         vertical line horizontal line, welcome screen icons etc.
+//   - Remove rgbtoxterm and other from the vmacs header.
+//   - mouse events should sent to windows properly.
+//   - fetch theme capture from theme (or somewhere).
+//   - Re implement DrawTextLine.
+//   - Window::Copy method review.
+//   - Modes "*" and SetMode
+//   - FindFiles opening document (select).
+//   - Fix finder refactor and implement live grep.
+//   - Draw diagnostics the same line.
+//   - auto completion icons move.
+//   - Auto completion dropdown width has a bug, Size inconsistance.
+//   - auto completion should override the split edge.
+//   - auto completion scrolling.
+//   ------
+//   - vmacs.hpp
+//   - editor.(hpp/cpp)
+//
+//
+// Now:
+//
+//
+// Pending:
+//   open document in editor where language and lsp are solved from the path.
+//   check lsp for un saved (not in path) files.
+//   glue split positions (viw shouldn't move and the selection wont' change after modify in another split)
+//   check what happens with empty Path with lsp server and handle.
+//   open empty, search for a file with file picker.
+//   Add another language server client and test. show errors and ask inputs.
+//   Global config (tabsize), dropdown icons, dropdown list max count. lsp config.
+//   Better draw diagnostics.
+//   remove global thread stop and handle locally
+//     document depends on redraw and: use listeners.
+//     synax depends on get theme: use callback to fetch theme.
+//
+//   structure:
+//     config move.
+//     theme: getting values and proper, dynamic changeing (listener);
+//     cleanup what ever we have and try to complete: before adding more things.
+//     Platform interface and Utils class.
+//
+//  Note:
+//    Document shouldn't draw autocompletion if it's in a window that's not focused.
+//      and if the same document opened in two windows, only one show the list.
+//    Drawing autocompletion is done at the document draw level, so split will
+//      override the list if we draw another on top of.
+//
+// Big things:
+//   gap buffer.
+//   file tree.
+//   mouse support.
+//   load configs.
+//   status line
+//
+//   prompt line + autocompletion (if them auto update).
+//   number line + diagnos gutter.
+//   scrollbar
+//   macro.
+//   open/close files.
+//   splits and tabs.
+//   copy paste clipboard.
+//   nerdfont support (maybe not)
+//   terminal (maybe)
+//
+// LSP:
+//   completion: additional text (like import statement).
+//   goto definition.
+//   rename.
+//   get all references.
+//   hover (maybe)
+//   the signature help contains multiple signatures only send the active signature to the caller not an array.
+//
+// BUG:
+//   opening the same file twise from finder will create another tab (it shoud just show the already opened tab).
+//   not scrolling if not focused
+//   draw auto completion popup only in the current focused window.
+//   drawing popup needs to be reviewed since if it goes out of the window, we just trim it but it needs to be pushed inside. (better draw primitives required)
+//   signature help will hide pressing space after comma.
+//   esc doesn't clear the selection.
+//   [bug in termbox] color 0x000000 (black) cannot be used as it will be replaced
+//     with default color (use emacs theme compare with helix)
+//     ref: https://github.com/nsf/termbox/issues/114
+//
+//  Cleanup things:
+//    Registry of language server, and language => lsp mapping in the Editor:
+//      { "clangd" : LspClient(), "pyright" : LspClient(), ...  }
+//      { "c" : "clangd", "c++": "clangd",  "python" : "pyright", etc. }
+//    Theme manager...
+//    Global Configs.
+//
+//
+// Unfinished, working things:
+//   autocompletion + (show documnt, symbol helper for parameter, icon, etc.)
+//   autocompletion selection of items. icon config.
+//   Theme loading from file and swith theme, theme listening for change etc.
+//   proper keybinding and loading that from config.
+//   auto completion -> scroll if we cycle and add a scroll bar depends on better drawing code. (not current temp).
+//   IPC instead of "sh" as the file, use correct file with va_args (variadic parameters);
+//   finder (picker):
+//     (file, rgrep, diagnos, buffer, symbols(treesitter))
+//     preview.
+//     actoin selection.
+//   Tab/split:
+//     Tab name.
+//     Tab scrolling if we have too many tabs.
+//     Closing tabs (closing duplicats etc).
+//     split size are fixed.
+//
+// Pending:
+//   <S-tab> is not bindable (but should be. "\x1b[Z")
+//
+//   keybinding with logical like micro: (&, |, ',') (comman run sequence).
+//     <tab> : "cycle_completion_list | insert_tab"
+//     <S-tab> : "cycle_completion_list_reversed | insert_tab"
+//
+//   Need to check if fzf/rg exists in the system and report (implement fallback tools).
+//
+//   Main loop should be handled by the front end (so raylib can draw forever and termbox2 don't have to). and FE will set the FPS.
+//   editor send events and ask draw in a structured manner.
+//   M-c rename to A-c (M doesn't make sence, even in Eamcs)
+//   proper draw system. (request client for buffer and fill only if it needs to re-draw).
+//   line numbers.
+//   global configs (tabwidth, ).
+//   debug print that accumilate logs and dumps at the end.
+//   pair and auto indent
+//   editor modes implement properly.
+//   default bindnigs and tmeme settings.
+//   treesitter and syntax highlighting.
+//   status bar; prompt bar
+//   multi cursor select next match what under cursor (like micro)
+//
+//   Can't bind to 12j, d10|, ... with numbers.
+//
+// Code quality:
+//   Position and Coord names are alike (change Position -> Coord, Coord-> BuffPos)
+//   Write a clang-formater and apply through all the source.
+//   change all DrawBuffer parameter as reference than value.
+//   remove all the trailing white spaces all around the source.
+//   fprintf in the lsp client.
+//   write tests (if I have time)
+//   ipc timeout value hardcoded fix.
+//   merge core + buffer (maybe)
+//   Refactor fronend (better file names).
+//   Maybe rename.
+//   change all comments to // insead of /**/
+//   change color values to 256, (terminal support first).
+//   restructure the source files.
+//   use String (typedef) for all std::string.
+//
+//
+
+
+
 #include <vmacs.hpp>
 
 
@@ -233,147 +398,6 @@ void tree_sitter_test() {
   ts_parser_delete(parser);
   return;
 }
-
-
-// TODO:
-// The goal should be all pack together in as a single binary but also supports
-// loading resources from file (mainly theme and treesitter language).
-//
-// Now:
-//   initial window (pane).
-//
-//
-// Pending:
-//   open document in editor where language and lsp are solved from the path.
-//   check lsp for un saved (not in path) files.
-//   glue split positions (viw shouldn't move and the selection wont' change after modify in another split)
-//   check what happens with empty Path with lsp server and handle.
-//   open empty, search for a file with file picker.
-//   Add another language server client and test. show errors and ask inputs.
-//   Global config (tabsize), dropdown icons, dropdown list max count. lsp config.
-//   Better draw diagnostics.
-//   remove global thread stop and handle locally
-//     document depends on redraw and: use listeners.
-//     synax depends on get theme: use callback to fetch theme.
-//
-//   structure:
-//     config move.
-//     theme: getting values and proper, dynamic changeing (listener);
-//     cleanup what ever we have and try to complete: before adding more things.
-//     Platform interface and Utils class.
-//
-//  Note:
-//    Document shouldn't draw autocompletion if it's in a window that's not focused.
-//      and if the same document opened in two windows, only one show the list.
-//    Drawing autocompletion is done at the document draw level, so split will
-//      override the list if we draw another on top of.
-//
-// Big things:
-//   gap buffer.
-//   file tree.
-//   mouse support.
-//   load configs.
-//   status line
-//
-//   prompt line + autocompletion (if them auto update).
-//   number line + diagnos gutter.
-//   scrollbar
-//   macro.
-//   open/close files.
-//   splits and tabs.
-//   copy paste clipboard.
-//   nerdfont support (maybe not)
-//   terminal (maybe)
-//
-// LSP:
-//   completion: additional text (like import statement).
-//   goto definition.
-//   rename.
-//   get all references.
-//   hover (maybe)
-//   the signature help contains multiple signatures only send the active signature to the caller not an array.
-//
-// BUG:
-//   opening the same file twise from finder will create another tab (it shoud just show the already opened tab).
-//   not scrolling if not focused
-//   draw auto completion popup only in the current focused window.
-//   drawing popup needs to be reviewed since if it goes out of the window, we just trim it but it needs to be pushed inside. (better draw primitives required)
-//   signature help will hide pressing space after comma.
-//   esc doesn't clear the selection.
-//   [bug in termbox] color 0x000000 (black) cannot be used as it will be replaced
-//     with default color (use emacs theme compare with helix)
-//     ref: https://github.com/nsf/termbox/issues/114
-//
-//  Cleanup things:
-//    Registry of language server, and language => lsp mapping in the Editor:
-//      { "clangd" : LspClient(), "pyright" : LspClient(), ...  }
-//      { "c" : "clangd", "c++": "clangd",  "python" : "pyright", etc. }
-//    Theme manager...
-//    Global Configs.
-//
-//
-// Unfinished, working things:
-//   autocompletion + (show documnt, symbol helper for parameter, icon, etc.)
-//   autocompletion selection of items. icon config.
-//   Theme loading from file and swith theme, theme listening for change etc.
-//   proper keybinding and loading that from config.
-//   auto completion -> scroll if we cycle and add a scroll bar depends on better drawing code. (not current temp).
-//   IPC instead of "sh" as the file, use correct file with va_args (variadic parameters);
-//   finder (picker):
-//     (file, rgrep, diagnos, buffer, symbols(treesitter))
-//     preview.
-//     actoin selection.
-//   Tab/split:
-//     Tab name.
-//     Tab scrolling if we have too many tabs.
-//     Closing tabs (closing duplicats etc).
-//     split size are fixed.
-//
-// Pending:
-//   <S-tab> is not bindable (but should be. "\x1b[Z")
-//
-//   keybinding with logical like micro: (&, |, ',') (comman run sequence).
-//     <tab> : "cycle_completion_list | insert_tab"
-//     <S-tab> : "cycle_completion_list_reversed | insert_tab"
-//
-//   Need to check if fzf/rg exists in the system and report (implement fallback tools).
-//
-//   Main loop should be handled by the front end (so raylib can draw forever and termbox2 don't have to). and FE will set the FPS.
-//   editor send events and ask draw in a structured manner.
-//   M-c rename to A-c (M doesn't make sence, even in Eamcs)
-//   proper draw system. (request client for buffer and fill only if it needs to re-draw).
-//   line numbers.
-//   global configs (tabwidth, ).
-//   debug print that accumilate logs and dumps at the end.
-//   pair and auto indent
-//   editor modes implement properly.
-//   default bindnigs and tmeme settings.
-//   treesitter and syntax highlighting.
-//   status bar; prompt bar
-//   multi cursor select next match what under cursor (like micro)
-//
-//   Can't bind to 12j, d10|, ... with numbers.
-//
-// Code quality:
-//   Position and Coord names are alike (change Position -> Coord, Coord-> BuffPos)
-//   Write a clang-formater and apply through all the source.
-//   change all DrawBuffer parameter as reference than value.
-//   remove all the trailing white spaces all around the source.
-//   fprintf in the lsp client.
-//   write tests (if I have time)
-//   ipc timeout value hardcoded fix.
-//   merge core + buffer (maybe)
-//   Refactor fronend (better file names).
-//   Maybe rename.
-//   change all comments to // insead of /**/
-//   change color values to 256, (terminal support first).
-//   restructure the source files.
-//   use String (typedef) for all std::string.
-//
-//
-
-
-
 
 
 

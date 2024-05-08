@@ -68,11 +68,6 @@ private:
 
 private:
 
-  // FIXME: These methods should buffer the pending input if it's now ends with
-  // a new line otherwise we'll get a broken path (see lsp/client.cpp) for reference.
-  //
-  // FIXME: Make sure the buff only contains printable ascii/utf8 values otherwise
-  // it'll messup the ui drawing of those text.
   static void StdoutCallbackResults(void* data, const char* buff, size_t length);
   static void StdoutCallbackFilter(void* data, const char* buff, size_t length);
   void TriggerFuzzyFilter(const std::string& input_text);

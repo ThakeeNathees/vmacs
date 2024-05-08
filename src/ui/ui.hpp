@@ -13,12 +13,15 @@
 #include "editor/editor.hpp"
 #include "finder.hpp"
 
+
 // -----------------------------------------------------------------------------
 // Window.
 // -----------------------------------------------------------------------------
 
+
 class Split;
 class Tab;
+
 
 // Note that since Window is a subtype of event handler. And HandleEvent() is
 // already defined.
@@ -76,6 +79,7 @@ private:
 // -----------------------------------------------------------------------------
 // Split.
 // -----------------------------------------------------------------------------
+
 
 // Split is a tree of child splits and the leaf node contains a window.
 // If the split type is Vertical all of it's children would be horizontal splits
@@ -211,15 +215,7 @@ public: // Actions.
 // UI.
 // -----------------------------------------------------------------------------
 
-// WARNING:
-//
-// Note that since Window's first parent is not EventHander we cannot safly do
-// the bellow case:
-//
-//   EventHandler* e = (EventHander*)(ptr_of_window); // This will fail.
-//
-// And that's why we're using EventHander* in the Action methods bellow. Unlike
-// other child classes of event handers.
+
 class Ui : public IUi, public EventHandler {
 public:
   Ui();
@@ -251,6 +247,15 @@ private:
   void DrawTabsBar(FrameBuffer buff, Position pos, Size area);
 
 public: // Actions.
+  // WARNING:
+  //
+  // Note that since Window's first parent is not EventHander we cannot safly do
+  // the bellow case:
+  //
+  //   EventHandler* e = (EventHander*)(ptr_of_window); // This will fail.
+  //
+  // And that's why we're using EventHander* in the Action methods bellow.
+  // Unlike other child classes of event handers.
   static bool Action_PopupFilesFinder(EventHandler* self);
   static bool Action_NewDocument(EventHandler* self);
   static bool Action_TabNext(EventHandler* self);
@@ -261,6 +266,7 @@ public: // Actions.
 // -----------------------------------------------------------------------------
 // Document Window.
 // -----------------------------------------------------------------------------
+
 
 // DocumentWindow is the window that handles events and display the undeling buffer
 // it's more of a text editor with number line and scroll bar etc.
@@ -400,6 +406,5 @@ public: // Actions.
   static bool Action_CycleSelectionReversed(FindWindow* self);
   static bool Action_AcceptSelection(FindWindow* self);
   static bool Action_Close(FindWindow* self);
-
 };
 

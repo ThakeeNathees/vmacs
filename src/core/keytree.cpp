@@ -126,6 +126,7 @@ bool KeyTreeCursor::TryEvent(EventHandler* handler, const Event& event) {
 // Event handler.
 // ----------------------------------------------------------------------------
 
+
 EventHandler::EventHandler(const KeyTree* keytree)
   : keytree(keytree), cursor(keytree) { }
 

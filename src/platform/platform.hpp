@@ -53,7 +53,7 @@ private:
 
 
 // A platform is an an "abstract" interface to comminicate to the host system.
-// It could be a direct os level of if it's running inside another application, 
+// It could be a direct os level of if it's running inside another application,
 // Tha application will be the platform, Loading files, resources logging etc.
 // all are provided by the platform.
 class Platform {
@@ -94,7 +94,7 @@ public:
     std::string file; // The executable (command/file) we'll be calling execvp.
     std::vector<std::string> argv; // Optional additional arguments.
     int timeout_sec  = -1;         // -1 means no timeout.
-    
+
     // Set to true to the child process to listen for inputs which we'll be
     // send using WriteToStdin() method. If this is false, WriteToStdin
     // shouldn't write anything to the stdin of the child process.

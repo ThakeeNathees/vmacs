@@ -6,7 +6,6 @@
 // Copyright (c) 2024 Thakee Nathees
 // Licenced under: MIT
 
-
 #include "core/core.hpp"
 #include "document.hpp"
 
@@ -296,7 +295,7 @@ void Document::EnterCharacter(char c) {
   // This is the proper way instead of requesting the server every time, but in that
   // case we have to do fuzzy match filter the existing list and we need to figure
   // out where to insert the text (range and new text alrady in the completion item).
-  // 
+  //
   // { // Check if already in completion.
   //   std::lock_guard<std::mutex> lock(mutex_completions);
   //   if (!completion_items.empty() && !is_incomplete) {
