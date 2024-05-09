@@ -28,28 +28,26 @@ bool Termbox2::Cleanup() {
 }
 
 
-
-FrameBuffer Termbox2::GetDrawBuffer() {
+FrameBuffer_& Termbox2::GetDrawBuffer() {
 
   int width = tb_width();
   int height = tb_height();
 
-  if (cells.size() != width * height) {
-    cells.resize(width*height);
+  if (buff.cells.size() != width * height) {
+    buff.cells.resize(width*height);
   }
 
-  draw_buffer.width  = width;
-  draw_buffer.height = height;
-  draw_buffer.cells  = cells.data();
+  buff.width  = width;
+  buff.height = height;
 
-  return draw_buffer;
+  return buff;
 }
 
 
-void Termbox2::Display(uint32_t clear_color) {
+void Termbox2::Display() {
 
-  int width = draw_buffer.width;
-  int height = draw_buffer.height;
+  int width = buff.width;
+  int height = buff.height;
 
   tb_clear();
 
@@ -57,7 +55,13 @@ void Termbox2::Display(uint32_t clear_color) {
   // buffer and they provide an api to do so.
   for (int y = 0; y < height; y++) {
     for (int x = 0; x < width; x++) {
-      Cell& cell = cells[y*width + x];
+      Cell& cell = buff.cells[y*width + x];
+
+      // FIXME(mess): Since termbox treat 0 as the default terminal color, we
+      // cannot use black with 0, so I'm using 0x000001 as black (truecolor).
+      // Find a better way.
+      if (cell.fg == 0) cell.fg = 0x000001;
+
       int attrib = 0;
       attrib |= (cell.attrib & VMACS_CELL_BOLD)      ? TB_BOLD : 0;
       attrib |= (cell.attrib & VMACS_CELL_UNDERLINE) ? TB_UNDERLINE : 0;

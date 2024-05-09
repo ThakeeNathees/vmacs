@@ -26,7 +26,7 @@ void Window::Update() {
 }
 
 
-void Window::Draw(FrameBuffer buff, Position pos, Size area) {
+void Window::Draw(FrameBuffer_& buff, Position pos, Area area) {
   this->pos = pos;
   this->area = area;
   _Draw(buff, pos, area);
@@ -313,12 +313,12 @@ const Split* Tab::GetActiveSplit() {
 }
 
 
-void Tab::Draw(FrameBuffer buff, Position pos, Size area) {
+void Tab::Draw(FrameBuffer_& buff, Position pos, Area area) {
   DrawSplit(buff, root.get(), pos, area);
 }
 
 
-void Tab::DrawSplit(FrameBuffer buff, Split* split, Position pos, Size area) {
+void Tab::DrawSplit(FrameBuffer_& buff, Split* split, Position pos, Area area) {
   if (split->children.size() == 0) { // Leaf node.
     ASSERT(split->type == Split::Type::LEAF, OOPS);
     if (split->window != nullptr) split->window->Draw(buff, pos, area);
@@ -328,10 +328,10 @@ void Tab::DrawSplit(FrameBuffer buff, Split* split, Position pos, Size area) {
   ASSERT(split->type != Split::Type::LEAF, OOPS);
 
   // FIXME: Properly fetch the style from the editor or somewhere else.
-  Style style = Editor::GetCurrentTheme()->GetStyle("ui.background.separator");
+  Style style = Editor::GetTheme()->GetStyle("ui.background.separator");
 
   // The position to draw the children.
-  int x = pos.col, y = pos.row;
+  Position curr = pos;
 
   int child_count = split->children.size();
 
@@ -346,20 +346,20 @@ void Tab::DrawSplit(FrameBuffer buff, Split* split, Position pos, Size area) {
       // The total width including a split line at the end.
       int width = (area.width / child_count) + ((is_last) ? (area.width % child_count) : 0);
       if (!is_last) width--;
-      DrawSplit(buff, child, {.col = x, .row = y}, {.width = width, .height = area.height});
+      DrawSplit(buff, child, curr, Area(width, area.height));
       if (!is_last) {
-        DrawVerticalLine(buff, x+width, y, area.height, style);
+        DrawVerticalLine(buff, Position(curr.x+width, curr.y), area.height, style, Editor::GetIcons());
       }
-      x += width+1; // +1 for split line.
+      curr.x += width+1; // +1 for split line.
 
     } else if (split->type == Split::Type::HORIZONTAL) {
       int height = (area.height / child_count) + ((is_last) ? (area.height % child_count) : 0);
       if (!is_last) height--; // We'll use one row for drawing the split.
-      DrawSplit(buff, child, {.col = x, .row = y}, {.width = area.width, .height = height});
+      DrawSplit(buff, child, curr, Area(area.width, height));
       if (!is_last) {
-        DrawHorizontalLine(buff, x, y+height, area.width, style);
+        DrawHorizontalLine(buff, Position(curr.x, curr.y + height), area.width, style, Editor::GetIcons());
       }
-      y += height+1; // +1 for split line.
+      curr.y += height+1; // +1 for split line.
     }
   }
 }
@@ -459,44 +459,45 @@ void Ui::Update() {
 
 
 // FIXME(mess): Cleanup this mess.
-void Ui::Draw(FrameBuffer buff) {
+void Ui::Draw(FrameBuffer_& buff) {
 
-  Position pos = {0, 0};
-  Size area = {.width = buff.width, .height = buff.height-1};
+  Position pos(0, 0);
+  Area area(buff.width, buff.height-1);
 
   if (tabs.size()) {
     ASSERT_INDEX(active_tab_index, tabs.size());
     std::unique_ptr<Tab>& tab = tabs[active_tab_index];
 
     Position curr_pos = pos;
-    Size curr_area    = area;
+    Area curr_area    = area;
     if (tabs.size() >= 2) {
       DrawTabsBar(buff, pos, area);
-      curr_pos.row += 1;
+      curr_pos.row     += 1;
       curr_area.height -= 1;
     }
+
     tab->Draw(buff, curr_pos, curr_area);
 
   } else {
     DrawHomeScreen(buff, pos, area);
   }
 
+  DrawPromptBar(buff);
+
   if (popup) {
     popup->Draw(buff, pos, area);
   }
-
-  // FIXME:
-  Style style_text = Editor::GetCurrentTheme()->GetStyle("ui.text");
-  Style style_bg   = Editor::GetCurrentTheme()->GetStyle("ui.background");
-  Style style      = style_bg.Apply(style_text);
-  DrawTextLine(buff, info_bar_text.c_str(), 0, buff.height-1, buff.width, style, true);
 }
 
 
-void Ui::DrawHomeScreen(FrameBuffer buff, Position pos, Size area) {
+void Ui::DrawHomeScreen(FrameBuffer_& buff, Position pos, Area area) {
+
+  const Icons* icons = Editor::GetIcons();
+  ASSERT(icons != nullptr, OOPS);
+
   // FIXME: Move this to somewhere else.
   // --------------------------------------------------------------------------
-  const Theme* theme = Editor::GetCurrentTheme();
+  const Theme* theme = Editor::GetTheme();
   // TODO: Use ui.cursor for secondary cursor same as selection.
   Style style_text       = theme->GetStyle("ui.text");
   Style style_bg         = theme->GetStyle("ui.background");
@@ -506,26 +507,18 @@ void Ui::DrawHomeScreen(FrameBuffer buff, Position pos, Size area) {
   Style style_error      = theme->GetStyle("error");
   Style style_warning    = theme->GetStyle("warning");
 
-  //  : 0xf15b
-  //  : 0xe68f 
-  // 󰈞 : 0xf021e
-  // 󰈚 : 0xf021a
-  // 󰈭 : 0xf022d 
-  //  : 0xf02e
-  //  : 0xe22b
-
   Style style = style_bg.Apply(style_text);
-  // Style style_copyright = style_bg.Apply(theme->GetStyle("keyword"));
   Style style_copyright = style_bg.Apply(style_whitespace);
+  // --------------------------------------------------------------------------
 
+  // FIXME: This is temproary.
+  // --------------------------------------------------------------------------
   std::vector<std::pair<std::string, std::string>> items;
-
-  items.push_back({ Utf8UnicodeToString(0xf15b)  + " New file",       "<C-n>" });
-  items.push_back({ Utf8UnicodeToString(0xe68f)  + " Find Files",     "<C-o>" });
-  items.push_back({ Utf8UnicodeToString(0xf021a) + " Recent Files",   "<C-r>" });
-  items.push_back({ Utf8UnicodeToString(0xf022d) + " Live Grep",      "<C-g>" });
-  // items.push_back({ Utf8UnicodeToString(0xf02e)  + " Bookmakrs",      "<C-b>" });
-  items.push_back({ Utf8UnicodeToString(0xe22b)  + " Themes",         "<C-t>" });
+  items.push_back({ Utf8UnicodeToString(icons->empty_file)   + " New file",       "<C-n>" });
+  items.push_back({ Utf8UnicodeToString(icons->find)         + " Find Files",     "<C-o>" });
+  items.push_back({ Utf8UnicodeToString(icons->textbox)      + " Recent Files",   "<C-r>" });
+  items.push_back({ Utf8UnicodeToString(icons->find_in_file) + " Live Grep",      "<C-g>" });
+  items.push_back({ Utf8UnicodeToString(icons->palette)      + " Themes",         "<C-t>" });
   // --------------------------------------------------------------------------
 
 
@@ -547,8 +540,9 @@ void Ui::DrawHomeScreen(FrameBuffer buff, Position pos, Size area) {
   for (auto& pair : items) {
     size_t len_text = Utf8Strlen(pair.first.c_str());
     size_t len_bind = Utf8Strlen(pair.second.c_str());
-    DrawTextLine(buff, pair.first.c_str(), curr.col, curr.row, len_text, style, false);
-    DrawTextLine(buff, pair.second.c_str(), curr.col + (max_len_text + spacing), curr.row, len_bind, style, false);
+    DrawTextLine(buff, pair.first.c_str(), curr, len_text, style, icons, false);
+    Position pos_binding = Position(curr.x+max_len_text+spacing, curr.y);
+    DrawTextLine(buff, pair.second.c_str(), pos_binding, len_bind, style, icons, false);
     curr.row += 2;
   }
 
@@ -556,18 +550,48 @@ void Ui::DrawHomeScreen(FrameBuffer buff, Position pos, Size area) {
   std::string copyright = "Copyright (c) 2024 Thakee Nathees";
   curr.row = pos.row + area.height - 1;
   curr.col = pos.col + (area.width - copyright.size()) / 2;
-  DrawTextLine(buff, copyright.c_str(), curr.col, curr.row, copyright.size(), style_copyright, false);
+  DrawTextLine(buff, copyright.c_str(), curr, copyright.size(), style_copyright, icons, false);
+}
 
+
+void Ui::DrawPromptBar(FrameBuffer_& buff) {
+
+  // FIXME: --------------------------------------------------------------------
+  Style style_text = Editor::GetTheme()->GetStyle("ui.text");
+  Style style_bg   = Editor::GetTheme()->GetStyle("ui.background");
+  Style style      = style_bg.Apply(style_text);
+  // ---------------------------------------------------------------------------
+
+  const Icons* icons = Editor::GetIcons();
+  ASSERT(icons != nullptr, OOPS);
+
+  DrawTextLine(
+      buff, info_bar_text.c_str(),
+      Position(0, buff.height-1),
+      buff.width-1, // -1 for spinning wheel.
+      style, icons,
+      true);
+
+  const int wheel_count = sizeof icons->brail_spinning_wheel / sizeof * icons->brail_spinning_wheel;
+  static int wheel_icon_index = 0;
+  int wheel_icon = icons->brail_spinning_wheel[wheel_icon_index++];
+  if (wheel_icon_index >= wheel_count) wheel_icon_index = 0;
+
+  // Draw a spinning wheel which will spin every time we re-draw.
+  SET_CELL(buff, buff.width-1, buff.height-1, wheel_icon, style);
 }
 
 
 // TODO: Add multiple tabs and scroll and ensure active tab is in view.
-void Ui::DrawTabsBar(FrameBuffer buff, Position pos, Size area) {
+void Ui::DrawTabsBar(FrameBuffer_& buff, Position pos, Area area) {
   ASSERT(tabs.size() > 0, OOPS);
+
+  const Icons* icons = Editor::GetIcons();
+  ASSERT(icons != nullptr, OOPS);
 
   // FIXME: Move this.
   // --------------------------------------------------------------------------
-  const Theme* theme = Editor::GetCurrentTheme();
+  const Theme* theme = Editor::GetTheme();
   Style style_text       = theme->GetStyle("ui.text");
   Style style_bg         = theme->GetStyle("ui.background");
   Style style_whitespace = theme->GetStyle("ui.virtual.whitespace");
@@ -587,7 +611,7 @@ void Ui::DrawTabsBar(FrameBuffer buff, Position pos, Size area) {
   // --------------------------------------------------------------------------
 
   Position curr = pos;
-  DrawRectangleFill(buff, curr.col, curr.row, area.width, 1, style_not_active);
+  DrawRectangleFill(buff, curr, Area(area.width, 1), style_not_active);
 
   for (int i = 0; i < tabs.size(); i++) {
     auto& tab = tabs[i];
@@ -599,13 +623,13 @@ void Ui::DrawTabsBar(FrameBuffer buff, Position pos, Size area) {
     std::string tab_bar_display = std::string(" ") + tab_name + " ";
 
     Style& style = (i == active_tab_index) ? style_active : style_not_active;
-    DrawTextLine(buff, tab_bar_display.c_str(), curr.col, curr.row, tab_bar_display.size(), style, true);
+    DrawTextLine(buff, tab_bar_display.c_str(), curr, tab_bar_display.size(), style, icons, true);
     curr.col += tab_bar_display.size();
 
     if (i == active_tab_index || (i+1) == active_tab_index) {
       SET_CELL(buff, curr.col, curr.row, ' ', style_active);
     } else {
-      DrawVerticalLine(buff, curr.col, curr.row, 1, style_split);
+      DrawVerticalLine(buff, curr, 1, style_split, icons);
     }
 
     curr.col++;  // +1 for vertical split.

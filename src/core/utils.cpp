@@ -101,121 +101,147 @@ int GetElapsedTime() {
 }
 
 
-void DrawTextLine(FrameBuffer buff, const char* text, int x, int y, int width, Style style, bool fill_area) {
+// -----------------------------------------------------------------------------
+// Draw primitives.
+// -----------------------------------------------------------------------------
+
+
+void DrawTextLine(
+    FrameBuffer_& buff,
+    const char* text,
+    Position pos,
+    int width,
+    Style style,
+    const Icons* icons,
+    bool fill_area) {
+
   if (text == NULL || *text == '\0') return;
-  if (x < 0 || y < 0) return;
-  if (x >= buff.width || y >= buff.height) return;
-  if (x + width > buff.width) width = buff.width - x;
+  if (pos.col < 0 || pos.row < 0) return;
+  if (pos.col >= buff.width || pos.row >= buff.height) return;
+  if (pos.col + width > buff.width) width = buff.width - pos.col;
   if (width <= 0) return;
-
-  // Current x position we're drawing.
-  int curr = x;
-
-  // FIXME(mess,icon): Move this somewhere general.
-  // We draw an indicator that the text is trimmed with three dot unicode.
-  // 0x2026 : '…'
-  int trim_indicator = 0x2026;
 
   int length = Utf8Strlen(text);
   int text_len = MIN(length, width);
+  int trim_indicator = icons ? icons->trim_indicator : '-';
 
   bool trimming = (length > width);
   if (trimming) text_len -= 1;
 
-  int xcurr = x;
+  // Current x position we're drawing.
+  int x = pos.col;
   const char* c = text;
-  for (; xcurr < x + text_len; xcurr++) {
+
+  for (; x < pos.col + text_len; x++) {
     uint32_t ch;
     c += Utf8CharToUnicode(&ch, c);
     if (ch == '\n' || ch == '\t') ch = ' ';
-    SET_CELL(buff, xcurr, y, ch, style);
+    SET_CELL(buff, x, pos.row, ch, style);
   }
-  if (trimming) SET_CELL(buff, xcurr++, y, trim_indicator, style);
+
+  if (trimming) SET_CELL(buff, x++, pos.row, trim_indicator, style);
   if (fill_area) {
-    while (xcurr < (x + width)) {
-      SET_CELL(buff, xcurr++, y, ' ', style);
+    while (x < (pos.col + width)) {
+      SET_CELL(buff, x++, pos.row, ' ', style);
     }
   }
 }
 
 
-void DrawRectangleFill(FrameBuffer buff, int x, int y, int width, int height, Style style) {
-  if (x < 0 || y < 0) return;
-  if (x >= buff.width || y >= buff.height) return;
-  if (x + width > buff.width) width = buff.width - x;
-  if (y + height > buff.height) height = buff.height - y;
-  if (width <= 0) return;
+void DrawRectangleFill(FrameBuffer_& buff, Position pos, Area area, Style style) {
 
-  for (int row = y; row < y+height; row++) {
-    for (int col = x; col < x+width; col++) {
-      SET_CELL(buff, col, row, ' ', style);
+  // Clip the rectangle to our frame and if the entire rectangle is out of the
+  // current frame or the size after clip is zero we don't have to draw.
+  if (pos.x >= buff.width || pos.y >= buff.height) return;
+  pos.x = MAX(pos.x, 0);
+  pos.y = MAX(pos.y, 0);
+  area.width  = MIN(area.width, buff.width-pos.x);
+  area.height = MIN(area.height, buff.height-pos.y);
+  if (area.width <= 0 || area.height <= 0) return;
+
+  for (int y = pos.y; y < pos.y+area.height; y++) {
+    for (int x = pos.x; x < pos.x+area.width; x++) {
+      SET_CELL(buff, x, y, ' ', style);
     }
   }
 }
 
 
-void DrawRectangleLine(FrameBuffer buff, int x, int y, int width, int height, Style style, bool fill) {
-  if (x < 0 || y < 0) return;
-  if (x >= buff.width || y >= buff.height) return;
-  if (x + width > buff.width) width = buff.width - x;
-  if (y + height > buff.height) height = buff.height - y;
-  if (width <= 0) return;
+void DrawRectangleLine(FrameBuffer_& buff, Position pos, Area area, Style style, const Icons* icons, bool fill) {
+  ASSERT(icons != nullptr, OOPS);
 
-  // FIXME: The box characters are hardcoded.
-  // int TR = 0x256d; // Curved corners.
-  // int TL = 0x256e;
-  // int BR = 0x256f;
-  // int BL = 0x2570;
-  int TR = 0x250c; // Sharp corners.
-  int TL = 0x2510;
-  int BR = 0x2518;
-  int BL = 0x2514;
+  // Clip the rectangle to our frame and if the entire rectangle is out of the
+  // current frame or the size after clip is zero we don't have to draw.
+  if (pos.x >= buff.width || pos.y >= buff.height) return;
+  pos.x = MAX(pos.x, 0);
+  pos.y = MAX(pos.y, 0);
+  area.width  = MIN(area.width, buff.width-pos.x);
+  area.height = MIN(area.height, buff.height-pos.y);
+  if (area.width <= 0 || area.height <= 0) return;
 
-  // horizontal, vertical lines.
-  int HL = 0x2500;
-  int VL = 0x2502;
+  // For ease of use.
+  const int x = pos.x;
+  const int y = pos.y;
+  const int w = area.width;
+  const int h = area.height;
 
-  SET_CELL(buff, x,         y,          TR, style); // Top right.
-  SET_CELL(buff, x+width-1, y,          TL, style); // Top left.
-  SET_CELL(buff, x,         y+height-1, BL, style); // Bottom left.
-  SET_CELL(buff, x+width-1, y+height-1, BR, style); // Bottom right.
+  const int tr = icons->tr;
+  const int tl = icons->tl;
+  const int br = icons->br;
+  const int bl = icons->bl;
+  const int hl = icons->hl;
+  const int vl = icons->vl;
 
-  for (int col = x+1; col < x+width-1; col++) {
-    SET_CELL(buff, col, y,          HL, style); // Tob horizontal bar.
-    SET_CELL(buff, col, y+height-1, HL, style); // Bottom horizontal bar.
+  SET_CELL(buff, x,     y,     tr, style); // Top right.
+  SET_CELL(buff, x+w-1, y,     tl, style); // Top left.
+  SET_CELL(buff, x,     y+h-1, bl, style); // Bottom left.
+  SET_CELL(buff, x+w-1, y+h-1, br, style); // Bottom right.
+
+  for (int col = x+1; col < x+w-1; col++) {
+    SET_CELL(buff, col, y,     hl, style); // Tob horizontal bar.
+    SET_CELL(buff, col, y+h-1, hl, style); // Bottom horizontal bar.
   }
 
-  for (int row = y+1; row < y+height-1; row++) {
-    SET_CELL(buff, x,         row, VL, style); // Left vertical bar.
-    SET_CELL(buff, x+width-1, row, VL, style); // Right vertical bar.
+  for (int row = y+1; row < y+h-1; row++) {
+    SET_CELL(buff, x,     row, vl, style); // Left vertical bar.
+    SET_CELL(buff, x+w-1, row, vl, style); // Right vertical bar.
   }
 
-  if (fill) DrawRectangleFill(buff, x+1, y+1, width-2, height-2, style);
-}
-
-
-void DrawHorizontalLine(FrameBuffer buff, int x, int y, int width, Style style) {
-  if (x < 0 || y < 0) return;
-  if (x >= buff.width || y >= buff.height) return;
-  if (x + width > buff.width) width = buff.width - x;
-  if (width <= 0) return;
-
-  int HL = 0x2500;
-  for (int col = x; col < x+width; col++) {
-    SET_CELL(buff, col, y, HL, style);
+  if (fill) {
+    pos.x++; pos.y++; area.width -= 2; area.height -= 2;
+    DrawRectangleFill(buff, pos, area, style);
   }
 }
 
 
-void DrawVerticalLine(FrameBuffer buff, int x, int y, int height, Style style) {
-  if (x < 0 || y < 0) return;
-  if (x >= buff.width || y >= buff.height) return;
-  if (y + height > buff.height) height = buff.height - y;
+void DrawHorizontalLine(FrameBuffer_& buff, Position pos, int width, Style style, const Icons* icons) {
+  ASSERT(icons != nullptr, OOPS);
+
+  // Clip the line and if it's out of the current frame, we don't have to draw.
+  if (pos.x >= buff.width || pos.y >= buff.height) return;
+  pos.x = MAX(pos.x, 0);
+  pos.y = MAX(pos.y, 0);
+  width = MIN(width, buff.width-pos.x);
+  if (width <= 0) return;
+
+  for (int x = pos.x; x < pos.x+width; x++) {
+    SET_CELL(buff, x, pos.y, icons->hl, style);
+  }
+}
+
+
+void DrawVerticalLine(FrameBuffer_& buff, Position pos, int height, Style style, const Icons* icons) {
+  ASSERT(icons != nullptr, OOPS);
+
+  // Clip the line and if it's out of the current frame, we don't have to draw.
+  if (pos.x >= buff.width || pos.y >= buff.height) return;
+  pos.x  = MAX(pos.x, 0);
+  pos.y  = MAX(pos.y, 0);
+  height = MIN(height, buff.height-pos.y);
   if (height <= 0) return;
 
-  int VL = 0x2502;
-  for (int row = y; row < y+height; row++) {
-    SET_CELL(buff, x, row, VL, style);
+  for (int y = pos.y; y < pos.y+height; y++) {
+    SET_CELL(buff, pos.x, y, icons->vl, style);
   }
 }
 

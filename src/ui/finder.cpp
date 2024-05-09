@@ -9,13 +9,11 @@
 #include "finder.hpp"
 
 
-void Finder::RegisterItemsChangeListener(CallbackFinderItemsChanged cb) {
-  cb_item_changed = cb;
-}
-
-
-void Finder::ItemsChanged() {
-  if (cb_item_changed) cb_item_changed(); 
+void Finder::RegisterItemsChangeListener(
+    CallbackFinderItemsChanged cb_filter,
+    CallbackFinderItemsChanged cb_total) {
+  cb_item_changed_filter = cb_filter;
+  cb_item_changed_total  = cb_total;
 }
 
 
@@ -66,13 +64,13 @@ void FilesFinder::InputChanged(const std::string& input_text) {
       filters = results; // Copy all the values from results.
     }
   } else {
+
     TriggerFuzzyFilter(input_text);
   }
 }
 
 
 void FilesFinder::SelectedItem(const std::string& item) {
-
 }
 
 
@@ -107,6 +105,8 @@ void FilesFinder::StdoutCallbackResults(void* data, const char* buff, size_t len
       self->buff_results += std::string(buff, (end-buff));
     }
   }
+
+  if (self->cb_item_changed_total) self->cb_item_changed_total();
 }
 
 
@@ -136,10 +136,9 @@ void FilesFinder::StdoutCallbackFilter(void* data, const char* buff, size_t leng
       self->buff_filter += std::string(buff, (end-buff));
     }
   }
-  self->ItemsChanged();
+
+  if (self->cb_item_changed_filter) self->cb_item_changed_filter();
 }
-
-
 
 
 // FIXME: This method is not final.

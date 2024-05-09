@@ -195,28 +195,40 @@ typedef uint32_t event_t;
 
 // The coordinate inside a buffer, we can't use row, col since the tab character
 // span over multiple columns.
-typedef struct {
+struct Coord {
+  Coord(int line=0, int character=0) : line(line), character(character) {}
   int line;
   int character;
-} Coord;
+};
 
 
-typedef struct {
-  int row;
-  int col;
-} Position;
+// TODO: Remove row, col and use x, y only. And the name Position is confusing
+// with Coord, maybe change to understand better.
+struct Position {
+  Position(int x=0, int y=0) : x(x), y(y) {}
+  union {
+    int row;
+    int y;
+  };
+  union {
+    int x;
+    int col;
+  };
+};
 
 
-typedef struct {
+struct Slice {
+  Slice(int start=0, int end=0) : start(start), end(end) {}
   int start;
   int end;
-} Slice;
+};
 
 
-typedef struct {
+struct Area {
+  Area(int width=0, int height=0) : width(width), height(height) {}
   int width;
   int height;
-} Size;
+};
 
 
 // Style is a foreground, background color and attribute (bold, italic, etc).
@@ -347,6 +359,78 @@ private:
 // -----------------------------------------------------------------------------
 
 
+class Icons {
+public:
+  // Sharp corners.
+  int tr = 0x250c; // ┌
+  int tl = 0x2510; // ┐
+  int br = 0x2518; // ┘
+  int bl = 0x2514; // └
+
+  // Curved corners.
+  // int tr = 0x256d; // ╭
+  // int tl = 0x256e; // ╮
+  // int br = 0x256f; // ╯
+  // int bl = 0x2570; // ╰
+
+  // horizontal, vertical lines.
+  int hl = 0x2500; // ─
+  int vl = 0x2502; // │
+
+  int trim_indicator = 0x2026; // …
+  int whitespace_tab = 0x2192; // →
+
+  int empty_file   = 0xf15b;  // 
+  int find         = 0xe68f;  // 
+  int find_in_file = 0xf021e; // 󰈞
+  int textbox      = 0xf021a; // 󰈚
+  int Bookmakr     = 0xf02e;  // 
+  int palette      = 0xe22b;  // 
+
+  // TODO: The count 25 is hardcoded which is got from the LSP specification
+  // as of May of 2024.
+  int completion_kind[25] = {
+    0xea93,  //  Text          
+    0xea8c,  //  Method        
+    0xf0295, //  Function      󰊕
+    0xea8c,  //  Constructor   
+    0xeb5f,  //  Field         
+    0xea88,  //  Variable      
+    0xeb5b,  //  Class         
+    0xeb61,  //  Interface     
+    0xea8b,  //  Module        
+    0xeb65,  //  Property      
+    0xea96,  //  Unit          
+    0xea95,  //  Value         
+    0xea95,  //  Enum          
+    0xeb62,  //  Keyword       
+    0xeb66,  //  Snippet       
+    0xeb5c,  //  Color         
+    0xea7b,  //  File          
+    0xea94,  //  Reference     
+    0xea83,  //  Folder        
+    0xea95,  //  EnumMember    
+    0xeb5d,  //  Constant      
+    0xea91,  //  Struct        
+    0xea86,  //  Event         
+    0xeb64,  //  Operator      
+    0xea92,  //  TypeParameter 
+  };
+
+  int brail_spinning_wheel[8] = {
+    0x28bf, // ⢿
+    0x28fb, // ⣻
+    0x28fd, // ⣽
+    0x28fe, // ⣾
+    0x28f7, // ⣷
+    0x28ef, // ⣯
+    0x28df, // ⣟
+    0x287f, // ⡿
+  };
+
+};
+
+
 class Theme {
 
 public:
@@ -417,20 +501,20 @@ std::string Utf8UnicodeToString(uint32_t c);
 
 // Draw a NULL terminated text (utf8) to the specified position and width.
 void DrawTextLine(
-    FrameBuffer buff,
+    FrameBuffer_& buff,
     const char* text,
-    int x,
-    int y,
-    int width,       // If the text goes beyond the width it'll terminate.
+    Position pos,
+    int width,          // If the text goes beyond the width it'll terminate.
     Style style,
-    bool fill_area); // If true all the width is filled with the bg othereise
-                     // only the text is drawn with the given bg.
+    const Icons* icons, // Needed to draw text terminated indicator.
+    bool fill_area);    // If true all the width is filled with the bg othereise
+                        // only the text is drawn with the given bg.
 
 
-void DrawRectangleFill(FrameBuffer buff, int x, int y, int width, int height, Style style);
-void DrawRectangleLine(FrameBuffer buff, int x, int y, int width, int height, Style style, bool fill=false);
-void DrawHorizontalLine(FrameBuffer buff, int x, int y, int width, Style style);
-void DrawVerticalLine(FrameBuffer buff, int x, int y, int height, Style style);
+void DrawRectangleFill(FrameBuffer_& buff, Position pos, Area area, Style style);
+void DrawRectangleLine(FrameBuffer_& buff, Position pos, Area area, Style style, const Icons* icons, bool fill);
+void DrawHorizontalLine(FrameBuffer_& buff, Position pos, int width, Style style, const Icons* icons);
+void DrawVerticalLine(FrameBuffer_& buff, Position pos, int height, Style style, const Icons* icons);
 
 
 // On a successfull parse, it'll return true and push all the keys are parsed

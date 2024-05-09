@@ -20,9 +20,15 @@ DocumentWindow::DocumentWindow(std::shared_ptr<Document> document_)
   : Window(&keytree), document(document_), cursors_backup(document->buffer.get()) {
 
   cursors_backup = document->cursors;
+  document->RegisterListener(this);
 
   // FIXME: Get the default mode from the config.
   SetMode("insert");
+}
+
+
+DocumentWindow::~DocumentWindow() {
+  document->UnRegisterListener(this);
 }
 
 
@@ -118,7 +124,7 @@ std::unique_ptr<Window> DocumentWindow::Copy() const {
 }
 
 
-void DocumentWindow::_Draw(FrameBuffer buff, Position pos, Size area) {
+void DocumentWindow::_Draw(FrameBuffer_& buff, Position pos, Area area) {
   DrawBuffer(buff, pos, area);
   if (IsActive()) DrawAutoCompletions(buff, pos, area);
 }
@@ -143,12 +149,12 @@ void DocumentWindow::CheckCellStatusForDrawing(int index, bool* in_cursor, bool*
 }
 
 
-void DocumentWindow::DrawBuffer(FrameBuffer buff, Position pos, Size area) {
+void DocumentWindow::DrawBuffer(FrameBuffer_& buff, Position pos, Area area) {
   ASSERT(this->document != nullptr, OOPS);
 
   // FIXME: Move this to themes.
   // --------------------------------------------------------------------------
-  const Theme* theme = Editor::GetCurrentTheme();
+  const Theme* theme = Editor::GetTheme();
   // TODO: Use ui.cursor for secondary cursor same as selection.
   Style style_text       = theme->GetStyle("ui.text");
   Style style_whitespace = theme->GetStyle("ui.virtual.whitespace");
@@ -157,11 +163,11 @@ void DocumentWindow::DrawBuffer(FrameBuffer buff, Position pos, Size area) {
   Style style_bg         = theme->GetStyle("ui.background");
   Style style_error      = theme->GetStyle("error");
   Style style_warning    = theme->GetStyle("warning");
-
-  // We draw an indicator for the tab character.
-  // 0x2192 : '→'
-  int tab_indicator = 0x2192;
   // --------------------------------------------------------------------------
+
+  const Icons* icons = Editor::GetIcons();
+  ASSERT(icons != nullptr, OOPS);
+  int whitespace_tag = icons->whitespace_tab;
 
   // Update our text area so we'll know about the viewing area when we're not
   // drawing, needed to ensure the cursors are on the view area, etc.
@@ -230,7 +236,7 @@ void DocumentWindow::DrawBuffer(FrameBuffer buff, Position pos, Size area) {
       bool istab = (c == '\t');
       if (istab) {
         style.ApplyInplace(style_whitespace);
-        c = tab_indicator;
+        c = whitespace_tag;
       } else if (isspace(c) || c == '\0') {
         c = ' ';
       }
@@ -279,13 +285,13 @@ void DocumentWindow::DrawBuffer(FrameBuffer buff, Position pos, Size area) {
         // Draw the message.
         int width = MIN(diagnos->message.size(), buff.width);
         int x = buff.width - width;
-        DrawTextLine(buff, diagnos->message.c_str(), x, 0, width, style_diag, false);
+        DrawTextLine(buff, diagnos->message.c_str(), Position(x, 0), width, style_diag, icons, false);
 
         // Draw the code + source.
         std::string code_source = diagnos->source + ": " + diagnos->code;
         width = MIN(code_source.size(), buff.width);
         x = buff.width - width;
-        DrawTextLine(buff, code_source.c_str(), x, 1, width, style_diag, false);
+        DrawTextLine(buff, code_source.c_str(), Position(x, 1), width, style_diag, icons, false);
       }
       // --------------------------------------------------------------------------
 
@@ -298,41 +304,15 @@ void DocumentWindow::DrawBuffer(FrameBuffer buff, Position pos, Size area) {
 }
 
 
-// FIXME: Move this, add color value.
-static const int completion_kind_nerd_icon[] = {
-  0xea93, //  Text          
-  0xea8c, //  Method        
-  0xf0295, //  Function     󰊕
-  0xea8c, //  Constructor   
-  0xeb5f, //  Field         
-  0xea88, //  Variable      
-  0xeb5b, //  Class         
-  0xeb61, //  Interface     
-  0xea8b, //  Module        
-  0xeb65, //  Property      
-  0xea96, //  Unit          
-  0xea95, //  Value         
-  0xea95, //  Enum          
-  0xeb62, //  Keyword       
-  0xeb66, //  Snippet       
-  0xeb5c, //  Color         
-  0xea7b, //  File          
-  0xea94, //  Reference     
-  0xea83, //  Folder        
-  0xea95, //  EnumMember    
-  0xeb5d, //  Constant      
-  0xea91, //  Struct        
-  0xea86, //  Event         
-  0xeb64, //  Operator      
-  0xea92, //  TypeParameter 
-};
-static const int completion_kind_count = sizeof completion_kind_nerd_icon / sizeof *completion_kind_nerd_icon;
+void DocumentWindow::DrawAutoCompletions(FrameBuffer_& buff, Position docpos, Area docarea) {
 
+  const Icons* icons = Editor::GetIcons();
+  ASSERT(icons != nullptr, OOPS);
+  const int completion_kind_count = sizeof icons->completion_kind / sizeof * icons->completion_kind;
 
-void DocumentWindow::DrawAutoCompletions(FrameBuffer buff, Position docpos, Size docarea) {
 
   // FIXME: Cleanup this mess.-------------------------------------------------
-  const Theme* theme = Editor::GetCurrentTheme();
+  const Theme* theme = Editor::GetTheme();
   Style style_menu          = theme->GetStyle("ui.menu");
   Style style_menu_selected = theme->GetStyle("ui.menu.selected");
   Style style_active_param  = theme->GetStyle("type"); // FIXME: Not the correct one.
@@ -408,8 +388,11 @@ void DocumentWindow::DrawAutoCompletions(FrameBuffer buff, Position docpos, Size
   pos = menu_start;
   pos.row += (drawing_bellow_cursor) ? 1 : (-count_dispaynig_items);
 
-  // Adjust the max len depends on available space.
-  max_len = MIN(max_len, docarea.width - (pos.col-docpos.col));
+  // FIXME: +2 because we draw the icon + 1 space but we should consider no icon
+  // configuration also and that should be handled properly.
+  //
+  // Adjust the max len depends on available space. +2 because we'll be drawing icon.
+  max_len = MIN(max_len + 2, docarea.width - pos.col);
 
   for (int i = 0; i < count_dispaynig_items; i++) {
     auto& item = (*completion_items)[i];
@@ -418,27 +401,18 @@ void DocumentWindow::DrawAutoCompletions(FrameBuffer buff, Position docpos, Size
     Style style = (i == document->completion_selected) ? style_menu_selected : style_menu;
 
     // TODO: Draw a scroll bar.
-    // FIXME: The layout is hardcoded. handle this properly (+2s)
 
-    SET_CELL(
-        buff,
-        docpos.col + pos.col,
-        docpos.row + pos.row,
-        completion_kind_nerd_icon[icon_index],
-        style);
-    SET_CELL(
-        buff,
-        docpos.col + pos.col + 1,
-        docpos.row + pos.row,
-        ' ',
-        style);
+    std::string completion_item_line = Utf8UnicodeToString(icons->completion_kind[icon_index]);
+    completion_item_line += " " + item.label;
     DrawTextLine(
         buff,
-        item.label.c_str(),
-        docpos.col + pos.col + 2, // +2 becase we draw the icon above.
-        docpos.row + pos.row,
-        max_len - 2,              // -2 because we draw the icon above.
+        completion_item_line.c_str(),
+        Position(
+          docpos.col + pos.col,
+          docpos.row + pos.row),
+        max_len,
         style,
+        icons,
         true);
     pos.row++;
   }
@@ -473,10 +447,12 @@ void DocumentWindow::DrawAutoCompletions(FrameBuffer buff, Position docpos, Size
   DrawTextLine(
       buff,
       si.label.c_str(),
-      docpos.col + pos.col,
-      docpos.row + pos.row,
+      Position(
+        docpos.col + pos.col,
+        docpos.row + pos.row),
       label_max_len,
       style_menu,
+      icons,
       true);
 
   // Draw the current parameter highlighted.
@@ -495,10 +471,12 @@ void DocumentWindow::DrawAutoCompletions(FrameBuffer buff, Position docpos, Size
   DrawTextLine(
       buff,
       param_label.c_str(),
-      docpos.col + pos.col + pi.label.start,
-      docpos.row + pos.row,
+      Position(
+        docpos.col + pos.col + pi.label.start,
+        docpos.row + pos.row),
       label_max_len,
       style_menu.Apply(style_active_param),
+      icons,
       true);
 }
 

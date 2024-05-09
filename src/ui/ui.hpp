@@ -34,7 +34,7 @@ public:
   // This will internally call _Draw(), and the subclasses should override it.
   bool HandleEvent(const Event& event) final override;
   void Update();
-  void Draw(FrameBuffer buff, Position pos, Size area);
+  void Draw(FrameBuffer_& buff, Position pos, Area area);
 
   // Set if this window is active in it's tab, this will be called if the window
   // gained or lost focus.
@@ -53,7 +53,7 @@ private:
   // FIXME: The bellow values are used to check if the mouse event is in bound.
   // refactor (remove if we can).
   Position pos = {0};
-  Size area    = {0};
+  Area area    = {0};
 
   // Set this to true if this window has to be closed by the owner of this
   // window.
@@ -69,7 +69,7 @@ private:
   // The handler should return true if the event is consumed by the window.
   virtual bool _HandleEvent(const Event& event) = 0;
   virtual void _Update() = 0;
-  virtual void _Draw(FrameBuffer buff, Position pos, Size area) = 0;
+  virtual void _Draw(FrameBuffer_& buff, Position pos, Area area) = 0;
 
   // Override this to handled this event.
   virtual void OnFocusChanged(bool focus);
@@ -186,7 +186,7 @@ public:
 
   bool HandleEvent(const Event& event) override;
   void Update();
-  void Draw(FrameBuffer buff, Position pos, Size area);
+  void Draw(FrameBuffer_& buff, Position pos, Area area);
 
   const Split* GetActiveSplit();
 
@@ -201,7 +201,7 @@ private:
   Split* active = nullptr;
 
 private:
-  void DrawSplit(FrameBuffer buff, Split* split, Position pos, Size area);
+  void DrawSplit(FrameBuffer_& buff, Split* split, Position pos, Area area);
 
 public: // Actions.
   static bool Action_NextWindow(Tab* self);
@@ -222,7 +222,7 @@ public:
 
   bool HandleEvent(const Event& event);
   void Update();
-  void Draw(FrameBuffer buff);
+  void Draw(FrameBuffer_& buff);
 
   void Info(const std::string& error);
   void Success(const std::string& error);
@@ -243,8 +243,9 @@ private:
   std::string info_bar_text;
 
 private:
-  void DrawHomeScreen(FrameBuffer buff, Position pos, Size area);
-  void DrawTabsBar(FrameBuffer buff, Position pos, Size area);
+  void DrawTabsBar(FrameBuffer_& buff, Position pos, Area area);
+  void DrawHomeScreen(FrameBuffer_& buff, Position pos, Area area);
+  void DrawPromptBar(FrameBuffer_& buff); // Will draw at the bottom line.
 
 public: // Actions.
   // WARNING:
@@ -275,6 +276,7 @@ class DocumentWindow : public Window, public DocumentListener {
 public:
   DocumentWindow();
   DocumentWindow(std::shared_ptr<Document> document);
+  ~DocumentWindow();
 
   // Events.
   void OnDocumentChanged() override;
@@ -294,7 +296,7 @@ private:
   Position view_start = {0, 0};
 
   // We "cache" the draw area for the text needed in some method.
-  Size text_area = {0, 0};
+  Area text_area = {0, 0};
 
   // We set it to the time it was blinked last time and
   // if (time_now - last_blink > blink_period) we blink again.
@@ -306,13 +308,13 @@ private:
 private:
   void _Update() override;
   bool _HandleEvent(const Event& event) override;
-  void _Draw(FrameBuffer buff, Position pos, Size area) override;
+  void _Draw(FrameBuffer_& buff, Position pos, Area area) override;
 
   void ResetCursorBlink();
   void EnsureCursorOnView();
 
-  void DrawBuffer(FrameBuffer buff, Position pos, Size area);
-  void DrawAutoCompletions(FrameBuffer buff, Position pos, Size area);
+  void DrawBuffer(FrameBuffer_& buff, Position pos, Area area);
+  void DrawAutoCompletions(FrameBuffer_& buff, Position pos, Area area);
 
   // Check the given index is within selection or inside the cursor and sets the pointers.
   // This is needed to set the background color of a cell and re-usable. Note that this
@@ -381,9 +383,10 @@ private:
 private:
   void _Update() override;
   bool _HandleEvent(const Event& event) override;
-  void _Draw(FrameBuffer buff, Position pos, Size area) override;
+  void _Draw(FrameBuffer_& buff, Position pos, Area area) override;
 
   void EnsureSelectionOnView();
+  void OnTotalItemsChanged();
   void OnFilteredItemsChanged();
 
   // Will return empty string if nothing is selected or the index is exceeded
@@ -391,7 +394,7 @@ private:
   std::string GetSelectedItem();
 
   // Draw a list of items in the given area (xywh).
-  void DrawItems(FrameBuffer buff,
+  void DrawItems(FrameBuffer_& buff,
                  int x, int y, int w, int h,
                  const std::vector<std::string>* items);
 

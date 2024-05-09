@@ -65,9 +65,15 @@ void Editor::ReDraw() {
 }
 
 
-// FIXME: This is temproary.
-const Theme* Editor::GetCurrentTheme() {
-  return Singleton()->themes["dracula"].get();
+const Theme* Editor::GetTheme() {
+  const Theme* theme = Singleton()->theme;
+  ASSERT(theme != nullptr, OOPS);
+  return theme;
+}
+
+
+const Icons* Editor::GetIcons() {
+  return &Singleton()->icons;
 }
 
 
@@ -96,6 +102,10 @@ Editor::Editor() {
     languages[result.language_id] = lang;
   }
 
+  // FIXME(mess, config): load current from config and use a default theme if not found.
+  SetTheme("dark_plus");
+  ASSERT(theme != nullptr, OOPS);
+
   // FIXME(mess,registry): Register LSP clients. TODO(grep): load the config from RESLOAD.
   LspConfig config;
   config.id = "clangd";
@@ -105,6 +115,17 @@ Editor::Editor() {
 
 
 Editor::~Editor() { }
+
+
+void Editor::SetTheme(const std::string theme_name) {
+  auto it = themes.find(theme_name);
+  if (it == themes.end()) {
+    std::string errmsg = std::string("Theme not found (name='") + theme_name + "')";
+    Editor::Error(errmsg);
+    return;
+  }
+  theme = it->second.get();
+}
 
 
 void Editor::SetFrontEnd(std::unique_ptr<FrontEnd> frontend) {
@@ -119,16 +140,6 @@ void Editor::SetUi(std::unique_ptr<IUi> ui) {
 
 IUi* Editor::GetUi() {
   return ui.get();
-}
-
-
-uint8_t IEditor::RgbToXterm(uint32_t rgb) {
-  return ::RgbToXterm(rgb);
-}
-
-
-uint32_t IEditor::XtermToRgb(uint8_t xterm) {
-  return ::XtermToRgb(xterm);
 }
 
 
@@ -174,13 +185,11 @@ int Editor::MainLoop() {
     // Update call.
     ui->Update();
 
-    // FIXME: Because of raylib we can't do this. The fron end should own the main
-    // loop and use the eidtor as a instance to run at each iteration.
-    //
     // Draw call.
-    // if (redraw)
+    if (redraw) {
       Draw();
-    redraw = false;
+      redraw = false;
+    }
 
     // Wait till we reach the frame rate limit.
     int now = GetElapsedTime();
@@ -209,11 +218,11 @@ void Editor::EventLoop() {
 }
 
 
+// FIXME: This needs to be re-factored and cleaned up.
+// Draw to the front end buffer.
 void Editor::Draw() {
-  // FIXME: This needs to be re-factored and cleaned up.
-  // Draw to the front end buffer.
-  FrameBuffer buff = frontend->GetDrawBuffer();
-  Style style_bg = Editor::GetCurrentTheme()->GetStyle("ui.background");
+  Style style_bg = Editor::GetTheme()->GetStyle("ui.background");
+  FrameBuffer_& buff = frontend->GetDrawBuffer();
 
   // Clear the background.
   for (int i = 0; i < buff.width * buff.height; i++) {
@@ -221,8 +230,7 @@ void Editor::Draw() {
   }
 
   ui->Draw(buff);
-  // FIXME(grep): Move this insde window.
-  frontend->Display(style_bg.bg.value_or(0xffffff)); // FIXME: background color for raylib.
+  frontend->Display();
 }
 
 
@@ -238,7 +246,7 @@ std::shared_ptr<Document> Editor::OpenDocument(const Path& path) {
 
   std::shared_ptr<Buffer> buff = std::make_shared<Buffer>(text);
   std::shared_ptr<Document> document = std::make_shared<Document>(path, buff);
-  document->SetThemeGetter([](){ return GetCurrentTheme(); });
+  document->SetThemeGetter([](){ return GetTheme(); });
 
   documents[path] = document;
   return document;

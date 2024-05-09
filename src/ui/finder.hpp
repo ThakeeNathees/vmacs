@@ -31,11 +31,13 @@ public:
   virtual void InputChanged(const std::string& input_text) = 0;
   virtual void SelectedItem(const std::string& item) = 0;
 
-  void RegisterItemsChangeListener(CallbackFinderItemsChanged cb);
-  void ItemsChanged();
+  void RegisterItemsChangeListener(
+      CallbackFinderItemsChanged cb_filter,
+      CallbackFinderItemsChanged cb_total);
 
-private:
-  CallbackFinderItemsChanged cb_item_changed;
+protected:
+  CallbackFinderItemsChanged cb_item_changed_filter = nullptr;
+  CallbackFinderItemsChanged cb_item_changed_total = nullptr;
 };
 
 

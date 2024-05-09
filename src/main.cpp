@@ -8,38 +8,46 @@
 
 
 
-
-
 // TODO:
 // The goal should be all pack together in as a single binary but also supports
 // loading resources from file (mainly theme and treesitter language).
 //
-// Mess,CodeQ:
-//   - Modes "*" and SetMode
+// Now:
 //
+//
+// Mess,CodeQ:
+//   - github_dark: ui investigate.
+//
+//   - Opening the same document twise in the find file shouldn't open new tab
+//     but make the existing tab active.
+//     * this requires window type == documentwindow check at runtime. and get
+//     the path from the window.
+//
+//   - FindFiles opening document (select) method should be re-implemented.
+//     + require config: filetype match language and lsp.
+//        ex: *cpp,*hpp : lang=cpp, lsp=clangd
+//            *c, *h    : lang=c,   lsp=clangd
+//            (Note: MakeFile, CMakeLists.txt needs to match so use regex instead of checking endswith).
+//
+//   - Window pos, area stored in draw call, fix it.
+//     + mouse events should sent to windows properly.
+//     + Should be able to scroll in every splits.
+//
+//   - Only Ui has keytree.
 //   - Register themes, languages, lsp clients keybindings etc somewhere comon.
 //   - FIXME(mess,config):
 //       create a global config (fps, theme, tabsize, etc)
-//       Icons api, provide nerd/unicode/ascii icons based on config.
 //         vertical line horizontal line, welcome screen icons etc.
-//   - Remove rgbtoxterm and other from the vmacs header.
-//   - mouse events should sent to windows properly.
-//   - fetch theme capture from theme (or somewhere).
-//   - Re implement DrawTextLine.
+//   - Fetch theme capture from theme (or somewhere).
 //   - Window::Copy method review.
-//   - FindFiles opening document (select).
 //   - Fix finder refactor and implement live grep.
 //   - Draw diagnostics the same line.
-//   - auto completion icons move.
-//   - Auto completion dropdown width has a bug, Size inconsistance.
-//   - auto completion should override the split edge.
-//   - auto completion scrolling.
+//   - Create config class (lsp config).
+//   - Event binding refactor.
 //   ------
 //   - vmacs.hpp
 //   - editor.(hpp/cpp)
 //
-//
-// Now:
 //
 //
 // Pending:
@@ -54,6 +62,9 @@
 //   remove global thread stop and handle locally
 //     document depends on redraw and: use listeners.
 //     synax depends on get theme: use callback to fetch theme.
+//  - Support true and 256 color from config.
+//  - auto completion should override the split edge.
+//  - auto completion scrolling.
 //
 //   structure:
 //     config move.
@@ -95,10 +106,8 @@
 // BUG:
 //   opening the same file twise from finder will create another tab (it shoud just show the already opened tab).
 //   not scrolling if not focused
-//   draw auto completion popup only in the current focused window.
 //   drawing popup needs to be reviewed since if it goes out of the window, we just trim it but it needs to be pushed inside. (better draw primitives required)
 //   signature help will hide pressing space after comma.
-//   esc doesn't clear the selection.
 //   [bug in termbox] color 0x000000 (black) cannot be used as it will be replaced
 //     with default color (use emacs theme compare with helix)
 //     ref: https://github.com/nsf/termbox/issues/114
@@ -107,11 +116,11 @@
 //    Registry of language server, and language => lsp mapping in the Editor:
 //      { "clangd" : LspClient(), "pyright" : LspClient(), ...  }
 //      { "c" : "clangd", "c++": "clangd",  "python" : "pyright", etc. }
-//    Theme manager...
 //    Global Configs.
 //
 //
 // Unfinished, working things:
+//   Icons api, provide nerd/unicode/ascii icons based on config.
 //   autocompletion + (show documnt, symbol helper for parameter, icon, etc.)
 //   autocompletion selection of items. icon config.
 //   Theme loading from file and swith theme, theme listening for change etc.
@@ -515,7 +524,7 @@ int main(int argc, char** argv) {
   FindWindow::keytree.RegisterBinding("<right>", "cursor_right");
   FindWindow::keytree.RegisterBinding("<left>",  "cursor_left");
   FindWindow::keytree.RegisterBinding("<home>",  "cursor_home");
-  FindWindow::keytree.RegisterBinding("<end>",  "cursor_home");
+  FindWindow::keytree.RegisterBinding("<end>",  "cursor_end");
   FindWindow::keytree.RegisterBinding("<backspace>",  "backspace");
   FindWindow::keytree.RegisterBinding("<C-n>",  "cycle_selection");
   FindWindow::keytree.RegisterBinding("<C-p>",  "cycle_selection_reversed");

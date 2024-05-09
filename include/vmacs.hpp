@@ -24,7 +24,7 @@ typedef uint32_t Color;
 // The UI is considered as a grid of cells, each cell has foreground and
 // background colors. The color values are rgb values structured as 0xrrggbb
 // if you want the xterm-256 compatible single byte value. RgbToXterm() function
-// defined bellow.
+// defined in the utils.
 typedef struct {
   uint32_t ch;     // Unicode codepoint.
   Color    fg;     // Foreground color.
@@ -37,10 +37,10 @@ typedef struct {
 // cell values, at the backend draw call which then will be displaied by the
 // front end.
 typedef struct {
-  Cell* cells;
+  std::vector<Cell> cells;
   int width;
   int height;
-} FrameBuffer;
+} FrameBuffer_;
 
 
 // All the event enums here are copied from raylib, since the core should be
@@ -240,11 +240,11 @@ public:
   // the display takes a cleaer color argument which needed to clear the color
   // outside of the grid otherwise the color outside gride will be different and
   // also raylib requires a clear_color swap a new buffer and start drawing.
-  virtual FrameBuffer GetDrawBuffer() = 0;
+  virtual FrameBuffer_& GetDrawBuffer() = 0;
  
   // TODO: Remove the clear color and get the color for raylib from the theme
   // config or somewhere.
-  virtual void Display(uint32_t clear_color) = 0; // Display the drawbuffer.
+  virtual void Display() = 0; // Display the drawbuffer.
 
   virtual ~FrontEnd() = default;
 };
@@ -262,10 +262,5 @@ public:
   virtual int MainLoop() = 0;
 
   virtual ~IEditor() = default;
-
-  // Utility functions.
-  static uint8_t RgbToXterm(uint32_t rgb);
-  static uint32_t XtermToRgb(uint8_t xterm);
 };
-
 

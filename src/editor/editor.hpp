@@ -22,7 +22,7 @@ public:
 
   virtual bool HandleEvent(const Event& event) = 0;
   virtual void Update() = 0;
-  virtual void Draw(FrameBuffer buff) = 0;
+  virtual void Draw(FrameBuffer_& buff) = 0;
 
   // Methods to show in the info bar.
   virtual void Info(const std::string& error) = 0;
@@ -50,9 +50,11 @@ public:
   // Signale the editor to draw to the frame buffer since something is changed.
   static void ReDraw();
 
-  // Since the resources are loaded at the start of the application and only
-  // released at the very end, it's safe to use the raw pointers.
-  static const Theme* GetCurrentTheme();
+  // Returns the current theme. Since the resources are loaded at the start of
+  // the application and only released at the very end, it's safe to use the raw
+  // pointers.
+  static const Theme* GetTheme();
+  static const Icons* GetIcons();
 
   int MainLoop() override;
 
@@ -60,6 +62,8 @@ public:
 
   void SetUi(std::unique_ptr<IUi> window);
   IUi* GetUi();
+
+  void SetTheme(const std::string theme_name);
 
   std::shared_ptr<Document> OpenDocument(const Path& path);
   std::shared_ptr<const Language> GetLanguage(const LanguageId& id) const;
@@ -84,7 +88,10 @@ private:
   std::map<Path, std::shared_ptr<Document>>             documents;
   std::map<LspClientId, std::shared_ptr<LspClient>>     lsp_clients;
 
-  friend class Global;
+  // Themes are stored in the above themes registry and we have a raw pointer
+  // of the theme here.
+  const Theme* theme = nullptr;
+  Icons icons;
 
 private:
   // Lsp listeners.
@@ -100,6 +107,5 @@ private:
   void EventLoop();
 
   void Draw(); // The draw call for each iteration.
-
 };
 
