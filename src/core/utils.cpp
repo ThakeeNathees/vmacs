@@ -123,7 +123,7 @@ LanguageId Config::GetLangIdFromFileName(const std::string& filename) const {
 
 // FIXME: Remove this ugly logic.
 LspClientId Config::GetLspClientIdFromFileName(const std::string& filename) const {
-  // if (EndsWith(filename, ".py")) return "python";
+  if (EndsWith(filename, ".py")) return "pylsp";
 
   if (EndsWith(filename, ".cpp")) return "clangd";
   if (EndsWith(filename, ".hpp")) return "clangd";

@@ -110,8 +110,11 @@ void LspClient::StartServer() {
   // Run server in a child process IO loop in a different thread.
   ipc->Run();
 
-  // TODO: configure params.
-  SendRequest("initialize", Json::object());
+  // FIXME: configure params. (check with jedi-language-server)
+  // Json params = Json::parse(R"!!({"capabilities":{"textDocument":{"hover":{"dynamicRegistration":true,"contentFormat":["plaintext","markdown"]},"synchronization":{"dynamicRegistration":true,"willSave":false,"didSave":false,"willSaveWaitUntil":false},"completion":{"dynamicRegistration":true,"completionItem":{"snippetSupport":false,"commitCharactersSupport":true,"documentationFormat":["plaintext","markdown"],"deprecatedSupport":false,"preselectSupport":false},"contextSupport":false},"signatureHelp":{"dynamicRegistration":true,"signatureInformation":{"documentationFormat":["plaintext","markdown"]}},"declaration":{"dynamicRegistration":true,"linkSupport":true},"definition":{"dynamicRegistration":true,"linkSupport":true},"typeDefinition":{"dynamicRegistration":true,"linkSupport":true},"implementation":{"dynamicRegistration":true,"linkSupport":true}},"workspace":{"didChangeConfiguration":{"dynamicRegistration":true}}},"initializationOptions":null,"processId":null,"rootUri":"file:///home/ubuntu/artifacts/","workspaceFolders":null})!!");
+
+  Json params = Json::object();
+  SendRequest("initialize", params);
 }
 
 
@@ -153,7 +156,7 @@ void LspClient::SendNotification(const std::string& method, const Json& params) 
 }
 
 
-void LspClient::DidOpen(const Path& path, const std::string& text, const std::string& language) {
+void LspClient::DidOpen(const Path& path, const std::string& text, const std::string& language, uint32_t version) {
   SendNotification(
     "textDocument/didOpen", {
       {
@@ -161,6 +164,7 @@ void LspClient::DidOpen(const Path& path, const std::string& text, const std::st
           { "uri", path.Uri() },
           { "text", text },
           { "languageId", language },
+          { "version", version },
         }
       }
     });
@@ -534,6 +538,7 @@ bool LspClient::JsonToCompletionItem(CompletionItem* item, const Json& json) {
 
 
 void LspClient::StdoutCallback(void* user_data, const char* buff, size_t length) {
+
   LspClient* self = (LspClient*) user_data;
   std::string_view data(buff, length);
 

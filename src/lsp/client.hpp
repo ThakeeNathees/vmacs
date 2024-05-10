@@ -75,8 +75,8 @@ enum class CompletionItemKind {
 // The range and text needs to be inserted for the completion. Select the region
 // and insert the new text.
 struct TextEdit {
-  Coord start = {0, 0};
-  Coord end   = {0, 0};
+  Coord start = {-1, -1};
+  Coord end   = {-1, -1};
   std::string text;
 };
 
@@ -184,7 +184,7 @@ public:
   void SendNotification(const std::string& method, const Json& params);
 
   // Abstracted request/notification methods.
-  void DidOpen(const Path& path, const std::string& text, const std::string& langauge);
+  void DidOpen(const Path& path, const std::string& text, const std::string& langauge, uint32_t version);
   void DidChange(const Path& path, uint32_t version, const std::vector<DocumentChange>& changes);
   void Completion(const Path& path, Coord position);
   void SignatureHelp(const Path& path, Coord position);

@@ -108,7 +108,7 @@ void FindWindow::_Draw(FrameBuffer& buff, Position pos_windows, Area area) {
   const Style style = style_bg.Apply(style_text);
 
   // Dimentions.
-  const int percent = 90;
+  const int percent = 70;
   const int w = (area.width * percent) / 100;
   const int h = (area.height * percent) / 100;
   const int x = (area.width - w) / 2;

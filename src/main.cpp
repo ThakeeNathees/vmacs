@@ -13,14 +13,6 @@
 // loading resources from file (mainly theme and treesitter language).
 //
 // Now:
-//   - FIXME(mess,config):
-//   - Register lang, theme.
-//   - Create a defaults and register all defaults there.
-//   - Create config class (lsp config).
-//   - Register themes, languages, lsp clients keybindings etc somewhere comon.
-//   - Fetch theme capture from theme (or somewhere).
-//       create a global config (fps, theme, tabsize, etc)
-//   - lsp client shouldn't start when the editor is started (only a file opened).
 //
 //
 // Mess,CodeQ:
@@ -38,12 +30,8 @@
 //     * this requires window type == documentwindow check at runtime. and get
 //     the path from the window.
 //
-//   - [deps config] FindFiles opening document (select) method should be re-implemented.
-//     + require config: filetype match language and lsp.
-//        ex: *cpp,*hpp : lang=cpp, lsp=clangd
-//            *c, *h    : lang=c,   lsp=clangd
-//            (Note: MakeFile, CMakeLists.txt needs to match so use regex instead of checking endswith).
-//
+//   - Fetch theme capture from theme (or somewhere).
+//       create a global config (fps, theme, tabsize, etc)
 //
 //   - Only Ui has keytree.
 //   - Event binding refactor.
@@ -99,6 +87,10 @@
 //   terminal (maybe)
 //
 // LSP:
+//   pylsp completion insert text position has issue, it should replace only the text after '.'.
+//     json.loa|
+//     loads|
+//
 //   completion: additional text (like import statement).
 //   goto definition.
 //   rename.
@@ -270,7 +262,7 @@ void lsp_test() {
 
   std::string text;
   ASSERT(Platform::ReadFile(&text, path), "My ugly code");
-  client.DidOpen(path, text, "c");
+  client.DidOpen(path, text, "c", 0);
 
   // goto definition.
   // std::cin >> x;
@@ -570,11 +562,18 @@ int main(int argc, char** argv) {
 
   // TODO: Load them from config file or somewhere.
   // Register LSP clients.
-  LspConfig config;
-  config.id = "clangd";
-  config.server_file = "clangd";
-  editor->RegisterLspClient(config);
-
+  {
+    LspConfig config;
+    config.id = "clangd";
+    config.server_file = "clangd";
+    editor->RegisterLspClient(config);
+  }
+  {
+    LspConfig config;
+    config.id = "pylsp";
+    config.server_file = "pylsp";
+    editor->RegisterLspClient(config);
+  }
 
   std::unique_ptr<IFrontEnd> frontend = std::make_unique<Termbox2>();
   editor->SetFrontEnd(std::move(frontend));
