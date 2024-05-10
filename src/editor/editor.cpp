@@ -103,7 +103,7 @@ Editor::Editor() {
   }
 
   // FIXME(mess, config): load current from config and use a default theme if not found.
-  SetTheme("dark_plus");
+  SetTheme("varua");
   ASSERT(theme != nullptr, OOPS);
 
   // FIXME(mess,registry): Register LSP clients. TODO(grep): load the config from RESLOAD.
@@ -222,7 +222,7 @@ void Editor::EventLoop() {
 // Draw to the front end buffer.
 void Editor::Draw() {
   Style style_bg = Editor::GetTheme()->GetStyle("ui.background");
-  FrameBuffer_& buff = frontend->GetDrawBuffer();
+  FrameBuffer& buff = frontend->GetDrawBuffer();
 
   // Clear the background.
   for (int i = 0; i < buff.width * buff.height; i++) {

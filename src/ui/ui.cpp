@@ -26,7 +26,7 @@ void Window::Update() {
 }
 
 
-void Window::Draw(FrameBuffer_& buff, Position pos, Area area) {
+void Window::Draw(FrameBuffer& buff, Position pos, Area area) {
   this->pos = pos;
   this->area = area;
   _Draw(buff, pos, area);
@@ -313,12 +313,12 @@ const Split* Tab::GetActiveSplit() {
 }
 
 
-void Tab::Draw(FrameBuffer_& buff, Position pos, Area area) {
+void Tab::Draw(FrameBuffer& buff, Position pos, Area area) {
   DrawSplit(buff, root.get(), pos, area);
 }
 
 
-void Tab::DrawSplit(FrameBuffer_& buff, Split* split, Position pos, Area area) {
+void Tab::DrawSplit(FrameBuffer& buff, Split* split, Position pos, Area area) {
   if (split->children.size() == 0) { // Leaf node.
     ASSERT(split->type == Split::Type::LEAF, OOPS);
     if (split->window != nullptr) split->window->Draw(buff, pos, area);
@@ -459,7 +459,7 @@ void Ui::Update() {
 
 
 // FIXME(mess): Cleanup this mess.
-void Ui::Draw(FrameBuffer_& buff) {
+void Ui::Draw(FrameBuffer& buff) {
 
   Position pos(0, 0);
   Area area(buff.width, buff.height-1);
@@ -490,7 +490,7 @@ void Ui::Draw(FrameBuffer_& buff) {
 }
 
 
-void Ui::DrawHomeScreen(FrameBuffer_& buff, Position pos, Area area) {
+void Ui::DrawHomeScreen(FrameBuffer& buff, Position pos, Area area) {
 
   const Icons* icons = Editor::GetIcons();
   ASSERT(icons != nullptr, OOPS);
@@ -554,7 +554,7 @@ void Ui::DrawHomeScreen(FrameBuffer_& buff, Position pos, Area area) {
 }
 
 
-void Ui::DrawPromptBar(FrameBuffer_& buff) {
+void Ui::DrawPromptBar(FrameBuffer& buff) {
 
   // FIXME: --------------------------------------------------------------------
   Style style_text = Editor::GetTheme()->GetStyle("ui.text");
@@ -583,7 +583,7 @@ void Ui::DrawPromptBar(FrameBuffer_& buff) {
 
 
 // TODO: Add multiple tabs and scroll and ensure active tab is in view.
-void Ui::DrawTabsBar(FrameBuffer_& buff, Position pos, Area area) {
+void Ui::DrawTabsBar(FrameBuffer& buff, Position pos, Area area) {
   ASSERT(tabs.size() > 0, OOPS);
 
   const Icons* icons = Editor::GetIcons();

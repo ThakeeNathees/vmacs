@@ -13,37 +13,38 @@
 // loading resources from file (mainly theme and treesitter language).
 //
 // Now:
+//   - FIXME(mess,config):
+//   - Create config class (lsp config).
+//   - Register themes, languages, lsp clients keybindings etc somewhere comon.
+//   - Fetch theme capture from theme (or somewhere).
+//       create a global config (fps, theme, tabsize, etc)
 //
 //
 // Mess,CodeQ:
-//   - github_dark: ui investigate.
 //
-//   - Opening the same document twise in the find file shouldn't open new tab
+//   - Window pos, area stored in draw call, fix it.
+//     + mouse events should sent to windows properly.
+//     + Should be able to scroll in every splits.
+//     + view_start, and text_area in documentwindow, pos, area in window (same).
+//
+//   - [deps above] Opening the same document twise in the find file shouldn't open new tab
 //     but make the existing tab active.
 //     * this requires window type == documentwindow check at runtime. and get
 //     the path from the window.
 //
-//   - FindFiles opening document (select) method should be re-implemented.
+//   - [deps config] FindFiles opening document (select) method should be re-implemented.
 //     + require config: filetype match language and lsp.
 //        ex: *cpp,*hpp : lang=cpp, lsp=clangd
 //            *c, *h    : lang=c,   lsp=clangd
 //            (Note: MakeFile, CMakeLists.txt needs to match so use regex instead of checking endswith).
 //
-//   - Window pos, area stored in draw call, fix it.
-//     + mouse events should sent to windows properly.
-//     + Should be able to scroll in every splits.
 //
 //   - Only Ui has keytree.
-//   - Register themes, languages, lsp clients keybindings etc somewhere comon.
-//   - FIXME(mess,config):
-//       create a global config (fps, theme, tabsize, etc)
-//         vertical line horizontal line, welcome screen icons etc.
-//   - Fetch theme capture from theme (or somewhere).
+//   - Event binding refactor.
+//
 //   - Window::Copy method review.
 //   - Fix finder refactor and implement live grep.
 //   - Draw diagnostics the same line.
-//   - Create config class (lsp config).
-//   - Event binding refactor.
 //   ------
 //   - vmacs.hpp
 //   - editor.(hpp/cpp)
@@ -59,22 +60,18 @@
 //   Add another language server client and test. show errors and ask inputs.
 //   Global config (tabsize), dropdown icons, dropdown list max count. lsp config.
 //   Better draw diagnostics.
-//   remove global thread stop and handle locally
-//     document depends on redraw and: use listeners.
-//     synax depends on get theme: use callback to fetch theme.
 //  - Support true and 256 color from config.
-//  - auto completion should override the split edge.
-//  - auto completion scrolling.
+//  - autocompletion:
+//    - An abstract class for completion list.
+//    - auto completion should override the split edge.
+//    - auto completion scrolling.
 //
 //   structure:
 //     config move.
 //     theme: getting values and proper, dynamic changeing (listener);
-//     cleanup what ever we have and try to complete: before adding more things.
-//     Platform interface and Utils class.
+//     Utils class (maybe)
 //
 //  Note:
-//    Document shouldn't draw autocompletion if it's in a window that's not focused.
-//      and if the same document opened in two windows, only one show the list.
 //    Drawing autocompletion is done at the document draw level, so split will
 //      override the list if we draw another on top of.
 //

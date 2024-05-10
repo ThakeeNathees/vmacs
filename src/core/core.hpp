@@ -377,6 +377,8 @@ public:
   int hl = 0x2500; // ─
   int vl = 0x2502; // │
 
+  int scrollbar = 0x2590; // ▐
+
   int trim_indicator = 0x2026; // …
   int whitespace_tab = 0x2192; // →
 
@@ -501,7 +503,7 @@ std::string Utf8UnicodeToString(uint32_t c);
 
 // Draw a NULL terminated text (utf8) to the specified position and width.
 void DrawTextLine(
-    FrameBuffer_& buff,
+    FrameBuffer& buff,
     const char* text,
     Position pos,
     int width,          // If the text goes beyond the width it'll terminate.
@@ -511,10 +513,10 @@ void DrawTextLine(
                         // only the text is drawn with the given bg.
 
 
-void DrawRectangleFill(FrameBuffer_& buff, Position pos, Area area, Style style);
-void DrawRectangleLine(FrameBuffer_& buff, Position pos, Area area, Style style, const Icons* icons, bool fill);
-void DrawHorizontalLine(FrameBuffer_& buff, Position pos, int width, Style style, const Icons* icons);
-void DrawVerticalLine(FrameBuffer_& buff, Position pos, int height, Style style, const Icons* icons);
+void DrawRectangleFill(FrameBuffer& buff, Position pos, Area area, Style style);
+void DrawRectangleLine(FrameBuffer& buff, Position pos, Area area, Style style, const Icons* icons, bool fill);
+void DrawHorizontalLine(FrameBuffer& buff, Position pos, int width, Style style, const Icons* icons);
+void DrawVerticalLine(FrameBuffer& buff, Position pos, int height, Style style, const Icons* icons);
 
 
 // On a successfull parse, it'll return true and push all the keys are parsed

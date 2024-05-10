@@ -107,7 +107,7 @@ int GetElapsedTime() {
 
 
 void DrawTextLine(
-    FrameBuffer_& buff,
+    FrameBuffer& buff,
     const char* text,
     Position pos,
     int width,
@@ -148,7 +148,7 @@ void DrawTextLine(
 }
 
 
-void DrawRectangleFill(FrameBuffer_& buff, Position pos, Area area, Style style) {
+void DrawRectangleFill(FrameBuffer& buff, Position pos, Area area, Style style) {
 
   // Clip the rectangle to our frame and if the entire rectangle is out of the
   // current frame or the size after clip is zero we don't have to draw.
@@ -167,7 +167,7 @@ void DrawRectangleFill(FrameBuffer_& buff, Position pos, Area area, Style style)
 }
 
 
-void DrawRectangleLine(FrameBuffer_& buff, Position pos, Area area, Style style, const Icons* icons, bool fill) {
+void DrawRectangleLine(FrameBuffer& buff, Position pos, Area area, Style style, const Icons* icons, bool fill) {
   ASSERT(icons != nullptr, OOPS);
 
   // Clip the rectangle to our frame and if the entire rectangle is out of the
@@ -214,7 +214,7 @@ void DrawRectangleLine(FrameBuffer_& buff, Position pos, Area area, Style style,
 }
 
 
-void DrawHorizontalLine(FrameBuffer_& buff, Position pos, int width, Style style, const Icons* icons) {
+void DrawHorizontalLine(FrameBuffer& buff, Position pos, int width, Style style, const Icons* icons) {
   ASSERT(icons != nullptr, OOPS);
 
   // Clip the line and if it's out of the current frame, we don't have to draw.
@@ -230,7 +230,7 @@ void DrawHorizontalLine(FrameBuffer_& buff, Position pos, int width, Style style
 }
 
 
-void DrawVerticalLine(FrameBuffer_& buff, Position pos, int height, Style style, const Icons* icons) {
+void DrawVerticalLine(FrameBuffer& buff, Position pos, int height, Style style, const Icons* icons) {
   ASSERT(icons != nullptr, OOPS);
 
   // Clip the line and if it's out of the current frame, we don't have to draw.

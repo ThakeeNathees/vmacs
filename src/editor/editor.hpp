@@ -22,7 +22,7 @@ public:
 
   virtual bool HandleEvent(const Event& event) = 0;
   virtual void Update() = 0;
-  virtual void Draw(FrameBuffer_& buff) = 0;
+  virtual void Draw(FrameBuffer& buff) = 0;
 
   // Methods to show in the info bar.
   virtual void Info(const std::string& error) = 0;

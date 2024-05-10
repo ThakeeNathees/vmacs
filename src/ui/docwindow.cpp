@@ -124,7 +124,7 @@ std::unique_ptr<Window> DocumentWindow::Copy() const {
 }
 
 
-void DocumentWindow::_Draw(FrameBuffer_& buff, Position pos, Area area) {
+void DocumentWindow::_Draw(FrameBuffer& buff, Position pos, Area area) {
   DrawBuffer(buff, pos, area);
   if (IsActive()) DrawAutoCompletions(buff, pos, area);
 }
@@ -149,7 +149,7 @@ void DocumentWindow::CheckCellStatusForDrawing(int index, bool* in_cursor, bool*
 }
 
 
-void DocumentWindow::DrawBuffer(FrameBuffer_& buff, Position pos, Area area) {
+void DocumentWindow::DrawBuffer(FrameBuffer& buff, Position pos, Area area) {
   ASSERT(this->document != nullptr, OOPS);
 
   // FIXME: Move this to themes.
@@ -304,7 +304,7 @@ void DocumentWindow::DrawBuffer(FrameBuffer_& buff, Position pos, Area area) {
 }
 
 
-void DocumentWindow::DrawAutoCompletions(FrameBuffer_& buff, Position docpos, Area docarea) {
+void DocumentWindow::DrawAutoCompletions(FrameBuffer& buff, Position docpos, Area docarea) {
 
   const Icons* icons = Editor::GetIcons();
   ASSERT(icons != nullptr, OOPS);
@@ -316,6 +316,7 @@ void DocumentWindow::DrawAutoCompletions(FrameBuffer_& buff, Position docpos, Ar
   Style style_menu          = theme->GetStyle("ui.menu");
   Style style_menu_selected = theme->GetStyle("ui.menu.selected");
   Style style_active_param  = theme->GetStyle("type"); // FIXME: Not the correct one.
+  style_menu_selected = style_menu.Apply(style_menu_selected); // ui.menu.selected doesn't have bg.
   //---------------------------------------------------------------------------
 
   // Get the completion items.

@@ -91,7 +91,7 @@ std::string FindWindow::GetSelectedItem() {
 }
 
 
-void FindWindow::_Draw(FrameBuffer_& buff, Position pos_windows, Area area) {
+void FindWindow::_Draw(FrameBuffer& buff, Position pos_windows, Area area) {
 
   const Icons* icons = Editor::GetIcons();
   ASSERT(icons != nullptr, OOPS);
@@ -102,6 +102,7 @@ void FindWindow::_Draw(FrameBuffer_& buff, Position pos_windows, Area area) {
   Style style_cursor = theme->GetStyle("ui.cursor.primary");
   Style style_bg     = theme->GetStyle("ui.background");
   Style style_border = theme->GetStyle("ui.background.separator");
+  style_border = style_text.Apply(style_bg).Apply(style_border);
   // --------------------------------------------------------------------------
 
   // The default fg,bg,attrib for drawing bellow.
@@ -181,12 +182,15 @@ void FindWindow::_Draw(FrameBuffer_& buff, Position pos_windows, Area area) {
 }
 
 
-void FindWindow::DrawItems(FrameBuffer_& buff, int x, int y, int w, int h, const std::vector<std::string>* items) {
+void FindWindow::DrawItems(FrameBuffer& buff, int x, int y, int w, int h, const std::vector<std::string>* items) {
   // FIXME: Move this mess. ----------------------------------------------------
   const Theme* theme = Editor::GetTheme();
   Style style_text = theme->GetStyle("ui.text");
   Style style_bg   = theme->GetStyle("ui.background");
-  Style style_selected = theme->GetStyle("ui.menu.selected");
+
+  Style style_menu          = theme->GetStyle("ui.menu");
+  Style style_menu_selected = theme->GetStyle("ui.menu.selected");
+  Style style_selected = style_menu.Apply(style_menu_selected);
   // --------------------------------------------------------------------------
   Style style = style_bg.Apply(style_text);
 

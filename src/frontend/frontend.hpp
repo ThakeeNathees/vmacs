@@ -18,11 +18,11 @@ public:
   virtual bool Cleanup() override;
   virtual std::vector<Event> GetEvents() override;
 
-  virtual FrameBuffer_& GetDrawBuffer() override;
+  virtual FrameBuffer& GetDrawBuffer() override;
   virtual void Display() override;
 
 private:
-  FrameBuffer_ buff;
+  FrameBuffer buff;
 };
 
 
