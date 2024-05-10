@@ -93,15 +93,14 @@ std::string FindWindow::GetSelectedItem() {
 
 void FindWindow::_Draw(FrameBuffer& buff, Position pos_windows, Area area) {
 
-  const Icons* icons = Editor::GetIcons();
-  ASSERT(icons != nullptr, OOPS);
+  const Theme& theme = Editor::GetTheme();
+  const Icons& icons = Editor::GetIcons();
 
   // FIXME: Move this mess. ----------------------------------------------------
-  const Theme* theme = Editor::GetTheme();
-  Style style_text   = theme->GetStyle("ui.text");
-  Style style_cursor = theme->GetStyle("ui.cursor.primary");
-  Style style_bg     = theme->GetStyle("ui.background");
-  Style style_border = theme->GetStyle("ui.background.separator");
+  Style style_text   = theme.GetStyle("ui.text");
+  Style style_cursor = theme.GetStyle("ui.cursor.primary");
+  Style style_bg     = theme.GetStyle("ui.background");
+  Style style_border = theme.GetStyle("ui.background.separator");
   style_border = style_text.Apply(style_bg).Apply(style_border);
   // --------------------------------------------------------------------------
 
@@ -183,19 +182,18 @@ void FindWindow::_Draw(FrameBuffer& buff, Position pos_windows, Area area) {
 
 
 void FindWindow::DrawItems(FrameBuffer& buff, int x, int y, int w, int h, const std::vector<std::string>* items) {
+
+  const Theme& theme = Editor::GetTheme();
+  const Icons& icons = Editor::GetIcons();
+
   // FIXME: Move this mess. ----------------------------------------------------
-  const Theme* theme = Editor::GetTheme();
-  Style style_text = theme->GetStyle("ui.text");
-  Style style_bg   = theme->GetStyle("ui.background");
-
-  Style style_menu          = theme->GetStyle("ui.menu");
-  Style style_menu_selected = theme->GetStyle("ui.menu.selected");
-  Style style_selected = style_menu.Apply(style_menu_selected);
+  Style style_text          = theme.GetStyle("ui.text");
+  Style style_bg            = theme.GetStyle("ui.background");
+  Style style_menu          = theme.GetStyle("ui.menu");
+  Style style_menu_selected = theme.GetStyle("ui.menu.selected");
+  Style style_selected      = style_menu.Apply(style_menu_selected);
+  Style style               = style_bg.Apply(style_text);
   // --------------------------------------------------------------------------
-  Style style = style_bg.Apply(style_text);
-
-  const Icons* icons = Editor::GetIcons();
-  ASSERT(icons != nullptr, OOPS);
 
   for (int i = 0; i < h; i++) {
     if  (view_start_index + i >= items->size()) return; // Out of bound.
@@ -273,12 +271,6 @@ bool FindWindow::Action_AcceptSelection(FindWindow* self) {
   Editor* e = Editor::Singleton().get();
   std::shared_ptr<Document> doc = e->OpenDocument(path);
   ASSERT(doc != nullptr, OOPS);
-  std::shared_ptr<const Language> lang = e->GetLanguage("cpp");
-  ASSERT(lang != nullptr, OOPS);
-  std::shared_ptr<LspClient> client = e->GetLspClient("clangd");
-  ASSERT(client != nullptr, OOPS);
-  doc->SetLanguage(lang);
-  doc->SetLspClient(client);
 
   // FIXME(grep): Implement tab from window and call it here.
   std::unique_ptr<DocumentWindow> docwin = std::make_unique<DocumentWindow>(doc);

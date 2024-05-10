@@ -8,11 +8,11 @@
 
 #pragma once
 
-#include <vmacs.hpp>
+#include "core/core.hpp"
 #include <termbox2/termbox2.h>
 
 
-class Termbox2 : public FrontEnd {
+class Termbox2 : public IFrontEnd {
 public:
   virtual bool Initialize() override;
   virtual bool Cleanup() override;

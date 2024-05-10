@@ -26,6 +26,11 @@ std::string Path::Uri() const {
 }
 
 
+std::string Path::FileName() const {
+  return path.filename();
+}
+
+
 bool Path::Empty() const {
   return path.empty();
 }

@@ -110,18 +110,22 @@ Coord Buffer::IndexToCoord(int index) const {
 
 
 int Buffer::IndexToColumn(int index) const {
+
+  const int tabsize = GetConfig().tabsize;
+
   // tab_width will degrease for each character and if reached 0, will reset to
   // the tabsize again.
-  int tab_width = TABSIZE_;
+  int tab_width = tabsize;
+
   Slice line = GetLine(IndexToCoord(index).line);
   int curr_column = 0;
   for (int i = line.start; i < index; i++) {
     if (At(i) == '\t') {
       curr_column += tab_width;
-      tab_width = TABSIZE_;
+      tab_width = tabsize;
     } else {
       curr_column++;
-      if (--tab_width == 0) tab_width = TABSIZE_;
+      if (--tab_width == 0) tab_width = tabsize;
     }
   }
   return curr_column;
@@ -134,25 +138,29 @@ int Buffer::CoordToIndex(Coord coord) const {
 
 
 int Buffer::ColumnToIndex(int column, int line_num, int* col_delta) const {
+
+  const int tabsize = GetConfig().tabsize;
+
   // tab_width will degrease for each character and if reached 0, will reset to
   // the tabsize again.
-  int tab_width = TABSIZE_;
+  int tab_width = tabsize;
+
   Slice line = GetLine(line_num);
   int curr_column = 0;
   for (int i = line.start; i <= line.end; i++) {
     if (curr_column == column) { if (col_delta) *col_delta = 0; return i; }
     if (curr_column > column) {
-      ASSERT(column % TABSIZE_ != 0, OOPS);
-      if (col_delta) *col_delta = TABSIZE_ - (curr_column - column);
+      ASSERT(column % tabsize != 0, OOPS);
+      if (col_delta) *col_delta = tabsize - (curr_column - column);
       return i-1;
     }
 
     if (At(i) == '\t') {
       curr_column += tab_width;
-      tab_width = TABSIZE_;
+      tab_width = tabsize;
     } else {
       curr_column++;
-    if (--tab_width == 0) tab_width = TABSIZE_;
+    if (--tab_width == 0) tab_width = tabsize;
     }
   }
 

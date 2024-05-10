@@ -14,13 +14,19 @@
 //
 // Now:
 //   - FIXME(mess,config):
+//   - Register lang, theme.
+//   - Create a defaults and register all defaults there.
 //   - Create config class (lsp config).
 //   - Register themes, languages, lsp clients keybindings etc somewhere comon.
 //   - Fetch theme capture from theme (or somewhere).
 //       create a global config (fps, theme, tabsize, etc)
+//   - lsp client shouldn't start when the editor is started (only a file opened).
 //
 //
 // Mess,CodeQ:
+//   - Check if the LSP client exists and show an error message otherwise.
+//
+//   - if tab has single document -> tab name will be the file name of the document.
 //
 //   - Window pos, area stored in draw call, fix it.
 //     + mouse events should sent to windows properly.
@@ -179,8 +185,6 @@
 
 
 
-#include <vmacs.hpp>
-
 
 // FIXME: remove this.
 #include <iostream>
@@ -196,6 +200,8 @@
 #include "lsp/client.hpp"
 #include "ui/ui.hpp"
 
+#include "core/core.hpp"
+#include "platform/posix.hpp"
 #include "frontend/frontend.hpp"
 
 #include "editor/editor.hpp"
@@ -204,7 +210,6 @@
 #include <nlohmann/json.hpp>
 using Json = nlohmann::json;
 
-#include "platform/posix.hpp"
 
 void fzf_things_test() {
   IPC::IpcOptions opt;
@@ -307,103 +312,103 @@ void lsp_test() {
 }
 
 
-extern "C" const TSLanguage* tree_sitter_c(void);
-extern "C" const TSLanguage* tree_sitter_javascript(void);
+// extern "C" const TSLanguage* tree_sitter_c(void);
+// extern "C" const TSLanguage* tree_sitter_javascript(void);
 
 void tree_sitter_test() {
 
-  const TSLanguage* lang = tree_sitter_c();
-  const char* query_source = R"!(
-  [
-    "case"
-    "}"
-    "]"
-    ")"
-  ] @outdent
-  )!";
-  uint32_t error_offset;
-  TSQueryError err;
+//   const TSLanguage* lang = tree_sitter_c();
+//   const char* query_source = R"!(
+//   [
+//     "case"
+//     "}"
+//     "]"
+//     ")"
+//   ] @outdent
+//   )!";
+//   uint32_t error_offset;
+//   TSQueryError err;
 
-  const TSQuery* query = ts_query_new(lang,
-    query_source,
-    strlen(query_source),
-    &error_offset,
-    &err
-  );
+//   const TSQuery* query = ts_query_new(lang,
+//     query_source,
+//     strlen(query_source),
+//     &error_offset,
+//     &err
+//   );
 
-  TSParser* parser = ts_parser_new();
-  ts_parser_set_language(parser, lang);
+//   TSParser* parser = ts_parser_new();
+//   ts_parser_set_language(parser, lang);
 
-  const char* source_code = R"!(
-  {}
-  )!";
-  TSTree* tree = ts_parser_parse_string(
-      parser,
-      NULL,
-      source_code,
-      strlen(source_code)
-      );
-  // Print.
-  TSNode root_node = ts_tree_root_node(tree);
-  char* dump = ts_node_string(root_node);
-  printf("Syntax tree: %s\n", dump);
+//   const char* source_code = R"!(
+//   {}
+//   )!";
+//   TSTree* tree = ts_parser_parse_string(
+//       parser,
+//       NULL,
+//       source_code,
+//       strlen(source_code)
+//       );
+//   // Print.
+//   TSNode root_node = ts_tree_root_node(tree);
+//   char* dump = ts_node_string(root_node);
+//   printf("Syntax tree: %s\n", dump);
 
 
-  TSQueryCursor* cursor = ts_query_cursor_new();
-  ts_query_cursor_exec(cursor, query, root_node);
+//   TSQueryCursor* cursor = ts_query_cursor_new();
+//   ts_query_cursor_exec(cursor, query, root_node);
 
-  TSQueryMatch match;
-  if (false) {
-    uint32_t capture_index;
-    while (ts_query_cursor_next_capture(cursor, &match, &capture_index)) {
-      printf("capture_count=%i\n", match.capture_count);
-      printf("pattern_index=%i\n", match.pattern_index);
-      for (int i = 0; i < match.capture_count; i++) {
-        uint32_t len;
-        const char* cap_name = ts_query_capture_name_for_id(query, match.captures[i].index, &len);
-        printf("capture_name=%*s\n", len, cap_name);
-      }
-      printf("\n\n");
-    }
-  } else {
+//   TSQueryMatch match;
+//   if (false) {
+//     uint32_t capture_index;
+//     while (ts_query_cursor_next_capture(cursor, &match, &capture_index)) {
+//       printf("capture_count=%i\n", match.capture_count);
+//       printf("pattern_index=%i\n", match.pattern_index);
+//       for (int i = 0; i < match.capture_count; i++) {
+//         uint32_t len;
+//         const char* cap_name = ts_query_capture_name_for_id(query, match.captures[i].index, &len);
+//         printf("capture_name=%*s\n", len, cap_name);
+//       }
+//       printf("\n\n");
+//     }
+//   } else {
 
-    while (ts_query_cursor_next_match(cursor, &match)) {
-      printf("capture_count=%i\n", match.capture_count);
-      printf("pattern_index=%i\n", match.pattern_index);
-      for (int i = 0; i < match.capture_count; i++) {
-        uint32_t len;
-        const char* cap_name = ts_query_capture_name_for_id(query, match.captures[i].index, &len);
-        printf("capture_name=%*s\n", len, cap_name);
-        char* s = ts_node_string(root_node);
-        printf("Syntax tree: %s\n\n", s);
-        printf("start=%i, end=%i\n\n",
-          ts_node_start_byte(match.captures[i].node),
-          ts_node_end_byte(match.captures[i].node)
-        );
-        free(s);
-      }
-      printf("\n");
+//     while (ts_query_cursor_next_match(cursor, &match)) {
+//       printf("capture_count=%i\n", match.capture_count);
+//       printf("pattern_index=%i\n", match.pattern_index);
+//       for (int i = 0; i < match.capture_count; i++) {
+//         uint32_t len;
+//         const char* cap_name = ts_query_capture_name_for_id(query, match.captures[i].index, &len);
+//         printf("capture_name=%*s\n", len, cap_name);
+//         char* s = ts_node_string(root_node);
+//         printf("Syntax tree: %s\n\n", s);
+//         printf("start=%i, end=%i\n\n",
+//           ts_node_start_byte(match.captures[i].node),
+//           ts_node_end_byte(match.captures[i].node)
+//         );
+//         free(s);
+//       }
+//       printf("\n");
 
-    }
+//     }
 
-  }
+//   }
 
-  // TSNode expr_stmnt_node = ts_node_named_child(root_node, 0);
-  // TSNode array_node = ts_node_named_child(expr_stmnt_node, 0);
-  // printf("%s\n", ts_node_type(array_node));
+//   // TSNode expr_stmnt_node = ts_node_named_child(root_node, 0);
+//   // TSNode array_node = ts_node_named_child(expr_stmnt_node, 0);
+//   // printf("%s\n", ts_node_type(array_node));
 
-  // for (int i = 0; i < ts_node_child_count(array_node); i++) {
-  //   TSNode n = ts_node_child(array_node, i);
-  //   printf("%s\n", ts_node_type(n));
-  // }
+//   // for (int i = 0; i < ts_node_child_count(array_node); i++) {
+//   //   TSNode n = ts_node_child(array_node, i);
+//   //   printf("%s\n", ts_node_type(n));
+//   // }
 
-  // printf("cc = %i\n", );
-  // printf("nc = %i\n", ts_node_named_child_count(array_node));
+//   // printf("cc = %i\n", );
+//   // printf("nc = %i\n", ts_node_named_child_count(array_node));
 
-  free(dump);
-  ts_tree_delete(tree);
-  ts_parser_delete(parser);
-  return;
+//   free(dump);
+//   ts_tree_delete(tree);
+//   ts_parser_delete(parser);
+//   return;
 }
 
 
@@ -534,11 +539,46 @@ int main(int argc, char** argv) {
 
 
 
-  std::shared_ptr<IEditor> editor = IEditor::Singleton();
-  std::unique_ptr<FrontEnd> frontend = std::make_unique<Termbox2>();
+  std::shared_ptr<Editor> editor = Editor::Singleton();
+
+  // Register themes.
+  std::map<std::string, Json> theme_data = Platform::LoadThemes();
+  for (auto& it : theme_data) {
+    editor->RegisterTheme(it.first, std::make_shared<Theme>(it.second));
+  }
+
+  // Register languages.
+  for (const LanguageLoadResult& result : Platform::LoadLanguages()) {
+    std::shared_ptr<Language> lang = std::make_shared<Language>();
+    if (result.query_highlight != NULL) {
+      if (result.tree_sitter_loader) lang->data = result.tree_sitter_loader();
+
+      // TODO: check for errors.
+      uint32_t error_offset; TSQueryError err;
+
+      TSQuery* query = ts_query_new(
+          lang->data, // Note that the loader should be called above.
+          result.query_highlight,
+          strlen(result.query_highlight),
+          &error_offset, &err);
+      lang->query_highlight = query;
+
+      ASSERT(query != NULL, OOPS); // FIXME: check for errors and handle properly.
+    }
+    editor->RegisterLanguage(result.language_id, lang);
+  }
+
+  // TODO: Load them from config file or somewhere.
+  // Register LSP clients.
+  LspConfig config;
+  config.id = "clangd";
+  config.server_file = "clangd";
+  editor->RegisterLspClient(config);
+
+
+  std::unique_ptr<IFrontEnd> frontend = std::make_unique<Termbox2>();
   editor->SetFrontEnd(std::move(frontend));
 
-  Editor* e = (Editor*) editor.get();
   std::unique_ptr<Ui> ui = std::make_unique<Ui>();
 
 #if 0 // Split test.
@@ -581,9 +621,9 @@ int main(int argc, char** argv) {
   // root->SetWindow(std::move(win));
 #endif
 
-  e->SetUi(std::move(ui));
+  editor->SetUi(std::move(ui));
 
-  e->MainLoop();
+  editor->MainLoop();
   return 0;
 }
 

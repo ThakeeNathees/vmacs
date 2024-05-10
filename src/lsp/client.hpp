@@ -151,10 +151,7 @@ struct SignatureItems {
 // Unique Id for each request we make to the language server.
 typedef uint32_t RequestId;
 
-// The language id specified by the LSP specification.
 // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocumentItem
-typedef std::string LanguageId;  // c, cpp, python, js, etc.
-typedef std::string LspClientId; // clangd, ccls, pyright, etc.
 
 typedef std::function<void(const Path&, uint32_t version, std::vector<Diagnostic>&&)> CallbackDiagnostic;
 typedef std::function<void(const Path&, bool is_incomplete, std::vector<CompletionItem>&&)> CallbackCompletion;
@@ -201,6 +198,10 @@ public:
 
 private:
   LspConfig config;
+
+  // We set this to true once we start the server. Calling start server
+  // multiple times will actually start the server the first time.
+  bool server_started = false;
 
   // The Interprocess communication proxy.
   std::unique_ptr<IPC> ipc;

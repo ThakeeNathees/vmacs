@@ -54,6 +54,8 @@ static bool GetJson(const Json** ret, const Json& json, const char** args) {
 
 LspClient::LspClient(LspConfig config) : config(config) {
 
+  // FIXME: Move this logic to somewhere to support restarting the server
+  // if something went wrong and the user needs to restart this client/server.
   IPC::IpcOptions opt;
   opt.user_data      = this;
   opt.file           = config.server_file;
@@ -100,7 +102,14 @@ LspClient::~LspClient() {
 
 
 void LspClient::StartServer() {
+
+  // Check if server already started.
+  if (server_started) return;
+  server_started = true;
+
+  // Run server in a child process IO loop in a different thread.
   ipc->Run();
+
   // TODO: configure params.
   SendRequest("initialize", Json::object());
 }

@@ -38,6 +38,8 @@ public:
   std::string String() const;
   std::string Uri() const;
 
+  std::string FileName() const;
+
   bool Empty() const;
   bool Exists() const;
 

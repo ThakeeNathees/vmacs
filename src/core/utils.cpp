@@ -102,6 +102,40 @@ int GetElapsedTime() {
 
 
 // -----------------------------------------------------------------------------
+// Config related functions.
+// -----------------------------------------------------------------------------
+
+
+// FIXME: Remove this ugly logic.
+LanguageId Config::GetLangIdFromFileName(const std::string& filename) const {
+  if (EndsWith(filename, ".py")) return "python";
+
+  if (EndsWith(filename, ".cpp")) return "cpp";
+  if (EndsWith(filename, ".hpp")) return "cpp";
+  if (EndsWith(filename, ".inl")) return "cpp";
+
+  if (EndsWith(filename, ".c")) return "c";
+  if (EndsWith(filename, ".h")) return "c";
+
+  return "";
+}
+
+
+// FIXME: Remove this ugly logic.
+LspClientId Config::GetLspClientIdFromFileName(const std::string& filename) const {
+  // if (EndsWith(filename, ".py")) return "python";
+
+  if (EndsWith(filename, ".cpp")) return "clangd";
+  if (EndsWith(filename, ".hpp")) return "clangd";
+  if (EndsWith(filename, ".inl")) return "clangd";
+  if (EndsWith(filename, ".c"))   return "clangd";
+  if (EndsWith(filename, ".h"))   return "clangd";
+
+  return "";
+}
+
+
+// -----------------------------------------------------------------------------
 // Draw primitives.
 // -----------------------------------------------------------------------------
 
@@ -112,7 +146,7 @@ void DrawTextLine(
     Position pos,
     int width,
     Style style,
-    const Icons* icons,
+    const Icons& icons,
     bool fill_area) {
 
   if (text == NULL || *text == '\0') return;
@@ -123,7 +157,7 @@ void DrawTextLine(
 
   int length = Utf8Strlen(text);
   int text_len = MIN(length, width);
-  int trim_indicator = icons ? icons->trim_indicator : '-';
+  int trim_indicator = icons.trim_indicator;
 
   bool trimming = (length > width);
   if (trimming) text_len -= 1;
@@ -167,9 +201,7 @@ void DrawRectangleFill(FrameBuffer& buff, Position pos, Area area, Style style) 
 }
 
 
-void DrawRectangleLine(FrameBuffer& buff, Position pos, Area area, Style style, const Icons* icons, bool fill) {
-  ASSERT(icons != nullptr, OOPS);
-
+void DrawRectangleLine(FrameBuffer& buff, Position pos, Area area, Style style, const Icons& icons, bool fill) {
   // Clip the rectangle to our frame and if the entire rectangle is out of the
   // current frame or the size after clip is zero we don't have to draw.
   if (pos.x >= buff.width || pos.y >= buff.height) return;
@@ -185,12 +217,12 @@ void DrawRectangleLine(FrameBuffer& buff, Position pos, Area area, Style style, 
   const int w = area.width;
   const int h = area.height;
 
-  const int tr = icons->tr;
-  const int tl = icons->tl;
-  const int br = icons->br;
-  const int bl = icons->bl;
-  const int hl = icons->hl;
-  const int vl = icons->vl;
+  const int tr = icons.tr;
+  const int tl = icons.tl;
+  const int br = icons.br;
+  const int bl = icons.bl;
+  const int hl = icons.hl;
+  const int vl = icons.vl;
 
   SET_CELL(buff, x,     y,     tr, style); // Top right.
   SET_CELL(buff, x+w-1, y,     tl, style); // Top left.
@@ -214,9 +246,7 @@ void DrawRectangleLine(FrameBuffer& buff, Position pos, Area area, Style style, 
 }
 
 
-void DrawHorizontalLine(FrameBuffer& buff, Position pos, int width, Style style, const Icons* icons) {
-  ASSERT(icons != nullptr, OOPS);
-
+void DrawHorizontalLine(FrameBuffer& buff, Position pos, int width, Style style, const Icons& icons) {
   // Clip the line and if it's out of the current frame, we don't have to draw.
   if (pos.x >= buff.width || pos.y >= buff.height) return;
   pos.x = MAX(pos.x, 0);
@@ -225,14 +255,12 @@ void DrawHorizontalLine(FrameBuffer& buff, Position pos, int width, Style style,
   if (width <= 0) return;
 
   for (int x = pos.x; x < pos.x+width; x++) {
-    SET_CELL(buff, x, pos.y, icons->hl, style);
+    SET_CELL(buff, x, pos.y, icons.hl, style);
   }
 }
 
 
-void DrawVerticalLine(FrameBuffer& buff, Position pos, int height, Style style, const Icons* icons) {
-  ASSERT(icons != nullptr, OOPS);
-
+void DrawVerticalLine(FrameBuffer& buff, Position pos, int height, Style style, const Icons& icons) {
   // Clip the line and if it's out of the current frame, we don't have to draw.
   if (pos.x >= buff.width || pos.y >= buff.height) return;
   pos.x  = MAX(pos.x, 0);
@@ -241,7 +269,7 @@ void DrawVerticalLine(FrameBuffer& buff, Position pos, int height, Style style, 
   if (height <= 0) return;
 
   for (int y = pos.y; y < pos.y+height; y++) {
-    SET_CELL(buff, pos.x, y, icons->vl, style);
+    SET_CELL(buff, pos.x, y, icons.vl, style);
   }
 }
 

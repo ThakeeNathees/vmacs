@@ -13,27 +13,8 @@
 #include "document/document.hpp"
 
 
-// An abstract interface for the Ui class defined in the ui directory. A
-// Ui is simply something that should be able to handle events, update each
-// iteration and draw itself on the editor.
-class IUi {
-public:
-  virtual ~IUi() = default;
-
-  virtual bool HandleEvent(const Event& event) = 0;
-  virtual void Update() = 0;
-  virtual void Draw(FrameBuffer& buff) = 0;
-
-  // Methods to show in the info bar.
-  virtual void Info(const std::string& error) = 0;
-  virtual void Success(const std::string& error) = 0;
-  virtual void Warning(const std::string& error) = 0;
-  virtual void Error(const std::string& error) = 0;
-};
-
-
 // FIXME: Re-write this class and the interface.
-class Editor : public IEditor {
+class Editor {
 
 public:
   Editor();
@@ -53,17 +34,24 @@ public:
   // Returns the current theme. Since the resources are loaded at the start of
   // the application and only released at the very end, it's safe to use the raw
   // pointers.
-  static const Theme* GetTheme();
-  static const Icons* GetIcons();
+  static const Theme& GetTheme();
+  static const Icons& GetIcons();
+  static Config& GetConfig();
 
-  int MainLoop() override;
+  int MainLoop();
 
-  void SetFrontEnd(std::unique_ptr<FrontEnd> frontend) override;
+  void SetFrontEnd(std::unique_ptr<IFrontEnd> frontend);
 
   void SetUi(std::unique_ptr<IUi> window);
   IUi* GetUi();
 
-  void SetTheme(const std::string theme_name);
+  void RegisterTheme(const std::string& theme_name, std::shared_ptr<Theme> theme);
+  void RegisterLanguage(LanguageId id, std::shared_ptr<Language> lang);
+  void RegisterLspClient(const LspConfig& config);
+
+  // Returns true on success, otherwise will set the error message to editor
+  // info bar and return false.
+  bool SetTheme(const std::string theme_name);
 
   std::shared_ptr<Document> OpenDocument(const Path& path);
   std::shared_ptr<const Language> GetLanguage(const LanguageId& id) const;
@@ -74,7 +62,7 @@ private:
   static std::shared_ptr<Editor> singleton;
 
   std::unique_ptr<IUi> ui; // The ui root element.
-  std::unique_ptr<FrontEnd> frontend;
+  std::unique_ptr<IFrontEnd> frontend;
 
   std::atomic<bool> redraw = true;
   std::atomic<bool> running = true;
@@ -89,9 +77,13 @@ private:
   std::map<LspClientId, std::shared_ptr<LspClient>>     lsp_clients;
 
   // Themes are stored in the above themes registry and we have a raw pointer
-  // of the theme here.
+  // of the theme here. This will be initialized with a non nullptr value when
+  // the editor is initialized.
   const Theme* theme = nullptr;
   Icons icons;
+
+  // The editor's configuration.
+  Config config;
 
 private:
   // Lsp listeners.
@@ -99,13 +91,8 @@ private:
   void OnLspCompletion(const Path&, bool is_incomplete, std::vector<CompletionItem>&&);
   void OnLspSignatureHelp(const Path&, SignatureItems&&);
 
-  // Construct, configure, and register an lsp client.
-  void RegisterLspClient(const LspConfig& config);
-
   // blocking loop that collect event (blocking) from the front end and push it
   // to our event queue. Run this asyncronusly.
   void EventLoop();
-
-  void Draw(); // The draw call for each iteration.
 };
 

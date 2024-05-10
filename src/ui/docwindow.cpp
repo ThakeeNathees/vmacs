@@ -120,6 +120,7 @@ void DocumentWindow::EnsureCursorOnView() {
 
 std::unique_ptr<Window> DocumentWindow::Copy() const {
   std::unique_ptr<DocumentWindow> ret = std::make_unique<DocumentWindow>(*this);
+  ret->cursors_backup = this->document->cursors;
   return std::move(ret);
 }
 
@@ -152,22 +153,23 @@ void DocumentWindow::CheckCellStatusForDrawing(int index, bool* in_cursor, bool*
 void DocumentWindow::DrawBuffer(FrameBuffer& buff, Position pos, Area area) {
   ASSERT(this->document != nullptr, OOPS);
 
+  const Theme& theme = Editor::GetTheme();
+  const Icons& icons = Editor::GetIcons();
+  const Config& config = Editor::GetConfig();
+
   // FIXME: Move this to themes.
   // --------------------------------------------------------------------------
-  const Theme* theme = Editor::GetTheme();
   // TODO: Use ui.cursor for secondary cursor same as selection.
-  Style style_text       = theme->GetStyle("ui.text");
-  Style style_whitespace = theme->GetStyle("ui.virtual.whitespace");
-  Style style_cursor     = theme->GetStyle("ui.cursor.primary");
-  Style style_selection  = theme->GetStyle("ui.selection.primary");
-  Style style_bg         = theme->GetStyle("ui.background");
-  Style style_error      = theme->GetStyle("error");
-  Style style_warning    = theme->GetStyle("warning");
+  Style style_text       = theme.GetStyle("ui.text");
+  Style style_whitespace = theme.GetStyle("ui.virtual.whitespace");
+  Style style_cursor     = theme.GetStyle("ui.cursor.primary");
+  Style style_selection  = theme.GetStyle("ui.selection.primary");
+  Style style_bg         = theme.GetStyle("ui.background");
+  Style style_error      = theme.GetStyle("error");
+  Style style_warning    = theme.GetStyle("warning");
   // --------------------------------------------------------------------------
 
-  const Icons* icons = Editor::GetIcons();
-  ASSERT(icons != nullptr, OOPS);
-  int whitespace_tag = icons->whitespace_tab;
+  int whitespace_tag = icons.whitespace_tab;
 
   // Update our text area so we'll know about the viewing area when we're not
   // drawing, needed to ensure the cursors are on the view area, etc.
@@ -200,7 +202,7 @@ void DocumentWindow::DrawBuffer(FrameBuffer& buff, Position pos, Area area) {
     int index = document->buffer->ColumnToIndex(view_start.col, line_index, &col_delta);
 
     if (col_delta > 0 && index < line.end) {
-      col_delta = TABSIZE_ - col_delta;
+      col_delta = config.tabsize - col_delta;
       bool in_cursor, in_selection;
       CheckCellStatusForDrawing(index, &in_cursor, &in_selection);
 
@@ -266,7 +268,7 @@ void DocumentWindow::DrawBuffer(FrameBuffer& buff, Position pos, Area area) {
 
       // If it's a tab character we'll draw more white spaces.
       if (istab) {
-        int space_count = TABSIZE_ - document->buffer->IndexToColumn(index) % TABSIZE_;
+        int space_count = config.tabsize - document->buffer->IndexToColumn(index) % config.tabsize;
         space_count -= 1; // Since the tab character is drawn already above.
         Style empty = style_bg.Apply(in_selection ? style_selection : style_text);
         for (int _ = 0; _ < space_count; _++) {
@@ -306,18 +308,17 @@ void DocumentWindow::DrawBuffer(FrameBuffer& buff, Position pos, Area area) {
 
 void DocumentWindow::DrawAutoCompletions(FrameBuffer& buff, Position docpos, Area docarea) {
 
-  const Icons* icons = Editor::GetIcons();
-  ASSERT(icons != nullptr, OOPS);
-  const int completion_kind_count = sizeof icons->completion_kind / sizeof * icons->completion_kind;
-
+  const Icons& icons = Editor::GetIcons();
+  const Theme& theme = Editor::GetTheme();
 
   // FIXME: Cleanup this mess.-------------------------------------------------
-  const Theme* theme = Editor::GetTheme();
-  Style style_menu          = theme->GetStyle("ui.menu");
-  Style style_menu_selected = theme->GetStyle("ui.menu.selected");
-  Style style_active_param  = theme->GetStyle("type"); // FIXME: Not the correct one.
+  Style style_menu          = theme.GetStyle("ui.menu");
+  Style style_menu_selected = theme.GetStyle("ui.menu.selected");
+  Style style_active_param  = theme.GetStyle("type"); // FIXME: Not the correct one.
   style_menu_selected = style_menu.Apply(style_menu_selected); // ui.menu.selected doesn't have bg.
   //---------------------------------------------------------------------------
+
+  const int completion_kind_count = sizeof icons.completion_kind / sizeof * icons.completion_kind;
 
   // Get the completion items.
   std::vector<CompletionItem>* completion_items = nullptr;
@@ -403,7 +404,7 @@ void DocumentWindow::DrawAutoCompletions(FrameBuffer& buff, Position docpos, Are
 
     // TODO: Draw a scroll bar.
 
-    std::string completion_item_line = Utf8UnicodeToString(icons->completion_kind[icon_index]);
+    std::string completion_item_line = Utf8UnicodeToString(icons.completion_kind[icon_index]);
     completion_item_line += " " + item.label;
     DrawTextLine(
         buff,

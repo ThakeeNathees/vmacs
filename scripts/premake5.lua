@@ -59,18 +59,17 @@ project (project_name)
     root_dir_rel .. "/thirdparty/tomlcpp/**.cpp",
     root_dir_rel .. "/thirdparty/tomlcpp/**.h",
     root_dir_rel .. "/thirdparty/tomlcpp/**.hpp",
-    root_dir_rel .. "/thirdparty/tree-sitter/include/**.h",
-    root_dir_rel .. "/thirdparty/tree-sitter/src/lib.c",
+    root_dir_rel .. "/thirdparty/tree-sitter-0.22.6/include/**.h",
+    root_dir_rel .. "/thirdparty/tree-sitter-0.22.6/src/lib.c",
   }
 
   includedirs {
     root_dir_rel .. "/src/",
-    root_dir_rel .. "/include/",
 
     -- Thirdparty includes.
     root_dir_rel .. "/thirdparty/",
-    root_dir_rel .. "/thirdparty/tree-sitter/include/",
-    root_dir_rel .. "/thirdparty/tree-sitter/src/",
+    root_dir_rel .. "/thirdparty/tree-sitter-0.22.6/include/",
+    root_dir_rel .. "/thirdparty/tree-sitter-0.22.6/src/",
     root_dir_rel .. "/thirdparty/tomlcpp/",
   }
 

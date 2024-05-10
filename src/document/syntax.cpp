@@ -10,7 +10,7 @@
 
 // Treesitter docs:
 //
-//   Note — Predicates are not handled directly by the Tree-sitter C library.
+//   Note - Predicates are not handled directly by the Tree-sitter C library.
 //   They are just exposed in a structured form so that higher-level code can
 //   perform the filtering. However, higher-level bindings to Tree-sitter like
 //   the Rust Crate or the WebAssembly binding do implement a few common
@@ -150,7 +150,52 @@ static bool TreeSitterCheckPredicate(const char* source, const TSQuery* query, T
 
     case "eq?"_hash:
       if (step_count != 3) return_error;
-      TODO;
+      if (steps[1].type != TSQueryPredicateStepTypeCapture) return_error;
+
+      if (steps[2].type == TSQueryPredicateStepTypeString) {
+        const char* capture_name_1 = get_capture(steps[1].value_id);
+        const char* capture_name_2 = get_capture(steps[2].value_id);
+
+        TSNode* node1 = NULL;
+        TSNode* node2 = NULL;
+
+        for (int i = 0; i < match.capture_count; i++) {
+          TSQueryCapture capture = match.captures[i];
+          if (strcmp(get_capture(capture.index), capture_name_1) == 0) {
+            node1 = &capture.node;
+          }
+          if (strcmp(get_capture(capture.index), capture_name_2) == 0) {
+            node2 = &capture.node;
+          }
+        }
+
+        if (node1 == NULL || node2 == NULL) return true;
+
+        uint32_t start1 = ts_node_start_byte(*node1);
+        uint32_t end1 = ts_node_end_byte(*node1);
+        std::string text1(source + start1, end1 - start1);
+
+        uint32_t start2 = ts_node_start_byte(*node2);
+        uint32_t end2 = ts_node_end_byte(*node2);
+        std::string text2(source + start2, end2 - start2);
+
+        return (text1 == text2) == is_positive;
+
+      } else {
+        const char* capture_name = get_capture(steps[1].value_id);
+        const char* str = get_str(steps[2].value_id);
+
+        for (int i = 0; i < match.capture_count; i++) {
+          TSQueryCapture capture = match.captures[i];
+          if (strcmp(get_capture(capture.index), capture_name) == 0) {
+            uint32_t start = ts_node_start_byte(capture.node);
+            uint32_t end = ts_node_end_byte(capture.node);
+            std::string text(source + start, end - start);
+            return (text == str) == is_positive;
+          }
+        }
+
+      }
     } break;
 
     case "not-match?"_hash: {
@@ -168,16 +213,14 @@ static bool TreeSitterCheckPredicate(const char* source, const TSQuery* query, T
 
       for (int i = 0; i < match.capture_count; i++) {
         TSQueryCapture capture = match.captures[i];
-
         if (strcmp(get_capture(capture.index), capture_name) == 0) {
-
           uint32_t start = ts_node_start_byte(capture.node);
           uint32_t end = ts_node_end_byte(capture.node);
           std::string text(source + start, end - start);
           return std::regex_match(text, re) == is_positive;
         }
-
       }
+
     } break;
 
 // Not supporting these predicates, If needed someone contribute.

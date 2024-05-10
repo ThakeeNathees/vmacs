@@ -92,8 +92,8 @@ public:
   // which will be set to the number of column it's behind, we the provided column
   // is at the middle of a tab.
   Coord IndexToCoord(int index) const;
-  int IndexToColumn(int index) const;
   int CoordToIndex(Coord coord) const;
+  int IndexToColumn(int index) const;
   int ColumnToIndex(int column, int line_num, int* col_delta=NULL) const;
 
   // If the index is not nullptr, it'll write the index if the coord is valid.

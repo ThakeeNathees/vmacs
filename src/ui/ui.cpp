@@ -328,7 +328,7 @@ void Tab::DrawSplit(FrameBuffer& buff, Split* split, Position pos, Area area) {
   ASSERT(split->type != Split::Type::LEAF, OOPS);
 
   // FIXME: Properly fetch the style from the editor or somewhere else.
-  Style style = Editor::GetTheme()->GetStyle("ui.background.separator");
+  Style style = Editor::GetTheme().GetStyle("ui.background.separator");
 
   // The position to draw the children.
   Position curr = pos;
@@ -492,20 +492,19 @@ void Ui::Draw(FrameBuffer& buff) {
 
 void Ui::DrawHomeScreen(FrameBuffer& buff, Position pos, Area area) {
 
-  const Icons* icons = Editor::GetIcons();
-  ASSERT(icons != nullptr, OOPS);
+  const Icons& icons = Editor::GetIcons();
+  const Theme& theme = Editor::GetTheme();
 
   // FIXME: Move this to somewhere else.
   // --------------------------------------------------------------------------
-  const Theme* theme = Editor::GetTheme();
   // TODO: Use ui.cursor for secondary cursor same as selection.
-  Style style_text       = theme->GetStyle("ui.text");
-  Style style_bg         = theme->GetStyle("ui.background");
-  Style style_whitespace = theme->GetStyle("ui.virtual.whitespace");
-  Style style_cursor     = theme->GetStyle("ui.cursor.primary");
-  Style style_selection  = theme->GetStyle("ui.selection.primary");
-  Style style_error      = theme->GetStyle("error");
-  Style style_warning    = theme->GetStyle("warning");
+  Style style_text       = theme.GetStyle("ui.text");
+  Style style_bg         = theme.GetStyle("ui.background");
+  Style style_whitespace = theme.GetStyle("ui.virtual.whitespace");
+  Style style_cursor     = theme.GetStyle("ui.cursor.primary");
+  Style style_selection  = theme.GetStyle("ui.selection.primary");
+  Style style_error      = theme.GetStyle("error");
+  Style style_warning    = theme.GetStyle("warning");
 
   Style style = style_bg.Apply(style_text);
   Style style_copyright = style_bg.Apply(style_whitespace);
@@ -514,11 +513,11 @@ void Ui::DrawHomeScreen(FrameBuffer& buff, Position pos, Area area) {
   // FIXME: This is temproary.
   // --------------------------------------------------------------------------
   std::vector<std::pair<std::string, std::string>> items;
-  items.push_back({ Utf8UnicodeToString(icons->empty_file)   + " New file",       "<C-n>" });
-  items.push_back({ Utf8UnicodeToString(icons->find)         + " Find Files",     "<C-o>" });
-  items.push_back({ Utf8UnicodeToString(icons->textbox)      + " Recent Files",   "<C-r>" });
-  items.push_back({ Utf8UnicodeToString(icons->find_in_file) + " Live Grep",      "<C-g>" });
-  items.push_back({ Utf8UnicodeToString(icons->palette)      + " Themes",         "<C-t>" });
+  items.push_back({ Utf8UnicodeToString(icons.empty_file)   + " New file",       "<C-n>" });
+  items.push_back({ Utf8UnicodeToString(icons.find)         + " Find Files",     "<C-o>" });
+  items.push_back({ Utf8UnicodeToString(icons.textbox)      + " Recent Files",   "<C-r>" });
+  items.push_back({ Utf8UnicodeToString(icons.find_in_file) + " Live Grep",      "<C-g>" });
+  items.push_back({ Utf8UnicodeToString(icons.palette)      + " Themes",         "<C-t>" });
   // --------------------------------------------------------------------------
 
 
@@ -556,14 +555,14 @@ void Ui::DrawHomeScreen(FrameBuffer& buff, Position pos, Area area) {
 
 void Ui::DrawPromptBar(FrameBuffer& buff) {
 
+  const Theme& theme = Editor::GetTheme();
+  const Icons& icons = Editor::GetIcons();
+
   // FIXME: --------------------------------------------------------------------
-  Style style_text = Editor::GetTheme()->GetStyle("ui.text");
-  Style style_bg   = Editor::GetTheme()->GetStyle("ui.background");
+  Style style_text = theme.GetStyle("ui.text");
+  Style style_bg   = theme.GetStyle("ui.background");
   Style style      = style_bg.Apply(style_text);
   // ---------------------------------------------------------------------------
-
-  const Icons* icons = Editor::GetIcons();
-  ASSERT(icons != nullptr, OOPS);
 
   DrawTextLine(
       buff, info_bar_text.c_str(),
@@ -572,9 +571,9 @@ void Ui::DrawPromptBar(FrameBuffer& buff) {
       style, icons,
       true);
 
-  const int wheel_count = sizeof icons->brail_spinning_wheel / sizeof * icons->brail_spinning_wheel;
+  const int wheel_count = sizeof icons.brail_spinning_wheel / sizeof * icons.brail_spinning_wheel;
   static int wheel_icon_index = 0;
-  int wheel_icon = icons->brail_spinning_wheel[wheel_icon_index++];
+  int wheel_icon = icons.brail_spinning_wheel[wheel_icon_index++];
   if (wheel_icon_index >= wheel_count) wheel_icon_index = 0;
 
   // Draw a spinning wheel which will spin every time we re-draw.
@@ -586,28 +585,25 @@ void Ui::DrawPromptBar(FrameBuffer& buff) {
 void Ui::DrawTabsBar(FrameBuffer& buff, Position pos, Area area) {
   ASSERT(tabs.size() > 0, OOPS);
 
-  const Icons* icons = Editor::GetIcons();
-  ASSERT(icons != nullptr, OOPS);
+  const Theme& theme     = Editor::GetTheme();
+  const Icons& icons = Editor::GetIcons();
 
   // FIXME: Move this.
   // --------------------------------------------------------------------------
-  const Theme* theme = Editor::GetTheme();
-  Style style_text       = theme->GetStyle("ui.text");
-  Style style_bg         = theme->GetStyle("ui.background");
-  Style style_whitespace = theme->GetStyle("ui.virtual.whitespace");
-  Style style_cursor     = theme->GetStyle("ui.cursor.primary");
-  Style style_selection  = theme->GetStyle("ui.selection.primary");
-  Style style_error      = theme->GetStyle("error");
-  Style style_warning    = theme->GetStyle("warning");
-
-  Style style_menu     = theme->GetStyle("ui.menu");
-  Style style_menu_sel = theme->GetStyle("ui.menu.selected");
+  Style style_text       = theme.GetStyle("ui.text");
+  Style style_bg         = theme.GetStyle("ui.background");
+  Style style_whitespace = theme.GetStyle("ui.virtual.whitespace");
+  Style style_cursor     = theme.GetStyle("ui.cursor.primary");
+  Style style_selection  = theme.GetStyle("ui.selection.primary");
+  Style style_error      = theme.GetStyle("error");
+  Style style_warning    = theme.GetStyle("warning");
+  Style style_menu       = theme.GetStyle("ui.menu");
+  Style style_menu_sel   = theme.GetStyle("ui.menu.selected");
 
   Style style_not_active = style_menu;
-  Style style_active = style_menu_sel.Apply(style_bg);
-  Style style_split = style_not_active;
-  style_split.fg = style_active.bg;
-
+  Style style_active     = style_menu_sel.Apply(style_bg);
+  Style style_split      = style_not_active;
+  style_split.fg         = style_active.bg;
   // --------------------------------------------------------------------------
 
   Position curr = pos;
