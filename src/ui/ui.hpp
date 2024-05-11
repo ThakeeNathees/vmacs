@@ -287,6 +287,7 @@ public: // Actions.
   // And that's why we're using EventHander* in the Action methods bellow.
   // Unlike other child classes of event handers.
   static bool Action_PopupFilesFinder(EventHandler* self);
+  static bool Action_PopupLiveGrep(EventHandler* self);
   static bool Action_NewDocument(EventHandler* self);
   static bool Action_TabNext(EventHandler* self);
   static bool Action_TabPrev(EventHandler* self);
@@ -402,7 +403,6 @@ private:
 
   // The cursor inside the search bar.
   int cursor_index = 0;
-  std::string input_text; // The text that was inputted.
 
   // The index of the selected item in the filtered list. By default it'll be
   // 0 if there is anything in the filter list.
@@ -417,8 +417,7 @@ private:
   void _Draw(FrameBuffer& buff, Position pos, Area area) override;
 
   void EnsureSelectionOnView();
-  void OnTotalItemsChanged();
-  void OnFilteredItemsChanged();
+  void OnItemsChanged();
 
   // Will return empty string if nothing is selected or the index is exceeded
   // because of IPC changed the list and index become invalid.

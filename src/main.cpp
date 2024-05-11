@@ -13,6 +13,7 @@
 // loading resources from file (mainly theme and treesitter language).
 //
 // Now:
+//   - Remove tomlcpp library. We don't need it (maybe?)
 //
 // Mess,CodeQ:
 //   - Check if the LSP client exists and show an error message otherwise.
@@ -428,12 +429,14 @@ int main(int argc, char** argv) {
   // FIXME: This shoul be called after the editor is initialized to send errors.
 
   Ui::keytree.RegisterAction("popup_files_finder",  Ui::Action_PopupFilesFinder);
+  Ui::keytree.RegisterAction("popup_live_grep",  Ui::Action_PopupLiveGrep);
   Ui::keytree.RegisterAction("new_file",  Ui::Action_NewDocument);
   Ui::keytree.RegisterAction("tab_next",  Ui::Action_TabNext);
   Ui::keytree.RegisterAction("tab_prev",  Ui::Action_TabPrev);
 
   Ui::keytree.RegisterBinding("<esc>", "close_popup");
   Ui::keytree.RegisterBinding("<C-o>", "popup_files_finder");
+  Ui::keytree.RegisterBinding("<C-g>", "popup_live_grep");
   Ui::keytree.RegisterBinding("<C-n>", "new_file");
   Ui::keytree.RegisterBinding("<C-l>", "tab_next");
   Ui::keytree.RegisterBinding("<C-h>", "tab_prev");

@@ -747,7 +747,8 @@ Window* Ui::GetWindowAt(Position pos) const {
     return popup.get();
   }
 
-  ASSERT_INDEX(active_tab_index, tabs.size());
+  // It's possible for the active tab to be null, if we're at the wellcome screen.
+  if (active_tab_index < 0 || active_tab_index >= tabs.size()) return nullptr;
   Tab* tab = tabs[active_tab_index].get();
   ASSERT(tab != nullptr, OOPS);
   return tab->GetWindowAt(pos);
@@ -758,6 +759,14 @@ bool Ui::Action_PopupFilesFinder(EventHandler* eh) {
   Ui* self = (Ui*) eh;
   if (self->popup != nullptr) return false;
   self->popup = std::make_unique<FindWindow>(std::make_unique<FilesFinder>());
+  return true;
+}
+
+
+bool Ui::Action_PopupLiveGrep(EventHandler* eh) {
+  Ui* self = (Ui*) eh;
+  if (self->popup != nullptr) return false;
+  self->popup = std::make_unique<FindWindow>(std::make_unique<LiveGrep>());
   return true;
 }
 

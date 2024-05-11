@@ -15,9 +15,7 @@ KeyTree FindWindow::keytree;
 FindWindow::FindWindow(std::unique_ptr<Finder> finder_)
   : Window(&keytree), finder(std::move(finder_)) {
 
-  finder->RegisterItemsChangeListener(
-      [&](){ this->OnFilteredItemsChanged(); },
-      [&](){ this->OnTotalItemsChanged(); } );
+  finder->RegisterItemsChangeListener([&](){ this->OnItemsChanged(); });
   finder->Initialize();
 }
 
@@ -36,10 +34,10 @@ std::unique_ptr<Window> FindWindow::Copy() const {
 bool FindWindow::_HandleEvent(const Event& event) {
   if (event.type == Event::Type::KEY && event.key.unicode != 0) {
     char c = (char) event.key.unicode;
-    input_text.insert(cursor_index, std::string(1, event.key.unicode));
+    finder->GetSearchText().insert(cursor_index, std::string(1, event.key.unicode));
+    finder->InputChanged();
     cursor_index++;
-
-    finder->InputChanged(input_text);
+    selected_index = 0;
     return true;
   }
   return false;
@@ -52,45 +50,35 @@ void FindWindow::_Update() {
 
 
 void FindWindow::EnsureSelectionOnView() {
-  if (input_text.empty() && selected_index < 0) {
-    int total_count = finder->GetTotalItemsCount();
-    selected_index = (total_count > 0) ? 0 : -1;
-    view_start_index = 0;
-  } else {
-    if (selected_index < view_start_index) {
-      view_start_index = MAX(0, selected_index); // selected_index can be -1.
-    } else if (selected_index >= view_start_index + selection_height) {
-      view_start_index = selected_index - (selection_height - 1);
-    }
+  if (selected_index < view_start_index) {
+    view_start_index = MAX(0, selected_index); // selected_index can be -1.
+  } else if (selected_index >= view_start_index + selection_height) {
+    view_start_index = selected_index - (selection_height - 1);
   }
 }
 
 
-void FindWindow::OnFilteredItemsChanged() {
-  if (finder->GetFilteredItemsCount() == 0) this->selected_index = -1;
-  else this->selected_index = 0;
-  this->view_start_index = 0;
-  Editor::ReDraw();
-}
+void FindWindow::OnItemsChanged() {
+  int items_count = finder->GetItemsCount();
+  if (selected_index >= items_count) {
+    // If items count is 0, selected index will be -1 (no-selection).
+    selected_index = items_count - 1;
+    if (view_start_index >= items_count) {
+      view_start_index = MAX(0, selected_index);
+    }
+  } else if (selected_index < 0 && items_count > 0) {
+    selected_index = 0;
+    view_start_index = 0;
+  }
 
-
-void FindWindow::OnTotalItemsChanged() {
   Editor::ReDraw();
 }
 
 
 std::string FindWindow::GetSelectedItem() {
   if (selected_index < 0) return "";
-  if (input_text.size() == 0) {
-    const std::vector<std::string>* total = nullptr;
-    std::unique_lock<std::mutex> lock_t = finder->GetTotalItems(&total);
-    if (selected_index >= total->size()) return "";
-    return (*total)[selected_index];
-  }
-
-  // If we reached here, the selection is in filter list.
   const std::vector<std::string>* filtered = nullptr;
-  std::unique_lock<std::mutex> lock_t = finder->GetFilteredItems(&filtered);
+  std::unique_lock<std::mutex> lock = finder->GetItems(&filtered);
   if (selected_index >= filtered->size()) return "";
   return (*filtered)[selected_index];
 }
@@ -130,6 +118,7 @@ void FindWindow::_Draw(FrameBuffer& buff, Position pos_windows, Area area) {
   DrawRectangleLine(buff, Position(x, y), Area(w, h), style_border, icons, true);
 
   // Draw the input area.
+  const std::string& input_text = finder->GetSearchText();
   for (int i = 0; i < input_text.size(); i++) {
     SET_CELL(buff, x+2+i, y+1, input_text[i],
        (i == cursor_index) ? style.Apply(style_cursor) : style);
@@ -139,14 +128,17 @@ void FindWindow::_Draw(FrameBuffer& buff, Position pos_windows, Area area) {
     SET_CELL(buff, x+2 + cursor_index, y+1, ' ', s);
   }
 
-  int total_count = finder->GetTotalItemsCount();
-  int filtered_count = finder->GetFilteredItemsCount();
+  int total_count = finder->GetItemsCountTotal();
+  int items_count = finder->GetItemsCount();
 
   {
     // Draw the filter / results ratio.
-    std::string filter_ratio =
-      std::to_string(input_text.empty() ? total_count : filtered_count) +
-      " / " + std::to_string(total_count);
+    std::string filter_ratio;
+    if (items_count > total_count || items_count == 0) {
+      filter_ratio = std::to_string(items_count);
+    } else {
+      filter_ratio = std::to_string(items_count) + " / " + std::to_string(total_count);
+    }
     int x_ = x + w - 2 - filter_ratio.size(); // -2: right_bar, spacing.
     int y_ = y + 1;
     DrawTextLine(buff, filter_ratio.c_str(),
@@ -168,21 +160,11 @@ void FindWindow::_Draw(FrameBuffer& buff, Position pos_windows, Area area) {
   selection_height = h - 4; // -4: top_bar, input, split, bottom_bar.
 
   // TODO: If the line is too long, draw the tail only.
-  //
-  // TODO: Handle if the "returned" list is nullptr this may not be assered since
-  // the user plugins can also return this and we don't want to crash on it.
-  if (input_text.empty()) {
-    const std::vector<std::string>* total = nullptr;
-    std::unique_lock<std::mutex> lock_t = finder->GetTotalItems(&total);
-    int h_effect = MIN(selection_height, total_count);
-    DrawItems(buff, x_offset, y_offset, w_effect, h_effect, total);
-  } else {
-    const std::vector<std::string>* filtered = nullptr;
-    std::unique_lock<std::mutex> lock_f = finder->GetFilteredItems(&filtered);
-    int h_effect = MIN(selection_height, filtered_count); // -4: top_bar, input, split, bottom_bar.
-    DrawItems(buff, x_offset, y_offset, w_effect, h_effect, filtered);
-  }
-
+  const std::vector<std::string>* filtered = nullptr;
+  std::unique_lock<std::mutex> lock_f = finder->GetItems(&filtered);
+  if (filtered == nullptr) return;
+  int h_effect = MIN(selection_height, items_count); // -4: top_bar, input, split, bottom_bar.
+  DrawItems(buff, x_offset, y_offset, w_effect, h_effect, filtered);
 }
 
 
@@ -215,28 +197,23 @@ void FindWindow::DrawItems(FrameBuffer& buff, int x, int y, int w, int h, const 
 // Actions.
 // -----------------------------------------------------------------------------
 
-bool FindWindow::Action_CursorRight(FindWindow* self) { if (self->cursor_index < self->input_text.size()) self->cursor_index++; return true; }
-bool FindWindow::Action_CursorLeft(FindWindow* self) { if (self->cursor_index > 0) self->cursor_index--; return true; }
-bool FindWindow::Action_CursorHome(FindWindow* self) { self->cursor_index = 0; return true; }
-bool FindWindow::Action_CursorEnd(FindWindow* self) { self->cursor_index = self->input_text.size(); return true; }
+bool FindWindow::Action_CursorRight(FindWindow* self) { ASSERT(self->finder != nullptr, OOPS); if (self->cursor_index < self->finder->GetSearchText().size()) self->cursor_index++; return true; }
+bool FindWindow::Action_CursorLeft(FindWindow* self)  { if (self->cursor_index > 0) self->cursor_index--; return true; }
+bool FindWindow::Action_CursorHome(FindWindow* self)  { self->cursor_index = 0; return true; }
+bool FindWindow::Action_CursorEnd(FindWindow* self)   { ASSERT(self->finder != nullptr, OOPS); self->cursor_index = self->finder->GetSearchText().size(); return true; }
 
 bool FindWindow::Action_CycleSelection(FindWindow* self) {
-  int items_count = self->input_text.empty()
-    ? self->finder->GetTotalItemsCount()
-    : self->finder->GetFilteredItemsCount();
-
-  if (items_count  == 0) self->selected_index = -1;
-  else {
+  int items_count = self->finder->GetItemsCount();
+  if (items_count  == 0) {
+    self->selected_index = -1;
+  } else {
     self->selected_index = (self->selected_index + 1) % items_count;
   }
   return true;
 }
 
 bool FindWindow::Action_CycleSelectionReversed(FindWindow* self) {
-  int items_count = self->input_text.empty()
-    ? self->finder->GetTotalItemsCount()
-    : self->finder->GetFilteredItemsCount();
-
+  int items_count = self->finder->GetItemsCount();
   if (items_count == 0) self->selected_index = -1;
   else {
     self->selected_index--;
@@ -250,43 +227,26 @@ bool FindWindow::Action_CycleSelectionReversed(FindWindow* self) {
 
 bool FindWindow::Action_Backspace(FindWindow* self) {
   if (self->cursor_index > 0) {
-    self->input_text.erase(self->cursor_index-1, 1);
+    self->finder->GetSearchText().erase(self->cursor_index-1, 1);
+    self->finder->InputChanged();
     self->cursor_index--;
-    // If the input changed, the selection become invalid and we'll set to -1.
-    self->finder->InputChanged(self->input_text);
     self->view_start_index = 0;
-    self->selected_index = -1;
+    self->selected_index   = 0;
   }
   return true;
 }
 
 
-// FIXME(mess): This is temproary.
 bool FindWindow::Action_AcceptSelection(FindWindow* self) {
   std::string selected = self->GetSelectedItem();
   if (selected.empty()) return false;
 
-  Path path(selected);
-  if (!path.Exists()) {
-    // TODO: Error to editor.
-    return false;
+  if (self->finder->SelectItem(selected)) {
+    self->SetShouldClose();
+    return true;
   }
 
-  // FIXME(mess): Complete mess.
-  Editor* e = Editor::Singleton().get();
-  std::shared_ptr<Document> doc = e->OpenDocument(path);
-  ASSERT(doc != nullptr, OOPS);
-
-  // FIXME(grep): Implement tab from window and call it here.
-  std::unique_ptr<DocumentWindow> docwin = std::make_unique<DocumentWindow>(doc);
-  std::unique_ptr<Split> root = std::make_unique<Split>();
-  root->SetWindow(std::move(docwin));
-
-  std::unique_ptr<Tab> tab = std::make_unique<Tab>(std::move(root));
-  ((Ui*)e->GetUi())->AddTab(std::move(tab));
-
-  self->SetShouldClose();
-  return true;
+  return false;
 }
 
 
