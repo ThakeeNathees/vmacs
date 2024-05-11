@@ -423,6 +423,8 @@ int main(int argc, char** argv) {
   // lsp_test();
   // return 0;
 
+
+
   // FIXME: This shoul be called after the editor is initialized to send errors.
 
   Ui::keytree.RegisterAction("popup_files_finder",  Ui::Action_PopupFilesFinder);

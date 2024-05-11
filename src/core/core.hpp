@@ -835,6 +835,7 @@ bool IsCharName(int c); // Returns the given codepoint [a-zA-Z0-9_].
 bool IsCharWhitespace(int c); // Returns the given codepoint [\t\n' '].
 bool EndsWith(std::string_view str, std::string_view suffix);
 bool StartsWith(std::string_view str, std::string_view suffix);
+std::vector<std::string> StringSplit(const std::string& str, char delim);
 
 // UTF8 helper functions (Borrowed from termbox, see thridparty/termbox/LICENSE).
 int Utf8CharLength(char c);

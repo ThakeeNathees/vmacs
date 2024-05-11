@@ -8,6 +8,7 @@
 
 #include "platform.hpp"
 
+#include <cstdlib>
 #include <fstream>
 
 
@@ -84,4 +85,20 @@ bool Platform::ListDirectory(std::vector<std::string>* items, const Path& path) 
     items->push_back(std::move(filename));
   }
   return true;
+}
+
+
+bool Platform::IsCommandExists(const std::string& command) {
+  if (StartsWith(command, "./") || StartsWith(command, "../")) {
+    return Path(command).Exists();
+  }
+  const char* PATH = std::getenv("PATH");
+  if (PATH == NULL) return false;
+
+  char sep = GetPathSeparator(); // Either ':' or ';'.
+  std::vector<std::string> paths = StringSplit(PATH, sep);
+  for (std::string& path : paths) {
+    if ((Path(path) / command).Exists()) return true;
+  }
+  return false;
 }

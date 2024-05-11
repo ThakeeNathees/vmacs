@@ -100,6 +100,55 @@ int GetElapsedTime() {
   return std::chrono::duration_cast<milliseconds>(duration).count();
 }
 
+// -----------------------------------------------------------------------------
+// String functions.
+// -----------------------------------------------------------------------------
+
+// Copied from: https://stackoverflow.com/a/42844629/10846399
+bool EndsWith(std::string_view str, std::string_view suffix) {
+    return str.size() >= suffix.size() && str.compare(str.size()-suffix.size(), suffix.size(), suffix) == 0;
+}
+
+
+bool StartsWith(std::string_view str, std::string_view prefix) {
+    return str.size() >= prefix.size() && str.compare(0, prefix.size(), prefix) == 0;
+}
+
+
+bool IsCharName(int c) {
+  if (BETWEEN('a', c, 'z')) return true;
+  if (BETWEEN('A', c, 'Z')) return true;
+  if (BETWEEN('0', c, '9')) return true;
+  if (c == '_') return true;
+  return false;
+}
+
+
+bool IsCharWhitespace(int c) {
+  return (c == ' ' || c == '\t' || c == '\n');
+}
+
+
+std::vector<std::string> StringSplit(const std::string& str, char delim) {
+  std::vector<std::string> ret;
+
+  // Start index to search for the next match.
+  int start = 0;
+
+  while (true) {
+    size_t pos = str.find(delim, start);
+    if (pos == std::string::npos) {
+      ret.push_back(str.substr(start));
+      break;
+    } else {
+      ret.push_back(str.substr(start, pos - start));
+      start = pos + 1;
+    }
+  }
+
+  return ret;
+}
+
 
 // -----------------------------------------------------------------------------
 // Config related functions.
@@ -362,35 +411,9 @@ std::string Utf8UnicodeToString(uint32_t c) {
 }
 
 
-bool IsCharName(int c) {
-  if (BETWEEN('a', c, 'z')) return true;
-  if (BETWEEN('A', c, 'Z')) return true;
-  if (BETWEEN('0', c, '9')) return true;
-  if (c == '_') return true;
-  return false;
-}
-
-
-bool IsCharWhitespace(int c) {
-  return (c == ' ' || c == '\t' || c == '\n');
-}
-
-
 // ----------------------------------------------------------------------------
 // Key combination parsing.
 // ----------------------------------------------------------------------------
-
-
-// Copied from: https://stackoverflow.com/a/42844629/10846399
-bool EndsWith(std::string_view str, std::string_view suffix) {
-    return str.size() >= suffix.size() && str.compare(str.size()-suffix.size(), suffix.size(), suffix) == 0;
-}
-
-
-bool StartsWith(std::string_view str, std::string_view prefix) {
-    return str.size() >= prefix.size() && str.compare(0, prefix.size(), prefix) == 0;
-}
-
 
 #define STARTS_WITH(string, prefix) \
   (strncmp(string, prefix, strlen(prefix)) == 0)

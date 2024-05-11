@@ -66,6 +66,11 @@ public:
   // --------------------------------------------------------------------------
   static uint64_t GetPid();
 
+  // Note that directory seperator is '/' or '\\', and path seperator is ':' and
+  // ';'. Since C++ filesystem library doesn't provide a way to get thte path
+  // seperator and only direct seperator (AFIK). So I've implemented this.
+  static char GetPathSeparator();
+
   // --------------------------------------------------------------------------
   // Os independent but still we need this from the host system.
   // --------------------------------------------------------------------------
@@ -83,6 +88,12 @@ public:
   // this will return false.
   static bool ReadFile(std::string* ret, const Path& path);
   static bool ListDirectory(std::vector<std::string>* items, const Path& path);
+
+  // Check if the given command exists by appending the given command to all the
+  // paths of the PATH environment variables and check if the path exists. Note
+  // that if the command starts with './' or '../', it'll just check if the relative
+  // paths exits.
+  static bool IsCommandExists(const std::string& command);
 };
 
 

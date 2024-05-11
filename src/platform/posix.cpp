@@ -22,6 +22,11 @@ uint64_t Platform::GetPid() {
 }
 
 
+char Platform::GetPathSeparator() {
+  return ':';
+}
+
+
 // Returns true on success. If the fdread is not NULL, it'll open pipe from child to parent to listen stdout of the child and
 // if the fdwrite is not NULL it'll open pipe from parent to child to send message from parent's stdout.
 bool SpawnProcess(const char* file, char* const argv[], pid_t* pid, int* fdwrite_in, int* fdread_out, int* fdread_err) {
