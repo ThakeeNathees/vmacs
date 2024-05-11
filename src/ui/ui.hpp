@@ -45,13 +45,17 @@ public:
   void SetShouldClose();
   bool IsShouldClose() const;
 
+  // Returns the position and area of the current window.
+  const Position& GetPosition() const;
+  const Area& GetArea() const;
+  bool IsPointIncluded(const Position& point) const;
+
   // This should return a copy of the current window to display in a split.
   virtual std::unique_ptr<Window> Copy() const = 0;
 
 private:
 
-  // FIXME: The bellow values are used to check if the mouse event is in bound.
-  // refactor (remove if we can).
+  // The position and area of the current window.
   Position pos = {0};
   Area area    = {0};
 
@@ -188,7 +192,8 @@ public:
   void Update();
   void Draw(FrameBuffer& buff, Position pos, Area area);
 
-  const Split* GetActiveSplit();
+  const Split* GetActiveSplit() const;
+  Window* GetWindowAt(const Position& pos) const;
 
   // Key tree is public so we can register action and bind to keys outside. I
   // don't like the OOP getters and setters (what's the point)?
@@ -201,6 +206,8 @@ private:
   Split* active = nullptr;
 
 private:
+  // TODO: Maybe move this inside Split class.
+  Window* SplitGetWindowAt(const Position& pos, Split* split) const;
   void DrawSplit(FrameBuffer& buff, Split* split, Position pos, Area area);
 
 public: // Actions.
@@ -243,6 +250,11 @@ private:
   std::string info_bar_text;
 
 private:
+
+  // Returns the window at the given position, used when a mouse event occured
+  // at the given position and to pass the event to the window at that position.
+  Window* GetWindowAt(Position pos) const;
+
   void DrawTabsBar(FrameBuffer& buff, Position pos, Area area);
   void DrawHomeScreen(FrameBuffer& buff, Position pos, Area area);
   void DrawPromptBar(FrameBuffer& buff); // Will draw at the bottom line.
@@ -294,9 +306,6 @@ private:
   // The coordinate where we start drawing the buffer from, this will change
   // after h-scroll and v-scroll.
   Position view_start = {0, 0};
-
-  // We "cache" the draw area for the text needed in some method.
-  Area text_area = {0, 0};
 
   // We set it to the time it was blinked last time and
   // if (time_now - last_blink > blink_period) we blink again.

@@ -37,14 +37,8 @@ bool Window::HandleEvent(const Event& event) {
 
   // FIXME: scroll and mouse clicks shold be handled properly and needs to be
   // sent to the correct windows.
-  if (event.type == Event::Type::MOUSE) {
-    if (event.mouse.button == Event::MouseButton::MOUSE_WHEEL_UP ||
-        event.mouse.button == Event::MouseButton::MOUSE_WHEEL_DOWN) {
-      int x = event.mouse.x;
-      int y = event.mouse.y;
-      if (x < pos.col || x >= pos.col + area.width) return false;
-      if (y < pos.row || y >= pos.row + area.height) return false;
-    }
+  if (event.type == Event::Type::MOUSE && event.mouse.button != Event::MOUSE_RELEASED) {
+    ASSERT(IsPointIncluded(Position(event.mouse.x, event.mouse.y)), OOPS);
   }
 
   // We'll true handle the event from the key bindings and if there isn't any
@@ -76,6 +70,24 @@ void Window::SetShouldClose() {
 
 bool Window::IsShouldClose() const {
   return should_close;
+}
+
+
+const Position& Window::GetPosition() const {
+  return pos;
+}
+
+
+const Area& Window::GetArea() const {
+  return area;
+}
+
+
+bool Window::IsPointIncluded(const Position& point) const {
+  if (point.x < pos.x || point.y < pos.y) return false;
+  if (pos.x + area.width <= point.x) return false;
+  if (pos.y + area.height <= point.y) return false;
+  return true;
 }
 
 
@@ -308,8 +320,31 @@ void Tab::Update() {
 }
 
 
-const Split* Tab::GetActiveSplit() {
+const Split* Tab::GetActiveSplit() const {
   return active;
+}
+
+
+Window* Tab::GetWindowAt(const Position& pos) const {
+  return SplitGetWindowAt(pos, root.get());
+}
+
+
+Window* Tab::SplitGetWindowAt(const Position& pos, Split* split) const {
+  if (split == nullptr) return nullptr;
+
+  if (split->type == Split::Type::LEAF) {
+    ASSERT(split->children.empty(), OOPS);
+    if (split->GetWindow()->IsPointIncluded(pos)) return split->GetWindow();
+    return nullptr;
+  }
+
+  for (auto& child : split->children) {
+    Window* window = SplitGetWindowAt(pos, child.get());
+    if (window) return window;
+  }
+
+  return nullptr;
 }
 
 
@@ -426,6 +461,28 @@ Ui::Ui() : EventHandler(&keytree) {
 
 
 bool Ui::HandleEvent(const Event& event) {
+
+  // TODO: Make Splits as event listeners and pass the mouse event to splits
+  // to drag the split lines to adjust the size and refactor the bellow code.
+
+  // If the event is mouse button pressed (or scrolled and not released), we
+  // don't pass it to the active widnow, instead we'll send it to the window at
+  // the position of the cursor.
+  if (event.type == Event::Type::MOUSE && event.mouse.button != Event::MOUSE_RELEASED) {
+    Window* window = GetWindowAt(Position(event.mouse.x, event.mouse.y));
+    if (window) {
+      // Scrolling shouldn't reset our key combination listening.
+      bool is_scroll = event.mouse.button == Event::MOUSE_WHEEL_UP ||
+                       event.mouse.button == Event::MOUSE_WHEEL_DOWN;
+
+      if (!is_scroll) ResetCursor();
+      return window->HandleEvent(event);
+    }
+
+    // Not passing the event to any window since no one has the point. And sending
+    // will fail an assertion.
+    return false;
+  }
 
   // If we're at the middle of listening key combination don't send the event
   // to the bellow layers.
@@ -656,6 +713,18 @@ void Ui::Error(const std::string& msg) {
 void Ui::AddTab(std::unique_ptr<Tab> tab) {
   active_tab_index = tabs.size();
   tabs.push_back(std::move(tab));
+}
+
+
+Window* Ui::GetWindowAt(Position pos) const {
+  if (popup && popup.get()->IsPointIncluded(pos)) {
+    return popup.get();
+  }
+
+  ASSERT_INDEX(active_tab_index, tabs.size());
+  Tab* tab = tabs[active_tab_index].get();
+  ASSERT(tab != nullptr, OOPS);
+  return tab->GetWindowAt(pos);
 }
 
 

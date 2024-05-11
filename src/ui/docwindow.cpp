@@ -104,16 +104,18 @@ void DocumentWindow::EnsureCursorOnView() {
   int row = cursor.GetCoord().line;
   int col = document->buffer->IndexToColumn(cursor.GetIndex());
 
+  const Area& area = GetArea();
+
   if (col <= view_start.col) {
     view_start.col = col;
-  } else if (view_start.col + text_area.width <= col) {
-    view_start.col = col - text_area.width + 1;
+  } else if (view_start.col + area.width <= col) {
+    view_start.col = col - area.width + 1;
   }
 
   if (row <= view_start.row) {
     view_start.row = row;
-  } else if (view_start.row + text_area.height <= row) {
-    view_start.row = row - text_area.height + 1;
+  } else if (view_start.row + area.height <= row) {
+    view_start.row = row - area.height + 1;
   }
 }
 
@@ -170,10 +172,6 @@ void DocumentWindow::DrawBuffer(FrameBuffer& buff, Position pos, Area area) {
   // --------------------------------------------------------------------------
 
   int whitespace_tag = icons.whitespace_tab;
-
-  // Update our text area so we'll know about the viewing area when we're not
-  // drawing, needed to ensure the cursors are on the view area, etc.
-  text_area = area;
 
   int line_count = document->buffer->GetLineCount(); // Total lines in the buffer.
   const std::vector<Style>& highlights = document->syntax.GetHighlights();
@@ -306,7 +304,7 @@ void DocumentWindow::DrawBuffer(FrameBuffer& buff, Position pos, Area area) {
 }
 
 
-void DocumentWindow::DrawAutoCompletions(FrameBuffer& buff, Position docpos, Area docarea) {
+void DocumentWindow::DrawAutoCompletions(FrameBuffer& buff, Position pos, Area area) {
 
   const Icons& icons = Editor::GetIcons();
   const Theme& theme = Editor::GetTheme();
@@ -344,7 +342,7 @@ void DocumentWindow::DrawAutoCompletions(FrameBuffer& buff, Position docpos, Are
   // FIXME: The value is hardcoded (without a limit, the dropdown takes all the spaces).
   int count_items               = MIN(20, completion_items->size());
   int count_lines_above_cursor  = cursor_coord.line - view_start.row;
-  int count_lines_bellow_cursor = view_start.row + text_area.height - cursor_coord.line - 1;
+  int count_lines_bellow_cursor = view_start.row + area.height - cursor_coord.line - 1;
 
   // Check if we're focused before calling this to pass the bellow assertion.
   ASSERT(count_lines_above_cursor >= 0, OOPS);
@@ -381,20 +379,20 @@ void DocumentWindow::DrawAutoCompletions(FrameBuffer& buff, Position docpos, Are
   menu_start.row = document->buffer->IndexToCoord(menu_start_index).line - view_start.row;
 
   // Current drawing position (relative to the docpos).
-  Position pos = {0, 0};
+  Position curr = {0, 0};
 
   // ---------------------------------------------------------------------------
   // Drawing auto completion list.
   // ---------------------------------------------------------------------------
 
-  pos = menu_start;
-  pos.row += (drawing_bellow_cursor) ? 1 : (-count_dispaynig_items);
+  curr = menu_start;
+  curr.row += (drawing_bellow_cursor) ? 1 : (-count_dispaynig_items);
 
   // FIXME: +2 because we draw the icon + 1 space but we should consider no icon
   // configuration also and that should be handled properly.
   //
   // Adjust the max len depends on available space. +2 because we'll be drawing icon.
-  max_len = MIN(max_len + 2, docarea.width - pos.col);
+  max_len = MIN(max_len + 2, area.width - curr.col);
 
   for (int i = 0; i < count_dispaynig_items; i++) {
     auto& item = (*completion_items)[i];
@@ -410,13 +408,13 @@ void DocumentWindow::DrawAutoCompletions(FrameBuffer& buff, Position docpos, Are
         buff,
         completion_item_line.c_str(),
         Position(
-          docpos.col + pos.col,
-          docpos.row + pos.row),
+          pos.col + curr.col,
+          pos.row + curr.row),
         max_len,
         style,
         icons,
         true);
-    pos.row++;
+    curr.row++;
   }
 
   // --------------------------------------------------------------------------
@@ -439,19 +437,19 @@ void DocumentWindow::DrawAutoCompletions(FrameBuffer& buff, Position docpos, Are
   drawing_bellow_cursor = count_items == 0 || !drawing_bellow_cursor;
 
   // Prepare the coord for drawing the completions.
-  pos = menu_start;
-  pos.row += (drawing_bellow_cursor) ? 1 : -1;
+  curr = menu_start;
+  curr.row += (drawing_bellow_cursor) ? 1 : -1;
 
   // Adjust the max len depends on available space.
-  int label_max_len = MIN(si.label.size(), docarea.width - (pos.col-docpos.col));
+  int label_max_len = MIN(si.label.size(), area.width - (curr.col-pos.col));
 
   // Draw the label.
   DrawTextLine(
       buff,
       si.label.c_str(),
       Position(
-        docpos.col + pos.col,
-        docpos.row + pos.row),
+        pos.col + curr.col,
+        pos.row + curr.row),
       label_max_len,
       style_menu,
       icons,
@@ -465,17 +463,17 @@ void DocumentWindow::DrawAutoCompletions(FrameBuffer& buff, Position docpos, Are
   if (pi.label.start < 0 || pi.label.end >= si.label.size() || pi.label.start > pi.label.end) return;
 
   // Label starts after the width.
-  if (docarea.width <= pos.col+pi.label.start-docpos.col) return;
+  if (area.width <= curr.col+pi.label.start-pos.col) return;
 
   std::string param_label = si.label.substr(pi.label.start, pi.label.end - pi.label.start + 1);
-  label_max_len = MIN(param_label.size(), docarea.width - (pos.col+pi.label.start-docpos.col));
+  label_max_len = MIN(param_label.size(), area.width - (curr.col+pi.label.start-pos.col));
 
   DrawTextLine(
       buff,
       param_label.c_str(),
       Position(
-        docpos.col + pos.col + pi.label.start,
-        docpos.row + pos.row),
+        pos.col + curr.col + pi.label.start,
+        pos.row + curr.row),
       label_max_len,
       style_menu.Apply(style_active_param),
       icons,
