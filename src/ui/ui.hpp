@@ -199,6 +199,12 @@ public:
   // first leaf of the tree as active split.
   Tab(std::unique_ptr<Split> root, Split* active=nullptr);
 
+  // Returns the display name of the tab this might not be unique among other tabs.
+  // If the active window is a document window, it'll return the filename of that
+  // document otherwise it'll returns an empty string and the caller decides what to
+  // name this tab.
+  std::string GetName() const;
+
   bool HandleEvent(const Event& event) override;
   void Update();
   void Draw(FrameBuffer& buff, Position pos, Area area);
@@ -302,6 +308,7 @@ public:
   ~DocumentWindow();
 
   Type GetType() const override;
+  std::shared_ptr<Document> GetDocument() const;
 
   // Events.
   void OnDocumentChanged() override;

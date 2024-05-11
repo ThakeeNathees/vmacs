@@ -293,6 +293,23 @@ Tab::Tab(std::unique_ptr<Split> root_, Split* active_)
 }
 
 
+std::string Tab::GetName() const {
+  if (!active) return "";
+  ASSERT(active->type == Split::Type::LEAF, OOPS);
+
+  Window* window = active->GetWindow();
+  ASSERT(window != nullptr, OOPS);
+  if (window->GetType() == Window::Type::DOCUMENT) {
+    DocumentWindow* docwin = (DocumentWindow*) window;
+    std::shared_ptr<Document> document = docwin->GetDocument();
+    if (document == nullptr) return "";
+    return document->GetPath().FileName();
+  }
+
+  return ""; // Unknown window.
+}
+
+
 bool Tab::HandleEvent(const Event& event) {
 
   // If we're at the middle of listening key combination don't send the event
@@ -674,8 +691,11 @@ void Ui::DrawTabsBar(FrameBuffer& buff, Position pos, Area area) {
 
   for (int i = 0; i < tabs.size(); i++) {
     auto& tab = tabs[i];
-    // FIXME: Tab naming.
-    std::string tab_name = "tab " + std::to_string(i+1);
+
+    std::string tab_name = tab->GetName();
+    if (tab_name.empty()) {
+      tab_name = "tab " + std::to_string(i+1);
+    }
 
     // TODO: If current file modified we put an indicator (+).
     // This will be the displaied text of the tab bar including the padding.

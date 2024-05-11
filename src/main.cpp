@@ -34,7 +34,10 @@
 //
 //
 // Pending:
-//   open document in editor where language and lsp are solved from the path.
+//  - Opening new file should open in the split if the current tab has multi splits.
+//    it's a single window tab, we start in a new tab.
+//  - Clicking on tabname should change the tab.
+//  - open document in editor where language and lsp are solved from the path.
 //   check lsp for un saved (not in path) files.
 //   glue split positions (viw shouldn't move and the selection wont' change after modify in another split)
 //   check what happens with empty Path with lsp server and handle.

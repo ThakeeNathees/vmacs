@@ -37,6 +37,11 @@ Window::Type DocumentWindow::GetType() const {
 }
 
 
+std::shared_ptr<Document> DocumentWindow::GetDocument() const {
+  return document;
+}
+
+
 bool DocumentWindow::_HandleEvent(const Event& event) {
   if (event.type == Event::Type::KEY && event.key.unicode != 0) {
     char c = (char) event.key.unicode;
