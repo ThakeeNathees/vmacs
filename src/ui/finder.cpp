@@ -21,11 +21,8 @@ void Finder::StdoutCallbackLoadResults(
     std::mutex& mutex, std::vector<std::string>& lines,
     CallbackFinderItemsChanged cb) {
   {
-
     std::lock_guard<std::mutex> lock(mutex);
-
     const char* end = buff;
-
     while (length--) {
       if (*end == '\n') {
         size_t len = (end-buff); // This will skip the '\n' character, +1 if needed.
@@ -115,6 +112,10 @@ void FilesFinder::InputChanged() {
       std::lock_guard<std::mutex> lock_f(mutex_filters);
       filters = total; // Copy all the values from results.
     }
+
+    // Nothing to filter, just delete the un-wanted thread.
+    ipc_filter = nullptr;
+
   } else {
     TriggerFuzzyFilter();
   }
@@ -191,7 +192,16 @@ void LiveGrep::Initialize() {
 
 
 void LiveGrep::InputChanged() {
-  TriggerGrep();
+  if (search_text.empty()) {
+    {
+      std::lock_guard<std::mutex> lock(mutex_filters);
+      filters.clear();
+    }
+    ipc_filter = nullptr; // Delete the search thread.
+  } else {
+    TriggerGrep();
+  }
+
 }
 
 
@@ -232,14 +242,28 @@ void LiveGrep::TriggerGrep() {
 
 bool LiveGrep::SelectItem(const std::string& item) {
 
-  // TODO: This contains line number and column, open the document and set the cursor
-  // to that specific location, (this behaviour can be re-used with lsp goto definition and jumplist).
+  // TODO:
+  // - This contains line number and column, open the document and set the cursor
+  //   to that specific location, (this behaviour can be re-used with lsp goto
+  //   definition and jumplist).
+  // - Implement a "parser" to parse "<file/path>:<line>:<character>:<rest-of-the-text>"
+  //
   std::vector<std::string> splitted = StringSplit(item, ':');
-  if (splitted.empty()) return false;
-
-  // TODO: the bellow logic should be moved since it's re-usable.
+  if (splitted.size() < 3) return false;
 
   Path path(splitted[0]);
+  Coord coord(0, 0);
+
+  // If for some reason the coordinate failed to parse, we'll still proceed with
+  // the path and any valid coordinate will be set bellow.
+  try {
+    coord.line = std::stoi(splitted[1]) - 1;
+    // Note that we're not setting the character of the coord so it'll always
+    // jumps to the line we needed.
+    // coord.character = std::stoi(splitted[2]) - 1;
+  } catch (std::exception ex) { }
+
+  // TODO: the bellow logic should be moved since it's re-usable.
 
   // TODO: Error to editor.
   if (!path.Exists()) return false;
@@ -251,11 +275,18 @@ bool LiveGrep::SelectItem(const std::string& item) {
 
   // FIXME(grep): Implement tab from window and call it here.
   std::unique_ptr<DocumentWindow> docwin = std::make_unique<DocumentWindow>(doc);
+  DocumentWindow* ptr_docwin = docwin.get();  // Needed to set the view location.
+
   std::unique_ptr<Split> root = std::make_unique<Split>();
   root->SetWindow(std::move(docwin));
 
   // TODO: If the file already opened in another tab, just set it active.
   std::unique_ptr<Tab> tab = std::make_unique<Tab>(std::move(root));
   ((Ui*)e->GetUi())->AddTab(std::move(tab));
+
+  // We call this here since otherwise the pos/area of the window didn't updated.
+  // which is needed to set the view of the coordinate.
+  ptr_docwin->JumpTo(coord);
+
   return true;
 }

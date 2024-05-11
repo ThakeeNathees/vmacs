@@ -495,7 +495,7 @@ struct Config {
   // How many spaces should be used to render a tab character. Note that this
   // value should be at least 1.
   int tabsize = 4;
-
+  int scrolloff = 5; // Margin between the cursor and the view edge (vertical).
   int fps = 30;
   std::string theme = "dark_plus";
 

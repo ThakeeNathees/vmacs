@@ -518,9 +518,11 @@ bool Ui::HandleEvent(const Event& event) {
   #define return_true do { ResetCursor(); return true; } while (false)
   // Note that if the popup is available we won't send the event to the active
   // child split nodes.
-  if (popup && popup->HandleEvent(event)) {
-    if (popup->IsShouldClose()) popup = nullptr; // This will destroy the popup.
-    return_true;
+  if (popup) {
+    if (popup->HandleEvent(event)) {
+      if (popup->IsShouldClose()) popup = nullptr; // This will destroy the popup.
+      return_true;
+    }
   } else if (active_tab_index >= 0) {
     ASSERT_INDEX(active_tab_index, tabs.size());
     if (tabs[active_tab_index]->HandleEvent(event)) return_true;

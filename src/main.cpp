@@ -14,6 +14,9 @@
 //
 // Now:
 //   - Remove tomlcpp library. We don't need it (maybe?)
+//   - If the window already exists, we shouldn't create another one.
+//   - calculate area manually instead of draw so they can setup the view at start.
+//   - Jump to document should make the view center.
 //
 // Mess,CodeQ:
 //   - Check if the LSP client exists and show an error message otherwise.

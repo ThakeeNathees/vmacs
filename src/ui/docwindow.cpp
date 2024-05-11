@@ -111,21 +111,26 @@ void DocumentWindow::EnsureCursorOnView() {
   // Note that the col of Coord is not the view column, and cursor.GetColumn()
   // will return the column it wants go to and not the column it actually is.
   const Cursor& cursor = document->cursors.GetPrimaryCursor();
+  int lines_count = document->buffer->GetLineCount();
   int row = cursor.GetCoord().line;
   int col = document->buffer->IndexToColumn(cursor.GetIndex());
 
   const Area& area = GetArea();
 
+  int scrolloff = GetConfig().scrolloff;
+  scrolloff = MAX(0, scrolloff);
+  scrolloff = CLAMP(0, scrolloff, area.height / 2);
+
   if (col <= view_start.col) {
     view_start.col = col;
   } else if (view_start.col + area.width <= col) {
-    view_start.col = col - area.width + 1;
+    view_start.col = col - MAX(0, area.width - 1);
   }
 
-  if (row <= view_start.row) {
-    view_start.row = row;
-  } else if (view_start.row + area.height <= row) {
-    view_start.row = row - area.height + 1;
+  if ((row - scrolloff) <= view_start.row) {
+    view_start.row = MAX(0, row - scrolloff);
+  } else if (view_start.row + area.height <= (row + scrolloff)) {
+    view_start.row = row + scrolloff - MAX(0, area.height - 1);
   }
 }
 
@@ -134,6 +139,23 @@ std::unique_ptr<Window> DocumentWindow::Copy() const {
   std::unique_ptr<DocumentWindow> ret = std::make_unique<DocumentWindow>(*this);
   ret->cursors_backup = this->document->cursors;
   return std::move(ret);
+}
+
+
+void DocumentWindow::JumpTo(const Coord& coord) {
+  document->cursors.ClearMultiCursors();
+  Cursor& cursor = document->cursors.GetPrimaryCursor();
+
+  Buffer* buff = document->buffer.get();
+  ASSERT(buff != nullptr, OOPS);
+  int index = 0;
+  buff->IsValidCoord(coord, &index);
+
+  cursor.SetIndex(index);
+  cursors_backup = document->cursors;
+
+  // TODO: Make sure the cursor is at the middle of the view.
+  EnsureCursorOnView();
 }
 
 

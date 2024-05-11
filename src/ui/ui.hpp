@@ -316,6 +316,9 @@ public:
   void OnFocusChanged(bool focus) override;
   std::unique_ptr<Window> Copy() const override;
 
+  // Jump to the given coordinate, and place the cursor at that specific location.
+  void JumpTo(const Coord& coord);
+
 private:
   // The document we're editing on this window.
   std::shared_ptr<Document> document;
