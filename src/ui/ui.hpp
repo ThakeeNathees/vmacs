@@ -21,6 +21,8 @@
 
 class Split;
 class Tab;
+class DocumentWindow;
+class FindWindow;
 
 
 // Note that since Window is a subtype of event handler. And HandleEvent() is
@@ -79,6 +81,7 @@ private:
 
   friend class Split;
   friend class Tab;
+  friend class Ui;
 
 private:
   // The handler should return true if the event is consumed by the window.
@@ -158,6 +161,10 @@ public:
   // Returns an iterater which iterates on the leaf nodes.
   Iterator Iterate();
 
+  Window* GetWindowAt(const Position& pos);
+  DocumentWindow* GetDocumentWindow(const Path& path);
+  void Draw(FrameBuffer& buff, Position pos, Area area);
+
 private:
   Type type = Type::LEAF;
 
@@ -176,6 +183,7 @@ private:
 
   friend class Window;
   friend class Tab;
+  friend class Ui;
   friend class Iterator;
 
 private:
@@ -209,8 +217,8 @@ public:
   void Update();
   void Draw(FrameBuffer& buff, Position pos, Area area);
 
+  Split* GetRootSplit() const;
   const Split* GetActiveSplit() const;
-  Window* GetWindowAt(const Position& pos) const;
 
   // Key tree is public so we can register action and bind to keys outside. I
   // don't like the OOP getters and setters (what's the point)?
@@ -222,10 +230,7 @@ private:
   // Currently active leaf split in the split tree.
   Split* active = nullptr;
 
-private:
-  // TODO: Maybe move this inside Split class.
-  Window* SplitGetWindowAt(const Position& pos, Split* split) const;
-  void DrawSplit(FrameBuffer& buff, Split* split, Position pos, Area area);
+  friend class Ui;
 
 public: // Actions.
   static bool Action_NextWindow(Tab* self);
@@ -253,8 +258,8 @@ public:
   void Warning(const std::string& error);
   void Error(const std::string& error);
 
-  // TODO: Support insert tab with a name.
   void AddTab(std::unique_ptr<Tab> tab);
+  bool JumpToDocument(const Path& path, Coord coord); // Returns true on success.
 
   static KeyTree keytree;
 
@@ -271,6 +276,13 @@ private:
   // Returns the window at the given position, used when a mouse event occured
   // at the given position and to pass the event to the window at that position.
   Window* GetWindowAt(Position pos) const;
+
+  // Make the given window active inside the tabs.
+  void MakeWindowActive(Window* window);
+
+  // Returns the document window for the document at the given path, if no document
+  // already opened for the given path, it'll return nullptr.
+  DocumentWindow* GetDocumentWindow(const Path& path) const;
 
   void DrawTabsBar(FrameBuffer& buff, Position pos, Area area);
   void DrawHomeScreen(FrameBuffer& buff, Position pos, Area area);
@@ -317,6 +329,8 @@ public:
   std::unique_ptr<Window> Copy() const override;
 
   // Jump to the given coordinate, and place the cursor at that specific location.
+  // If the coordinate is not valid, it'll make sure the current cursor coordinate
+  // is ensured on the view.
   void JumpTo(const Coord& coord);
 
 private:

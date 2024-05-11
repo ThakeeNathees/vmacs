@@ -91,6 +91,10 @@ void FilesFinder::Initialize() {
   opt.user_data      = this;
   opt.file           = "rg";
   opt.argv           = { "--files" };
+  // opt.file           = "fd";
+  // opt.argv           = StringSplit("--type f", ' ');
+  // opt.file           = "find";
+  // opt.argv           = StringSplit(". -type f", ' ');
   opt.timeout_sec    = 4;
   opt.sending_inputs = false;
   opt.stdout_cb      = [&](void* data, const char* buff, size_t length) {
@@ -134,6 +138,8 @@ void FilesFinder::TriggerFuzzyFilter() {
   opt.user_data      = this;
   opt.file           = "fzf";
   opt.argv           = { "--filter", search_text };
+  // opt.file           = "grep"; // Use grep if fzf not available.
+  // opt.argv           = { search_text };
   opt.timeout_sec    = 2;
   opt.sending_inputs = true;
   opt.stdout_cb      = [&](void* data, const char* buff, size_t length) {
@@ -165,20 +171,9 @@ bool FilesFinder::SelectItem(const std::string& item) {
   // TODO: Error to editor.
   if (!path.Exists()) return false;
 
-  // TODO: If document is nullptr report error to editor.
+  Coord coord(-1, -1); // Invalid coord will jump to the current cursor of that document.
   Editor* e = Editor::Singleton().get();
-  std::shared_ptr<Document> doc = e->OpenDocument(path);
-  if (doc == nullptr) return false;
-
-  // FIXME(grep): Implement tab from window and call it here.
-  std::unique_ptr<DocumentWindow> docwin = std::make_unique<DocumentWindow>(doc);
-  std::unique_ptr<Split> root = std::make_unique<Split>();
-  root->SetWindow(std::move(docwin));
-
-  // TODO: If the file already opened in another tab, just set it active.
-  std::unique_ptr<Tab> tab = std::make_unique<Tab>(std::move(root));
-  ((Ui*)e->GetUi())->AddTab(std::move(tab));
-  return true;
+  return ((Ui*)e->GetUi())->JumpToDocument(path, coord);
 }
 
 
@@ -263,30 +258,7 @@ bool LiveGrep::SelectItem(const std::string& item) {
     // coord.character = std::stoi(splitted[2]) - 1;
   } catch (std::exception ex) { }
 
-  // TODO: the bellow logic should be moved since it's re-usable.
 
-  // TODO: Error to editor.
-  if (!path.Exists()) return false;
-
-  // TODO: If document is nullptr report error to editor.
   Editor* e = Editor::Singleton().get();
-  std::shared_ptr<Document> doc = e->OpenDocument(path);
-  if (doc == nullptr) return false;
-
-  // FIXME(grep): Implement tab from window and call it here.
-  std::unique_ptr<DocumentWindow> docwin = std::make_unique<DocumentWindow>(doc);
-  DocumentWindow* ptr_docwin = docwin.get();  // Needed to set the view location.
-
-  std::unique_ptr<Split> root = std::make_unique<Split>();
-  root->SetWindow(std::move(docwin));
-
-  // TODO: If the file already opened in another tab, just set it active.
-  std::unique_ptr<Tab> tab = std::make_unique<Tab>(std::move(root));
-  ((Ui*)e->GetUi())->AddTab(std::move(tab));
-
-  // We call this here since otherwise the pos/area of the window didn't updated.
-  // which is needed to set the view of the coordinate.
-  ptr_docwin->JumpTo(coord);
-
-  return true;
+  return ((Ui*)e->GetUi())->JumpToDocument(path, coord);
 }

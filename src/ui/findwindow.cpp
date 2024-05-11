@@ -100,6 +100,9 @@ void FindWindow::_Draw(FrameBuffer& buff, Position pos_windows, Area area) {
   // The default fg,bg,attrib for drawing bellow.
   const Style style = style_bg.Apply(style_text);
 
+  // FIXME: Window.pos/area should be properly handled and this values should be
+  // considered as well.
+  //
   // Dimentions.
   const int percent = 70;
   const int w = (area.width * percent) / 100;

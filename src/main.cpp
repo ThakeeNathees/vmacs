@@ -13,34 +13,20 @@
 // loading resources from file (mainly theme and treesitter language).
 //
 // Now:
-//   - Remove tomlcpp library. We don't need it (maybe?)
-//   - If the window already exists, we shouldn't create another one.
-//   - calculate area manually instead of draw so they can setup the view at start.
-//   - Jump to document should make the view center.
 //
-// Mess,CodeQ:
-//   - Check if the LSP client exists and show an error message otherwise.
-//
-//   - if tab has single document -> tab name will be the file name of the document.
-//
-//   - Opening the same document twise in the find file shouldn't open new tab
-//     but make the existing tab active.
-//     * this requires window type == documentwindow check at runtime. and get
-//     the path from the window.
-//
-//   - Only Ui has keytree.
-//   - Event binding refactor.
-//
-//   - Window::Copy method review.
-//
-//   - Fix finder refactor and implement live grep.
-//     + Needs to check if a command exists and report user if not properly.
 //
 //
 // Pending:
+//  - Remove tomlcpp library. We don't need it (maybe?)
+//  - calculate area manually instead of draw so they can setup the view at start.
+//  - Check if the LSP client exists and show an error message otherwise.
+//  - Only Ui has keytree (bind spc f: find file, spc w: save file -- possible).
+//  - Event binding refactor.
+//  - fzf, rg check if exists.
 //  - Opening new file should open in the split if the current tab has multi splits.
 //    it's a single window tab, we start in a new tab.
 //  - Clicking on tabname should change the tab.
+//  - Jump to document should make the view center.
 //  - open document in editor where language and lsp are solved from the path.
 //   check lsp for un saved (not in path) files.
 //   glue split positions (viw shouldn't move and the selection wont' change after modify in another split)
@@ -55,9 +41,9 @@
 //    - auto completion should override the split edge.
 //    - auto completion scrolling.
 //  - Draw diagnostics the same line.
+//  - Scroll if more tabs.
 //
 //   structure:
-//     config move.
 //     theme: getting values and proper, dynamic changeing (listener);
 //     Utils class (maybe)
 //
@@ -77,9 +63,7 @@
 //   scrollbar
 //   macro.
 //   open/close files.
-//   splits and tabs.
 //   copy paste clipboard.
-//   nerdfont support (maybe not)
 //   terminal (maybe)
 //
 // LSP:
@@ -156,19 +140,9 @@
 // Code quality:
 //   Position and Coord names are alike (change Position -> Coord, Coord-> BuffPos)
 //   Write a clang-formater and apply through all the source.
-//   change all DrawBuffer parameter as reference than value.
-//   remove all the trailing white spaces all around the source.
-//   fprintf in the lsp client.
 //   write tests (if I have time)
 //   ipc timeout value hardcoded fix.
-//   merge core + buffer (maybe)
-//   Refactor fronend (better file names).
 //   Maybe rename.
-//   change all comments to // insead of /**/
-//   change color values to 256, (terminal support first).
-//   restructure the source files.
-//   use String (typedef) for all std::string.
-//
 //
 
 

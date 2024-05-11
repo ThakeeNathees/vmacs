@@ -96,6 +96,7 @@ void DocumentWindow::OnFocusChanged(bool focus) {
     cursors_backup = document->GetCursors();
   } else {
     document->SetCursors(cursors_backup);
+    EnsureCursorOnView();
   }
 }
 
@@ -143,16 +144,19 @@ std::unique_ptr<Window> DocumentWindow::Copy() const {
 
 
 void DocumentWindow::JumpTo(const Coord& coord) {
-  document->cursors.ClearMultiCursors();
-  Cursor& cursor = document->cursors.GetPrimaryCursor();
 
   Buffer* buff = document->buffer.get();
   ASSERT(buff != nullptr, OOPS);
-  int index = 0;
-  buff->IsValidCoord(coord, &index);
 
-  cursor.SetIndex(index);
-  cursors_backup = document->cursors;
+  int index = 0;
+  if (buff->IsValidCoord(coord, &index)) {
+    document->cursors.ClearMultiCursors();
+    document->cursors.ClearSelections();
+
+    Cursor& cursor = document->cursors.GetPrimaryCursor();
+    cursor.SetIndex(index);
+    cursors_backup = document->cursors;
+  }
 
   // TODO: Make sure the cursor is at the middle of the view.
   EnsureCursorOnView();
@@ -423,8 +427,9 @@ void DocumentWindow::DrawAutoCompletions(FrameBuffer& buff, Position pos, Area a
   // FIXME: +2 because we draw the icon + 1 space but we should consider no icon
   // configuration also and that should be handled properly.
   //
-  // Adjust the max len depends on available space. +2 because we'll be drawing icon.
-  max_len = MIN(max_len + 2, area.width - curr.col);
+  // Adjust the max len depends on available space. +4 because we'll be drawing icon.
+  // and the margins.
+  max_len = MIN(max_len + 4, area.width - curr.col);
 
   for (int i = 0; i < count_dispaynig_items; i++) {
     auto& item = (*completion_items)[i];
@@ -434,8 +439,8 @@ void DocumentWindow::DrawAutoCompletions(FrameBuffer& buff, Position pos, Area a
 
     // TODO: Draw a scroll bar.
 
-    std::string completion_item_line = Utf8UnicodeToString(icons.completion_kind[icon_index]);
-    completion_item_line += " " + item.label;
+    std::string completion_icon = Utf8UnicodeToString(icons.completion_kind[icon_index]);
+    std::string completion_item_line = " " + completion_icon + " " + item.label + " ";
     DrawTextLine(
         buff,
         completion_item_line.c_str(),

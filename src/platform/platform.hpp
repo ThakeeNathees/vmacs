@@ -43,6 +43,7 @@ public:
   bool Empty() const;
   bool Exists() const;
 
+  bool operator ==(const Path& other) const;
   Path operator /(const std::string& inner) const;
   bool operator <(const Path& other) const; // Needed to be used in map keys.
 

@@ -42,6 +42,11 @@ bool Path::Exists() const {
 }
 
 
+bool Path::operator ==(const Path& other) const {
+  return path == other.path;
+}
+
+
 Path Path::operator /(const std::string& inner) const {
   return Path(path/inner);
 }

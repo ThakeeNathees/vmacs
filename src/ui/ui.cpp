@@ -121,8 +121,8 @@ Split* Split::Vsplit(bool right) {
     type = Type::VERTICAL;
     auto l = std::make_unique<Split>();
     auto r = std::make_unique<Split>();
-    if (right) l->window = std::move(window);
-    else r->window = std::move(window);
+    if (right) l->SetWindow(std::move(window));
+    else r->SetWindow(std::move(window));
     Split* split_left  = InsertChild(children.size(), std::move(l));
     Split* split_right = InsertChild(children.size(), std::move(r));
     return right ? split_right : split_left;
@@ -142,8 +142,8 @@ Split* Split::Hsplit(bool bottom) {
     type = Type::HORIZONTAL;
     auto t = std::make_unique<Split>();
     auto b = std::make_unique<Split>();
-    if (bottom) t->window = std::move(window);
-    else b->window = std::move(window);
+    if (bottom) t->SetWindow(std::move(window));
+    else b->SetWindow(std::move(window));
     Split* split_top    = InsertChild(children.size(), std::move(t));
     Split* split_bottom = InsertChild(children.size(), std::move(b));
     return bottom ? split_bottom : split_top;
@@ -265,6 +265,90 @@ void Split::Iterator::Next() {
 }
 
 
+Window* Split::GetWindowAt(const Position& pos) {
+  if (type == Split::Type::LEAF) {
+    ASSERT(children.empty(), OOPS);
+    if (GetWindow()->IsPointIncluded(pos)) return GetWindow();
+    return nullptr;
+  }
+
+  for (auto& child : children) {
+    Window* window = child->GetWindowAt(pos);
+    if (window) return window;
+  }
+
+  return nullptr;
+}
+
+
+DocumentWindow* Split::GetDocumentWindow(const Path& path) {
+  if (children.size() == 0) { // Leaf node.
+    ASSERT(type == Split::Type::LEAF, OOPS);
+    if (window != nullptr && window->GetType() == Window::Type::DOCUMENT) {
+      DocumentWindow* docwin = (DocumentWindow*) window.get();
+      if (docwin->GetDocument()->GetPath() == path) return docwin;
+    }
+    return nullptr;
+  }
+
+  ASSERT(type != Split::Type::LEAF, OOPS);
+
+  for (auto& child : children) {
+    DocumentWindow* docwin = child->GetDocumentWindow(path);
+    if (docwin) return docwin;
+  }
+
+  return nullptr;
+}
+
+
+void Split::Draw(FrameBuffer& buff, Position pos, Area area) {
+  if (children.size() == 0) { // Leaf node.
+    ASSERT(type == Split::Type::LEAF, OOPS);
+    if (window != nullptr) window->Draw(buff, pos, area);
+    return;
+  }
+
+  ASSERT(type != Split::Type::LEAF, OOPS);
+
+  // FIXME: Properly fetch the style from the editor or somewhere else.
+  Style style = Editor::GetTheme().GetStyle("ui.background.separator");
+
+  // The position to draw the children.
+  Position curr = pos;
+
+  int child_count = children.size();
+
+  for (int i = 0; i < child_count; i++) {
+    Split* child = children[i].get();
+
+    // If it's the last child will take the rest of the space. Not sure if this
+    // is correct.
+    bool is_last = i == child_count - 1;
+
+    if (type == Split::Type::VERTICAL) {
+      // The total width including a split line at the end.
+      int width = (area.width / child_count) + ((is_last) ? (area.width % child_count) : 0);
+      if (!is_last) width--;
+      child->Draw(buff, curr, Area(width, area.height));
+      if (!is_last) {
+        DrawVerticalLine(buff, Position(curr.x+width, curr.y), area.height, style, Editor::GetIcons());
+      }
+      curr.x += width+1; // +1 for split line.
+
+    } else if (type == Split::Type::HORIZONTAL) {
+      int height = (area.height / child_count) + ((is_last) ? (area.height % child_count) : 0);
+      if (!is_last) height--; // We'll use one row for drawing the split.
+      child->Draw(buff, curr, Area(area.width, height));
+      if (!is_last) {
+        DrawHorizontalLine(buff, Position(curr.x, curr.y + height), area.width, style, Editor::GetIcons());
+      }
+      curr.y += height+1; // +1 for split line.
+    }
+  }
+}
+
+
 // -----------------------------------------------------------------------------
 // Tab.
 // -----------------------------------------------------------------------------
@@ -343,83 +427,19 @@ void Tab::Update() {
 }
 
 
+Split* Tab::GetRootSplit() const {
+  return root.get();
+}
+
+
 const Split* Tab::GetActiveSplit() const {
   return active;
 }
 
 
-Window* Tab::GetWindowAt(const Position& pos) const {
-  return SplitGetWindowAt(pos, root.get());
-}
-
-
-Window* Tab::SplitGetWindowAt(const Position& pos, Split* split) const {
-  if (split == nullptr) return nullptr;
-
-  if (split->type == Split::Type::LEAF) {
-    ASSERT(split->children.empty(), OOPS);
-    if (split->GetWindow()->IsPointIncluded(pos)) return split->GetWindow();
-    return nullptr;
-  }
-
-  for (auto& child : split->children) {
-    Window* window = SplitGetWindowAt(pos, child.get());
-    if (window) return window;
-  }
-
-  return nullptr;
-}
-
-
 void Tab::Draw(FrameBuffer& buff, Position pos, Area area) {
-  DrawSplit(buff, root.get(), pos, area);
-}
-
-
-void Tab::DrawSplit(FrameBuffer& buff, Split* split, Position pos, Area area) {
-  if (split->children.size() == 0) { // Leaf node.
-    ASSERT(split->type == Split::Type::LEAF, OOPS);
-    if (split->window != nullptr) split->window->Draw(buff, pos, area);
-    return;
-  }
-
-  ASSERT(split->type != Split::Type::LEAF, OOPS);
-
-  // FIXME: Properly fetch the style from the editor or somewhere else.
-  Style style = Editor::GetTheme().GetStyle("ui.background.separator");
-
-  // The position to draw the children.
-  Position curr = pos;
-
-  int child_count = split->children.size();
-
-  for (int i = 0; i < child_count; i++) {
-    Split* child = split->children[i].get();
-
-    // If it's the last child will take the rest of the space. Not sure if this
-    // is correct.
-    bool is_last = i == child_count - 1;
-
-    if (split->type == Split::Type::VERTICAL) {
-      // The total width including a split line at the end.
-      int width = (area.width / child_count) + ((is_last) ? (area.width % child_count) : 0);
-      if (!is_last) width--;
-      DrawSplit(buff, child, curr, Area(width, area.height));
-      if (!is_last) {
-        DrawVerticalLine(buff, Position(curr.x+width, curr.y), area.height, style, Editor::GetIcons());
-      }
-      curr.x += width+1; // +1 for split line.
-
-    } else if (split->type == Split::Type::HORIZONTAL) {
-      int height = (area.height / child_count) + ((is_last) ? (area.height % child_count) : 0);
-      if (!is_last) height--; // We'll use one row for drawing the split.
-      DrawSplit(buff, child, curr, Area(area.width, height));
-      if (!is_last) {
-        DrawHorizontalLine(buff, Position(curr.x, curr.y + height), area.width, style, Editor::GetIcons());
-      }
-      curr.y += height+1; // +1 for split line.
-    }
-  }
+  ASSERT(root != nullptr, OOPS);
+  root->Draw(buff, pos, area);
 }
 
 
@@ -682,7 +702,7 @@ void Ui::DrawTabsBar(FrameBuffer& buff, Position pos, Area area) {
   Style style_menu       = theme.GetStyle("ui.menu");
   Style style_menu_sel   = theme.GetStyle("ui.menu.selected");
 
-  Style style_not_active = style_menu;
+  Style style_not_active = style_menu.Apply(style_whitespace);
   Style style_active     = style_menu_sel.Apply(style_bg);
   Style style_split      = style_not_active;
   style_split.fg         = style_active.bg;
@@ -704,6 +724,7 @@ void Ui::DrawTabsBar(FrameBuffer& buff, Position pos, Area area) {
     std::string tab_bar_display = std::string(" ") + tab_name + " ";
 
     Style& style = (i == active_tab_index) ? style_active : style_not_active;
+
     DrawTextLine(buff, tab_bar_display.c_str(), curr, tab_bar_display.size(), style, icons, true);
     curr.col += tab_bar_display.size();
 
@@ -744,6 +765,49 @@ void Ui::AddTab(std::unique_ptr<Tab> tab) {
 }
 
 
+bool Ui::JumpToDocument(const Path& path, Coord coord) {
+
+  // TODO: Error to editor.
+  if (!path.Exists()) return false;
+
+  // Check if a window opened for the given path, in that case just make it
+  // active.
+  {
+    DocumentWindow* docwin = GetDocumentWindow(path);
+    if (docwin) {
+      MakeWindowActive(docwin);
+      docwin->JumpTo(coord);
+      return true;
+    }
+  }
+
+  // TODO: If we're in a split, don't create a new tab. Set the split's window
+  // as the document.
+
+  // Note that if opening the file failed, an error message was already set
+  // by the OpenDocument method.
+  Editor* e = Editor::Singleton().get();
+  std::shared_ptr<Document> doc = e->OpenDocument(path);
+  if (doc == nullptr) return false;
+
+  // TODO: Implement tab from window and call it here.
+  std::unique_ptr<DocumentWindow> docwin = std::make_unique<DocumentWindow>(doc);
+  DocumentWindow* ptr_docwin = docwin.get();  // Needed to set the view location.
+
+  std::unique_ptr<Split> root = std::make_unique<Split>();
+  root->SetWindow(std::move(docwin));
+
+  std::unique_ptr<Tab> tab = std::make_unique<Tab>(std::move(root));
+  ((Ui*)e->GetUi())->AddTab(std::move(tab));
+
+  // We call this here since otherwise the pos/area of the window didn't updated.
+  // which is needed to set the view of the coordinate.
+  ptr_docwin->JumpTo(coord);
+
+  return true;
+}
+
+
 Window* Ui::GetWindowAt(Position pos) const {
   if (popup && popup.get()->IsPointIncluded(pos)) {
     return popup.get();
@@ -753,7 +817,36 @@ Window* Ui::GetWindowAt(Position pos) const {
   if (active_tab_index < 0 || active_tab_index >= tabs.size()) return nullptr;
   Tab* tab = tabs[active_tab_index].get();
   ASSERT(tab != nullptr, OOPS);
-  return tab->GetWindowAt(pos);
+  Split* root = tab->GetRootSplit();
+  ASSERT(root != nullptr, OOPS);
+  return root->GetWindowAt(pos);
+}
+
+
+void Ui::MakeWindowActive(Window* window) {
+  ASSERT(window != nullptr, OOPS);
+  ASSERT(window->split != nullptr, OOPS);
+  ASSERT(window->split->tab != nullptr, OOPS);
+
+  Tab* tab = window->split->tab;
+  for (int i = 0; i < tabs.size(); i++) {
+    if (tabs[i].get() == tab) {
+      active_tab_index = i;
+      tab->active = window->split;
+      window->SetActive(true);
+      break;
+    }
+  }
+}
+
+
+DocumentWindow* Ui::GetDocumentWindow(const Path& path) const {
+  for (auto& tab : tabs) {
+    Split* root = tab->GetRootSplit();
+    DocumentWindow* window = root->GetDocumentWindow(path);
+    if (window) return window;
+  }
+  return nullptr;
 }
 
 
