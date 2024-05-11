@@ -21,6 +21,12 @@ KeyTree Ui::keytree;
 
 Window::Window(const KeyTree* keytree) : EventHandler(keytree) {}
 
+
+Window::Type Window::GetType() const {
+  return Type::OTHER;
+}
+
+
 void Window::Update() {
   _Update();
 }

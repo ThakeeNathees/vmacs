@@ -32,6 +32,11 @@ DocumentWindow::~DocumentWindow() {
 }
 
 
+Window::Type DocumentWindow::GetType() const {
+  return Type::DOCUMENT;
+}
+
+
 bool DocumentWindow::_HandleEvent(const Event& event) {
   if (event.type == Event::Type::KEY && event.key.unicode != 0) {
     char c = (char) event.key.unicode;

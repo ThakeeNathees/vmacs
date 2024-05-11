@@ -22,6 +22,11 @@ FindWindow::FindWindow(std::unique_ptr<Finder> finder_)
 }
 
 
+Window::Type FindWindow::GetType() const {
+  return Type::FINDER;
+}
+
+
 std::unique_ptr<Window> FindWindow::Copy() const {
   ASSERT(false, "Copy constructor doesn't applied to FindWindow and shouldn't be called.");
   return nullptr;

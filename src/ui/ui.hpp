@@ -28,8 +28,19 @@ class Tab;
 class Window : public EventHandler {
 
 public:
+  // We'll use this enum to type case from Window* to the curresponding child type.
+  enum class Type {
+    DOCUMENT,
+    FINDER,
+    OTHER,
+  };
+
+
   Window(const KeyTree* keytree); // The static key tree registry of the child class.
   virtual ~Window() = default;
+
+  // By default it'll return OTHER, override this if needed to match for specific type..
+  virtual Type GetType() const;
 
   // This will internally call _Draw(), and the subclasses should override it.
   bool HandleEvent(const Event& event) final override;
@@ -290,6 +301,8 @@ public:
   DocumentWindow(std::shared_ptr<Document> document);
   ~DocumentWindow();
 
+  Type GetType() const override;
+
   // Events.
   void OnDocumentChanged() override;
   void OnFocusChanged(bool focus) override;
@@ -368,6 +381,8 @@ class FindWindow : public Window {
 
 public:
   FindWindow(std::unique_ptr<Finder> finder);
+
+  Type GetType() const override;
 
   // FIXME: Copy doesn't applied to FindWindow since it's a popup (TODO: implement
   // popup window base class) and we shouldn't and cannot split popup. This feels

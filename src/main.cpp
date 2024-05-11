@@ -14,35 +14,23 @@
 //
 // Now:
 //
-//
 // Mess,CodeQ:
 //   - Check if the LSP client exists and show an error message otherwise.
 //
 //   - if tab has single document -> tab name will be the file name of the document.
 //
-//   - Window pos, area stored in draw call, fix it.
-//     + mouse events should sent to windows properly.
-//     + Should be able to scroll in every splits.
-//     + view_start, and text_area in documentwindow, pos, area in window (same).
-//
-//   - [deps above] Opening the same document twise in the find file shouldn't open new tab
+//   - Opening the same document twise in the find file shouldn't open new tab
 //     but make the existing tab active.
 //     * this requires window type == documentwindow check at runtime. and get
 //     the path from the window.
-//
-//   - Fetch theme capture from theme (or somewhere).
-//       create a global config (fps, theme, tabsize, etc)
 //
 //   - Only Ui has keytree.
 //   - Event binding refactor.
 //
 //   - Window::Copy method review.
-//   - Fix finder refactor and implement live grep.
-//   - Draw diagnostics the same line.
-//   ------
-//   - vmacs.hpp
-//   - editor.(hpp/cpp)
 //
+//   - Fix finder refactor and implement live grep.
+//     + Needs to check if a command exists and report user if not properly.
 //
 //
 // Pending:
@@ -59,6 +47,7 @@
 //    - An abstract class for completion list.
 //    - auto completion should override the split edge.
 //    - auto completion scrolling.
+//  - Draw diagnostics the same line.
 //
 //   structure:
 //     config move.
