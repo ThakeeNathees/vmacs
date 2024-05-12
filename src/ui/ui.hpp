@@ -55,6 +55,9 @@ public:
   void SetActive(bool active);
   bool IsActive() const;
 
+  const std::string& GetMode() const;
+  void SetMode(const std::string& mode);
+
   // Setter and getter for for should_close.
   void SetShouldClose();
   bool IsShouldClose() const;
@@ -63,6 +66,9 @@ public:
   const Position& GetPosition() const;
   const Area& GetArea() const;
   bool IsPointIncluded(const Position& point) const;
+
+  Split* GetSplit() const;
+  void SetSplit(Split* split);
 
   // This will return a copy of the current window to display in a split.
   // If the window is not "copiable" it'll return nullptr and the caller should
@@ -81,10 +87,6 @@ private:
 
   // The split it belongs to.
   Split* split = nullptr;
-
-  friend class Split;
-  friend class Tab;
-  friend class Ui;
 
 private:
   // The handler should return true if the event is consumed by the window.
@@ -161,6 +163,9 @@ public:
   // for all the splits in the tree here.
   void SetTab(Tab* tab);
 
+  Split::Type GetType() const;
+  Tab* GetTab() const;
+
   // Returns an iterater which iterates on the leaf nodes.
   Iterator Iterate();
 
@@ -182,9 +187,6 @@ private:
   // it could be nullptr if the window is not initialized yet.
   std::unique_ptr<Window> window = nullptr;
 
-  friend class Window;
-  friend class Tab;
-  friend class Ui;
   friend class Iterator;
 
 private:
@@ -222,7 +224,13 @@ public:
   void Draw(FrameBuffer& buff, Position pos, Area area);
 
   Split* GetRoot() const;
-  const Split* GetActive() const;
+
+  Tabs* GetTabs() const;
+  void SetTabs(Tabs* tabs);
+
+  Split* GetActive() const;
+  void SetActive(Split* split);
+
 
   // Key tree is public so we can register action and bind to keys outside. I
   // don't like the OOP getters and setters (what's the point)?
@@ -236,9 +244,6 @@ private:
   // overall active split in the Ui, since the ui can contain multiple tabs
   // (for file tree and buffers maybe).
   Split* active = nullptr;
-
-  friend class Ui;
-  friend class Tabs;
 
 public: // Actions.
   static bool Action_NextWindow(Tab* self);
