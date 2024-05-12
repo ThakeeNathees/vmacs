@@ -64,8 +64,10 @@ public:
   const Area& GetArea() const;
   bool IsPointIncluded(const Position& point) const;
 
-  // This should return a copy of the current window to display in a split.
-  virtual std::unique_ptr<Window> Copy() const = 0;
+  // This will return a copy of the current window to display in a split.
+  // If the window is not "copiable" it'll return nullptr and the caller should
+  // handle it.
+  virtual std::unique_ptr<Window> Copy() const;
 
 private:
 
@@ -466,12 +468,6 @@ public:
 
   Type GetType() const override;
 
-  // FIXME: Copy doesn't applied to FindWindow since it's a popup (TODO: implement
-  // popup window base class) and we shouldn't and cannot split popup. This feels
-  // like a bad design, figure out how to do it properly instead of "throwing"
-  // not implemented error.
-  std::unique_ptr<Window> Copy() const override;
-
 private:
   std::unique_ptr<Finder> finder;
 
@@ -515,3 +511,20 @@ public: // Actions.
   static bool Action_Close(FindWindow* self);
 };
 
+
+// -----------------------------------------------------------------------------
+// Find Window.
+// -----------------------------------------------------------------------------
+
+
+class FileTree : public Window {
+
+public:
+  std::unique_ptr<Window> Copy() const override;
+
+private:
+  bool _HandleEvent(const Event& event) override;
+  void _Update() override;
+  void _Draw(FrameBuffer& buff, Position pos, Area area) override;
+
+};

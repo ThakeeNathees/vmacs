@@ -25,12 +25,6 @@ Window::Type FindWindow::GetType() const {
 }
 
 
-std::unique_ptr<Window> FindWindow::Copy() const {
-  ASSERT(false, "Copy constructor doesn't applied to FindWindow and shouldn't be called.");
-  return nullptr;
-}
-
-
 bool FindWindow::_HandleEvent(const Event& event) {
   if (event.type == Event::Type::KEY && event.key.unicode != 0) {
     char c = (char) event.key.unicode;

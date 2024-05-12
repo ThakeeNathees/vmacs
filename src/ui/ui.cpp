@@ -94,6 +94,11 @@ bool Window::IsPointIncluded(const Position& point) const {
 }
 
 
+std::unique_ptr<Window> Window::Copy() const {
+  return nullptr;
+}
+
+
 void Window::OnFocusChanged(bool focus) {}
 
 
@@ -471,6 +476,7 @@ bool Tab::Action_Vsplit(Tab* self) {
   ASSERT(self->active->type == Split::Type::LEAF, OOPS);
   bool right = true; // TODO: Get split pos from config like vim.
   std::unique_ptr<Window> copy = self->active->GetWindow()->Copy();
+  if (copy == nullptr) return false;
 
   self->active->GetWindow()->SetActive(false);
   {
@@ -487,6 +493,7 @@ bool Tab::Action_Hsplit(Tab* self) {
   ASSERT(self->active->type == Split::Type::LEAF, OOPS);
   bool bottom = true; // TODO: Get split pos from config like vim.
   std::unique_ptr<Window> copy = self->active->GetWindow()->Copy();
+  if (copy == nullptr) return false;
 
   self->active->GetWindow()->SetActive(false);
   {
