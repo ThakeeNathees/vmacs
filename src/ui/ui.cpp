@@ -94,6 +94,16 @@ bool Window::IsPointIncluded(const Position& point) const {
 }
 
 
+Split* Window::GetSplit() const {
+  return split;
+}
+
+
+void Window::SetSplit(Split* split) {
+  this->split = split;
+}
+
+
 std::unique_ptr<Window> Window::Copy() const {
   return nullptr;
 }
@@ -178,7 +188,7 @@ void Split::SetWindow(std::unique_ptr<Window> window) {
   ASSERT(window != nullptr, OOPS);
   ASSERT(type == Type::LEAF, OOPS);
   this->window = std::move(window);
-  this->window->split = this;
+  this->window->SetSplit(this);
 }
 
 
@@ -206,6 +216,16 @@ void Split::SetTab(Tab* tab) {
   for (std::unique_ptr<Split>& child: children) {
     child->SetTab(tab);
   }
+}
+
+
+Split::Type Split::GetType() const {
+  return type;
+}
+
+
+Tab* Split::GetTab() const {
+  return tab;
 }
 
 
@@ -367,7 +387,7 @@ Tab::Tab(std::unique_ptr<Split> root_, Split* active_)
   }
 
   ASSERT(active_ != nullptr, OOPS);
-  ASSERT(active_->type == Split::Type::LEAF, OOPS);
+  ASSERT(active_->GetType() == Split::Type::LEAF, OOPS);
   ASSERT(active_->GetRoot() == root.get(), "Given active spit should be part of the given split tree.");
 
   root->SetTab(this);
@@ -388,7 +408,7 @@ std::unique_ptr<Tab> Tab::FromWindow(std::unique_ptr<Window> window) {
 
 std::string Tab::GetName() const {
   if (!active) return "";
-  ASSERT(active->type == Split::Type::LEAF, OOPS);
+  ASSERT(active->GetType() == Split::Type::LEAF, OOPS);
 
   Window* window = active->GetWindow();
   ASSERT(window != nullptr, OOPS);
@@ -416,8 +436,8 @@ bool Tab::HandleEvent(const Event& event) {
   #define return_true do { ResetCursor(); return true; } while (false)
   // Send the event to the inner most child to handle if it cannot we do
   // event bubbling.
-  if (active != nullptr && active->window != nullptr) {
-    if (active->window->HandleEvent(event)) return_true;
+  if (active != nullptr && active->GetWindow() != nullptr) {
+    if (active->GetWindow()->HandleEvent(event)) return_true;
   }
   #undef return_true
 
@@ -429,7 +449,7 @@ bool Tab::HandleEvent(const Event& event) {
 void Tab::Update() {
   if (root == nullptr) return;
   for (auto it = root->Iterate(); it.Get() != nullptr; it.Next()) {
-    Window* window = it.Get()->window.get();
+    Window* window = it.Get()->GetWindow();
     if (window == nullptr) continue;
     window->Update();
   }
@@ -441,8 +461,25 @@ Split* Tab::GetRoot() const {
 }
 
 
-const Split* Tab::GetActive() const {
+Tabs* Tab::GetTabs() const {
+  return tabs;
+}
+
+
+void Tab::SetTabs(Tabs* tabs) {
+  this->tabs = tabs;
+}
+
+
+Split* Tab::GetActive() const {
   return active;
+}
+
+
+void Tab::SetActive(Split* split) {
+  ASSERT(split != nullptr, OOPS);
+  ASSERT(split->GetTab() == this, OOPS);
+  active = split;
 }
 
 
@@ -473,7 +510,7 @@ bool Tab::Action_NextWindow(Tab* self) {
 
 bool Tab::Action_Vsplit(Tab* self) {
   ASSERT(self->active != nullptr, OOPS);
-  ASSERT(self->active->type == Split::Type::LEAF, OOPS);
+  ASSERT(self->active->GetType() == Split::Type::LEAF, OOPS);
   bool right = true; // TODO: Get split pos from config like vim.
   std::unique_ptr<Window> copy = self->active->GetWindow()->Copy();
   if (copy == nullptr) return false;
@@ -490,7 +527,7 @@ bool Tab::Action_Vsplit(Tab* self) {
 
 bool Tab::Action_Hsplit(Tab* self) {
   ASSERT(self->active != nullptr, OOPS);
-  ASSERT(self->active->type == Split::Type::LEAF, OOPS);
+  ASSERT(self->active->GetType() == Split::Type::LEAF, OOPS);
   bool bottom = true; // TODO: Get split pos from config like vim.
   std::unique_ptr<Window> copy = self->active->GetWindow()->Copy();
   if (copy == nullptr) return false;
@@ -511,7 +548,7 @@ bool Tab::Action_Hsplit(Tab* self) {
 
 
 void Tabs::AddTab(std::unique_ptr<Tab> tab) {
-  tab->tabs = this;
+  tab->SetTabs(this);
   active_tab_index = tabs.size();
   tabs.push_back(std::move(tab));
 }
@@ -911,25 +948,28 @@ Window* Ui::GetWindowAt(Position pos) const {
 bool Ui::IsWindowActive(const Window* window) const {
   // active_tabs -> active_tab -> active_split -> window.
   if (active == nullptr) return false; // No tabs is active.
-  ASSERT(active->GetActive(), OOPS);
-  ASSERT(active->GetActive()->GetActive(), OOPS);
-  ASSERT(active->GetActive()->GetActive()->GetWindow(), OOPS);
-  return active->GetActive()->GetActive()->GetWindow() == window;
+
+  const Tab* tab = active->GetActive();
+  if (tab == nullptr) return false; // Empty tabs container.
+
+  ASSERT(tab->GetActive(), OOPS);
+  ASSERT(tab->GetActive()->GetWindow(), OOPS);
+  return tab->GetActive()->GetWindow() == window;
 }
 
 
 void Ui::SetWindowActive(Window* window) {
   ASSERT(window != nullptr, OOPS);
-  ASSERT(window->split != nullptr, OOPS);
-  ASSERT(window->split->tab != nullptr, OOPS);
-  ASSERT(window->split->tab->tabs != nullptr, OOPS);
+  ASSERT(window->GetSplit() != nullptr, OOPS);
+  ASSERT(window->GetSplit()->GetTab() != nullptr, OOPS);
+  ASSERT(window->GetSplit()->GetTab()->GetTabs() != nullptr, OOPS);
 
-  Tabs* next_active = window->split->tab->tabs;
+  Tabs* next_active = window->GetSplit()->GetTab()->GetTabs();
   for (int i = 0; i < next_active->Count(); i++) {
     Tab* child = next_active->Child(i);
-    if (child == window->split->tab) {
+    if (child == window->GetSplit()->GetTab()) {
       next_active->SetActive(i);
-      child->active = window->split;
+      child->SetActive(window->GetSplit());
       window->SetActive(true);
       break;
     }

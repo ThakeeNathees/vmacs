@@ -600,6 +600,8 @@ private:
 class KeyTreeCursor {
 public:
   KeyTreeCursor(const KeyTree* tree);
+
+  const std::string& GetMode() const;
   void SetMode(const std::string& mode);
 
   // Try to execute the event with the bindings, if success returns true.
@@ -649,6 +651,7 @@ public:
   // combination like "<C-w><C-l>" etc.
   bool ListeningCombination() const;
 
+  const std::string& GetMode() const;
   void SetMode(const std::string& mode);
 
 private:

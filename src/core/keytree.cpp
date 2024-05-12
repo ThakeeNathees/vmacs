@@ -72,6 +72,11 @@ bool KeyTreeCursor::IsCursorRoot() const {
 }
 
 
+const std::string& KeyTreeCursor::GetMode() const {
+  return mode;
+}
+
+
 void KeyTreeCursor::SetMode(const std::string& mode) {
   this->mode = mode;
   ResetCursor();
@@ -148,6 +153,11 @@ void EventHandler::ResetCursor() {
 
 bool EventHandler::ListeningCombination() const {
   return !cursor.IsCursorRoot();
+}
+
+
+const std::string& EventHandler::GetMode() const {
+  return cursor.GetMode();
 }
 
 
