@@ -21,6 +21,8 @@
 
 class Split;
 class Tab;
+class Tabs;
+class Ui;
 class DocumentWindow;
 class FindWindow;
 
@@ -36,7 +38,6 @@ public:
     FINDER,
     OTHER,
   };
-
 
   Window(const KeyTree* keytree); // The static key tree registry of the child class.
   virtual ~Window() = default;
@@ -171,15 +172,13 @@ private:
   // TODO: There is no size (w, h) for the split and will take equally at the
   // moment, fix it.
 
+  Tab* tab = nullptr;      // The tab it belongs to.
   Split* parent = nullptr; // If parent is nullptr, its the root of the tab.
   std::vector<std::unique_ptr<Split>> children;
 
   // A leaf node will have 0 children and the window* will be available. However
   // it could be nullptr if the window is not initialized yet.
   std::unique_ptr<Window> window = nullptr;
-
-  // The tab it belongs to.
-  Tab* tab = nullptr;
 
   friend class Window;
   friend class Tab;
@@ -207,6 +206,9 @@ public:
   // first leaf of the tree as active split.
   Tab(std::unique_ptr<Split> root, Split* active=nullptr);
 
+  // Create a new tab from a window set to the root split.
+  static std::unique_ptr<Tab> FromWindow(std::unique_ptr<Window> window);
+
   // Returns the display name of the tab this might not be unique among other tabs.
   // If the active window is a document window, it'll return the filename of that
   // document otherwise it'll returns an empty string and the caller decides what to
@@ -217,8 +219,8 @@ public:
   void Update();
   void Draw(FrameBuffer& buff, Position pos, Area area);
 
-  Split* GetRootSplit() const;
-  const Split* GetActiveSplit() const;
+  Split* GetRoot() const;
+  const Split* GetActive() const;
 
   // Key tree is public so we can register action and bind to keys outside. I
   // don't like the OOP getters and setters (what's the point)?
@@ -226,17 +228,55 @@ public:
 
 private:
   std::unique_ptr<Split> root;
+  Tabs* tabs = nullptr; // The tabs container it belongs to.
 
-  // Currently active leaf split in the split tree.
+  // Currently active leaf split in the split tree. Note that this is not the
+  // overall active split in the Ui, since the ui can contain multiple tabs
+  // (for file tree and buffers maybe).
   Split* active = nullptr;
 
   friend class Ui;
+  friend class Tabs;
 
 public: // Actions.
   static bool Action_NextWindow(Tab* self);
   static bool Action_Vsplit(Tab* self);
   static bool Action_Hsplit(Tab* self);
+};
 
+
+// -----------------------------------------------------------------------------
+// Tabs.
+// -----------------------------------------------------------------------------
+
+
+// Simply a container for tabs.
+class Tabs {
+public:
+  // Insert tab and make it active.
+  void AddTab(std::unique_ptr<Tab> tab);
+  int Count() const;
+  Tab* Child(int index) const;
+
+  Tab* GetActive() const;
+  void SetActive(int index);
+
+  Window* GetWindowAt(Position pos) const;
+
+  bool HandleEvent(const Event& event);
+  void Update();
+  void Draw(FrameBuffer& buff, Position pos, Area area);
+
+private:
+  int active_tab_index = -1; // Index of the active tab.
+  std::vector<std::unique_ptr<Tab>> tabs;
+
+private:
+  void DrawTabsBar(FrameBuffer& buff, Position pos, Area area);
+
+public:
+  static bool Action_TabNext(Tabs* self);
+  static bool Action_TabPrev(Tabs* self);
 };
 
 
@@ -261,12 +301,33 @@ public:
   void AddTab(std::unique_ptr<Tab> tab);
   bool JumpToDocument(const Path& path, Coord coord); // Returns true on success.
 
+  bool IsWindowActive(const Window* window) const;
+  void SetWindowActive(Window* window);
+
   static KeyTree keytree;
 
 private:
-  int active_tab_index = -1; // Index of current active tab.
-  std::vector<std::unique_ptr<Tab>> tabs;
+  // The layout of the highlevel Ui is hardcoded into the bellow structure.
+  // Where every "box" is a Tabs structure.
+  //
+  //     ┌────────┐ ┌────────────┐ ┌────────┐
+  //     │        │ │            │ │        │
+  //     │        │ │            │ │        │
+  //     │        │ │            │ │        │
+  //     │  Left  │ │  Documents │ │ Right  │
+  //     │        │ │            │ │        │
+  //     │        │ │            │ │        │
+  //     │        │ │            │ │        │
+  //     └────────┘ └────────────┘ └────────┘
+  //
+
+  Tabs left;
+  Tabs documents;
+  Tabs right;
   std::unique_ptr<Window> popup;
+
+  // The currently active tabs container.
+  Tabs* active = &documents;
 
   // FIXME(grep): This is temproary.
   std::string info_bar_text;
@@ -277,14 +338,10 @@ private:
   // at the given position and to pass the event to the window at that position.
   Window* GetWindowAt(Position pos) const;
 
-  // Make the given window active inside the tabs.
-  void MakeWindowActive(Window* window);
-
   // Returns the document window for the document at the given path, if no document
   // already opened for the given path, it'll return nullptr.
   DocumentWindow* GetDocumentWindow(const Path& path) const;
 
-  void DrawTabsBar(FrameBuffer& buff, Position pos, Area area);
   void DrawHomeScreen(FrameBuffer& buff, Position pos, Area area);
   void DrawPromptBar(FrameBuffer& buff); // Will draw at the bottom line.
 
@@ -311,8 +368,8 @@ public: // Actions.
 // -----------------------------------------------------------------------------
 
 
-// DocumentWindow is the window that handles events and display the undeling buffer
-// it's more of a text editor with number line and scroll bar etc.
+// DocumentWindow is the window that handles events and display the undeling
+// buffer it's more of a text editor with number line and scroll bar etc.
 class DocumentWindow : public Window, public DocumentListener {
 
 public:

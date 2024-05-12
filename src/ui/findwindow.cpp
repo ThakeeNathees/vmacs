@@ -180,9 +180,11 @@ void FindWindow::DrawItems(FrameBuffer& buff, int x, int y, int w, int h, const 
   Style style_text          = theme.GetStyle("ui.text");
   Style style_bg            = theme.GetStyle("ui.background");
   Style style_menu          = theme.GetStyle("ui.menu");
+  Style style_selection     = theme.GetStyle("ui.selection.primary");
   Style style_menu_selected = theme.GetStyle("ui.menu.selected");
-  Style style_selected      = style_menu.Apply(style_menu_selected);
+
   Style style               = style_bg.Apply(style_text);
+  Style style_selected      = style.Apply(style_selection);
   // --------------------------------------------------------------------------
 
   for (int i = 0; i < h; i++) {

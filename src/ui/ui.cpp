@@ -60,12 +60,9 @@ void Window::SetActive(bool active) {
 
 
 bool Window::IsActive() const {
-  ASSERT(split != nullptr, OOPS);
-  ASSERT(split->tab != nullptr, OOPS);
-  const Split* active_split = split->tab->GetActiveSplit();
-  ASSERT(active_split != nullptr, OOPS);
-  ASSERT(active_split->GetWindow() != nullptr, OOPS);
-  return active_split->GetWindow() == this;
+  Ui* ui = (Ui*)Editor::Singleton()->GetUi();
+  ASSERT(ui != nullptr, OOPS);
+  return ui->IsWindowActive(this);
 }
 
 
@@ -377,6 +374,13 @@ Tab::Tab(std::unique_ptr<Split> root_, Split* active_)
 }
 
 
+std::unique_ptr<Tab> Tab::FromWindow(std::unique_ptr<Window> window) {
+  std::unique_ptr<Split> root = std::make_unique<Split>();
+  root->SetWindow(std::move(window));
+  return std::make_unique<Tab>(std::move(root));
+}
+
+
 std::string Tab::GetName() const {
   if (!active) return "";
   ASSERT(active->type == Split::Type::LEAF, OOPS);
@@ -427,12 +431,12 @@ void Tab::Update() {
 }
 
 
-Split* Tab::GetRootSplit() const {
+Split* Tab::GetRoot() const {
   return root.get();
 }
 
 
-const Split* Tab::GetActiveSplit() const {
+const Split* Tab::GetActive() const {
   return active;
 }
 
@@ -495,6 +499,154 @@ bool Tab::Action_Hsplit(Tab* self) {
 
 
 // -----------------------------------------------------------------------------
+// Tabs.
+// -----------------------------------------------------------------------------
+
+
+void Tabs::AddTab(std::unique_ptr<Tab> tab) {
+  tab->tabs = this;
+  active_tab_index = tabs.size();
+  tabs.push_back(std::move(tab));
+}
+
+
+Tab* Tabs::GetActive() const {
+  if (active_tab_index >= 0 && active_tab_index < tabs.size()) {
+    return tabs[active_tab_index].get();
+  }
+  ASSERT(active_tab_index < 0, OOPS);
+  return nullptr;
+}
+
+
+void Tabs::SetActive(int index) {
+  ASSERT_INDEX(index, tabs.size());
+  active_tab_index = index;
+}
+
+
+int Tabs::Count() const {
+  return tabs.size();
+}
+
+
+Tab* Tabs::Child(int index) const {
+  if (0 <= index && index < tabs.size()) {
+    return tabs[index].get();
+  }
+  return nullptr;
+}
+
+
+Window* Tabs::GetWindowAt(Position pos) const {
+  // It's possible for the active tab to be null, if we're at the wellcome screen.
+  const Tab* active = GetActive();
+  if (active == nullptr) return nullptr;
+  Split* root = active->GetRoot();
+  ASSERT(root != nullptr, OOPS);
+  return root->GetWindowAt(pos);
+}
+
+
+bool Tabs::HandleEvent(const Event& event) {
+  Tab* active = GetActive();
+  if (active == nullptr) return false; // Empty tabs.
+  return active->HandleEvent(event);
+}
+
+
+void Tabs::Update() {
+  for (auto& tab : tabs) tab->Update();
+}
+
+
+void Tabs::Draw(FrameBuffer& buff, Position pos, Area area) {
+  Tab* active = GetActive();
+  if (active == nullptr) return; // Empty tabs.
+  if (tabs.size() >= 2) {
+    DrawTabsBar(buff, pos, area);
+    pos.row++; area.height--; // Adjust the size after drawing the tab bar.
+  }
+  active->Draw(buff, pos, area);
+}
+
+
+// TODO: Add multiple tabs and scroll and ensure active tab is in view.
+void Tabs::DrawTabsBar(FrameBuffer& buff, Position pos, Area area) {
+  ASSERT(tabs.size() > 0, OOPS);
+
+  const Theme& theme     = Editor::GetTheme();
+  const Icons& icons = Editor::GetIcons();
+
+  // FIXME: Move this.
+  // --------------------------------------------------------------------------
+  Style style_text       = theme.GetStyle("ui.text");
+  Style style_bg         = theme.GetStyle("ui.background");
+  Style style_whitespace = theme.GetStyle("ui.virtual.whitespace");
+  Style style_cursor     = theme.GetStyle("ui.cursor.primary");
+  Style style_selection  = theme.GetStyle("ui.selection.primary");
+  Style style_error      = theme.GetStyle("error");
+  Style style_warning    = theme.GetStyle("warning");
+  Style style_menu       = theme.GetStyle("ui.menu");
+  Style style_menu_sel   = theme.GetStyle("ui.menu.selected");
+
+  Style style_not_active = style_menu.Apply(style_whitespace);
+  Style style_active     = style_menu_sel.Apply(style_bg);
+  Style style_split      = style_not_active;
+  style_split.fg         = style_active.bg;
+  // --------------------------------------------------------------------------
+
+  Position curr = pos;
+  DrawRectangleFill(buff, curr, Area(area.width, 1), style_not_active);
+
+  for (int i = 0; i < tabs.size(); i++) {
+    auto& tab = tabs[i];
+
+    std::string tab_name = tab->GetName();
+    if (tab_name.empty()) {
+      tab_name = "tab " + std::to_string(i+1);
+    }
+
+    // TODO: If current file modified we put an indicator (+).
+    // This will be the displaied text of the tab bar including the padding.
+    std::string tab_bar_display = std::string(" ") + tab_name + " ";
+
+    Style& style = (i == active_tab_index) ? style_active : style_not_active;
+
+    DrawTextLine(buff, tab_bar_display.c_str(), curr, tab_bar_display.size(), style, icons, true);
+    curr.col += tab_bar_display.size();
+
+    if (i == active_tab_index || (i+1) == active_tab_index) {
+      SET_CELL(buff, curr.col, curr.row, ' ', style_active);
+    } else {
+      DrawVerticalLine(buff, curr, 1, style_split, icons);
+    }
+
+    curr.col++;  // +1 for vertical split.
+  }
+}
+
+
+bool Tabs::Action_TabNext(Tabs* self) {
+  if (self->tabs.size() == 0) return false;
+  self->active_tab_index++;
+  self->active_tab_index %= self->tabs.size();
+  return true;
+}
+
+
+bool Tabs::Action_TabPrev(Tabs* self) {
+  if (self->tabs.size() == 0) return false;
+  if (self->active_tab_index == 0) {
+    self->active_tab_index = self->tabs.size() - 1;
+  } else {
+    self->active_tab_index--;
+  }
+  return true;
+}
+
+
+// -----------------------------------------------------------------------------
 // Ui.
 // -----------------------------------------------------------------------------
 
@@ -543,9 +695,8 @@ bool Ui::HandleEvent(const Event& event) {
       if (popup->IsShouldClose()) popup = nullptr; // This will destroy the popup.
       return_true;
     }
-  } else if (active_tab_index >= 0) {
-    ASSERT_INDEX(active_tab_index, tabs.size());
-    if (tabs[active_tab_index]->HandleEvent(event)) return_true;
+  } else if (active) {
+    if (active->HandleEvent(event)) return_true;
   }
   #undef return_true
 
@@ -555,31 +706,20 @@ bool Ui::HandleEvent(const Event& event) {
 
 
 void Ui::Update() {
+  left.Update();
+  right.Update();
+  documents.Update();
   if (popup) popup->Update();
-  for (auto& tab : tabs) tab->Update();
 }
 
 
-// FIXME(mess): Cleanup this mess.
 void Ui::Draw(FrameBuffer& buff) {
 
   Position pos(0, 0);
   Area area(buff.width, buff.height-1);
 
-  if (tabs.size()) {
-    ASSERT_INDEX(active_tab_index, tabs.size());
-    std::unique_ptr<Tab>& tab = tabs[active_tab_index];
-
-    Position curr_pos = pos;
-    Area curr_area    = area;
-    if (tabs.size() >= 2) {
-      DrawTabsBar(buff, pos, area);
-      curr_pos.row     += 1;
-      curr_area.height -= 1;
-    }
-
-    tab->Draw(buff, curr_pos, curr_area);
-
+  if (documents.Count()) {
+    documents.Draw(buff, pos, area);
   } else {
     DrawHomeScreen(buff, pos, area);
   }
@@ -683,62 +823,6 @@ void Ui::DrawPromptBar(FrameBuffer& buff) {
 }
 
 
-// TODO: Add multiple tabs and scroll and ensure active tab is in view.
-void Ui::DrawTabsBar(FrameBuffer& buff, Position pos, Area area) {
-  ASSERT(tabs.size() > 0, OOPS);
-
-  const Theme& theme     = Editor::GetTheme();
-  const Icons& icons = Editor::GetIcons();
-
-  // FIXME: Move this.
-  // --------------------------------------------------------------------------
-  Style style_text       = theme.GetStyle("ui.text");
-  Style style_bg         = theme.GetStyle("ui.background");
-  Style style_whitespace = theme.GetStyle("ui.virtual.whitespace");
-  Style style_cursor     = theme.GetStyle("ui.cursor.primary");
-  Style style_selection  = theme.GetStyle("ui.selection.primary");
-  Style style_error      = theme.GetStyle("error");
-  Style style_warning    = theme.GetStyle("warning");
-  Style style_menu       = theme.GetStyle("ui.menu");
-  Style style_menu_sel   = theme.GetStyle("ui.menu.selected");
-
-  Style style_not_active = style_menu.Apply(style_whitespace);
-  Style style_active     = style_menu_sel.Apply(style_bg);
-  Style style_split      = style_not_active;
-  style_split.fg         = style_active.bg;
-  // --------------------------------------------------------------------------
-
-  Position curr = pos;
-  DrawRectangleFill(buff, curr, Area(area.width, 1), style_not_active);
-
-  for (int i = 0; i < tabs.size(); i++) {
-    auto& tab = tabs[i];
-
-    std::string tab_name = tab->GetName();
-    if (tab_name.empty()) {
-      tab_name = "tab " + std::to_string(i+1);
-    }
-
-    // TODO: If current file modified we put an indicator (+).
-    // This will be the displaied text of the tab bar including the padding.
-    std::string tab_bar_display = std::string(" ") + tab_name + " ";
-
-    Style& style = (i == active_tab_index) ? style_active : style_not_active;
-
-    DrawTextLine(buff, tab_bar_display.c_str(), curr, tab_bar_display.size(), style, icons, true);
-    curr.col += tab_bar_display.size();
-
-    if (i == active_tab_index || (i+1) == active_tab_index) {
-      SET_CELL(buff, curr.col, curr.row, ' ', style_active);
-    } else {
-      DrawVerticalLine(buff, curr, 1, style_split, icons);
-    }
-
-    curr.col++;  // +1 for vertical split.
-  }
-}
-
-
 void Ui::Info(const std::string& msg) {
   info_bar_text = msg;
 }
@@ -760,8 +844,7 @@ void Ui::Error(const std::string& msg) {
 
 
 void Ui::AddTab(std::unique_ptr<Tab> tab) {
-  active_tab_index = tabs.size();
-  tabs.push_back(std::move(tab));
+  documents.AddTab(std::move(tab));
 }
 
 
@@ -775,7 +858,7 @@ bool Ui::JumpToDocument(const Path& path, Coord coord) {
   {
     DocumentWindow* docwin = GetDocumentWindow(path);
     if (docwin) {
-      MakeWindowActive(docwin);
+      SetWindowActive(docwin);
       docwin->JumpTo(coord);
       return true;
     }
@@ -793,12 +876,8 @@ bool Ui::JumpToDocument(const Path& path, Coord coord) {
   // TODO: Implement tab from window and call it here.
   std::unique_ptr<DocumentWindow> docwin = std::make_unique<DocumentWindow>(doc);
   DocumentWindow* ptr_docwin = docwin.get();  // Needed to set the view location.
-
-  std::unique_ptr<Split> root = std::make_unique<Split>();
-  root->SetWindow(std::move(docwin));
-
-  std::unique_ptr<Tab> tab = std::make_unique<Tab>(std::move(root));
-  ((Ui*)e->GetUi())->AddTab(std::move(tab));
+  std::unique_ptr<Tab> tab = Tab::FromWindow(std::move(docwin));
+  AddTab(std::move(tab));
 
   // We call this here since otherwise the pos/area of the window didn't updated.
   // which is needed to set the view of the coordinate.
@@ -809,30 +888,41 @@ bool Ui::JumpToDocument(const Path& path, Coord coord) {
 
 
 Window* Ui::GetWindowAt(Position pos) const {
+
   if (popup && popup.get()->IsPointIncluded(pos)) {
     return popup.get();
   }
 
-  // It's possible for the active tab to be null, if we're at the wellcome screen.
-  if (active_tab_index < 0 || active_tab_index >= tabs.size()) return nullptr;
-  Tab* tab = tabs[active_tab_index].get();
-  ASSERT(tab != nullptr, OOPS);
-  Split* root = tab->GetRootSplit();
-  ASSERT(root != nullptr, OOPS);
-  return root->GetWindowAt(pos);
+  Window* window = nullptr;
+  if (!window) window = left.GetWindowAt(pos);
+  if (!window) window = right.GetWindowAt(pos);
+  if (!window) window = documents.GetWindowAt(pos);
+  return window;
 }
 
 
-void Ui::MakeWindowActive(Window* window) {
+bool Ui::IsWindowActive(const Window* window) const {
+  // active_tabs -> active_tab -> active_split -> window.
+  if (active == nullptr) return false; // No tabs is active.
+  ASSERT(active->GetActive(), OOPS);
+  ASSERT(active->GetActive()->GetActive(), OOPS);
+  ASSERT(active->GetActive()->GetActive()->GetWindow(), OOPS);
+  return active->GetActive()->GetActive()->GetWindow() == window;
+}
+
+
+void Ui::SetWindowActive(Window* window) {
   ASSERT(window != nullptr, OOPS);
   ASSERT(window->split != nullptr, OOPS);
   ASSERT(window->split->tab != nullptr, OOPS);
+  ASSERT(window->split->tab->tabs != nullptr, OOPS);
 
-  Tab* tab = window->split->tab;
-  for (int i = 0; i < tabs.size(); i++) {
-    if (tabs[i].get() == tab) {
-      active_tab_index = i;
-      tab->active = window->split;
+  Tabs* next_active = window->split->tab->tabs;
+  for (int i = 0; i < next_active->Count(); i++) {
+    Tab* child = next_active->Child(i);
+    if (child == window->split->tab) {
+      next_active->SetActive(i);
+      child->active = window->split;
       window->SetActive(true);
       break;
     }
@@ -841,8 +931,8 @@ void Ui::MakeWindowActive(Window* window) {
 
 
 DocumentWindow* Ui::GetDocumentWindow(const Path& path) const {
-  for (auto& tab : tabs) {
-    Split* root = tab->GetRootSplit();
+  for (int i = 0; i < documents.Count(); i++) {
+    Split* root = documents.Child(i)->GetRoot();
     DocumentWindow* window = root->GetDocumentWindow(path);
     if (window) return window;
   }
@@ -872,9 +962,8 @@ bool Ui::Action_NewDocument(EventHandler* eh) {
   // case what path should i use?
   std::shared_ptr<Document> document = std::make_shared<Document>();
   std::unique_ptr<DocumentWindow> docwindow = std::make_unique<DocumentWindow>(document);
-  std::unique_ptr<Split> root = std::make_unique<Split>();
-  root->SetWindow(std::move(docwindow));
-  std::unique_ptr<Tab> tab = std::make_unique<Tab>(std::move(root));
+
+  std::unique_ptr<Tab> tab = Tab::FromWindow(std::move(docwindow));
   self->AddTab(std::move(tab));
   return true;
 }
@@ -882,20 +971,13 @@ bool Ui::Action_NewDocument(EventHandler* eh) {
 
 bool Ui::Action_TabNext(EventHandler* eh) {
   Ui* self = (Ui*) eh;
-  if (self->tabs.size() == 0) return false;
-  self->active_tab_index++;
-  self->active_tab_index %= self->tabs.size();
-  return true;
+  if (!self->active) return false;
+  return self->active->Action_TabNext(self->active);
 }
 
 
 bool Ui::Action_TabPrev(EventHandler* eh) {
   Ui* self = (Ui*) eh;
-  if (self->tabs.size() == 0) return false;
-  if (self->active_tab_index == 0) {
-    self->active_tab_index = self->tabs.size() - 1;
-  } else {
-    self->active_tab_index--;
-  }
-  return true;
+  if (!self->active) return false;
+  return self->active->Action_TabPrev(self->active);
 }
