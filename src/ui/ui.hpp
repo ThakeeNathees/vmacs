@@ -29,9 +29,11 @@ class FindWindow;
 
 // Note that since Window is a subtype of event handler. And HandleEvent() is
 // already defined.
-class Window : public EventHandler {
+class Window : public ActionExecutor {
 
 public:
+
+  // TODO: Maybe remove this and implement IsDocWindow() since nothing else matters.
   // We'll use this enum to type case from Window* to the curresponding child type.
   enum class Type {
     DOCUMENT,
@@ -39,14 +41,13 @@ public:
     OTHER,
   };
 
-  Window(const KeyTree* keytree); // The static key tree registry of the child class.
   virtual ~Window() = default;
 
   // By default it'll return OTHER, override this if needed to match for specific type..
   virtual Type GetType() const;
 
   // This will internally call _Draw(), and the subclasses should override it.
-  bool HandleEvent(const Event& event) final override;
+  bool HandleEvent(const Event& event);
   void Update();
   void Draw(FrameBuffer& buff, Position pos, Area area);
 
@@ -199,13 +200,13 @@ private:
 // -----------------------------------------------------------------------------
 
 
-class Tab : public EventHandler {
+class Tab {
 public:
 
   // Set the root split of the tab, and takes an optional active split (which
   // should be part of the given tree). If active is nullptr, it'll takes the
   // first leaf of the tree as active split.
-  Tab(std::unique_ptr<Split> root, Split* active=nullptr);
+  Tab(std::unique_ptr<Split> root);
 
   // Create a new tab from a window set to the root split.
   static std::unique_ptr<Tab> FromWindow(std::unique_ptr<Window> window);
@@ -216,7 +217,7 @@ public:
   // name this tab.
   std::string GetName() const;
 
-  bool HandleEvent(const Event& event) override;
+  bool HandleEvent(const Event& event);
   void Update();
   void Draw(FrameBuffer& buff, Position pos, Area area);
 
@@ -228,10 +229,11 @@ public:
   Split* GetActive() const;
   void SetActive(Split* split);
 
-
-  // Key tree is public so we can register action and bind to keys outside. I
-  // don't like the OOP getters and setters (what's the point)?
-  static KeyTree keytree;
+  // "Actions" bind not bindable but called from Ui's actions, This method should
+  // act like actions and return true if the event is handled / action is performed.
+  bool NextWindow();
+  bool Vsplit();
+  bool Hsplit();
 
 private:
   std::unique_ptr<Split> root;
@@ -242,10 +244,6 @@ private:
   // (for file tree and buffers maybe).
   Split* active = nullptr;
 
-public: // Actions.
-  static bool Action_NextWindow(Tab* self);
-  static bool Action_Vsplit(Tab* self);
-  static bool Action_Hsplit(Tab* self);
 };
 
 
@@ -289,13 +287,15 @@ public:
 // -----------------------------------------------------------------------------
 
 
-class Ui : public IUi, public EventHandler {
+class Ui : public IUi, public ActionExecutor {
+  DEFINE_GET_CLASS_NAME(Ui);
+
 public:
   Ui();
 
-  bool HandleEvent(const Event& event);
-  void Update();
-  void Draw(FrameBuffer& buff);
+  bool HandleEvent(const Event& event) override;
+  void Update() override;
+  void Draw(FrameBuffer& buff) override;
 
   void Info(const std::string& error);
   void Success(const std::string& error);
@@ -305,12 +305,14 @@ public:
   void AddTab(std::unique_ptr<Tab> tab);
   bool JumpToDocument(const Path& path, Coord coord); // Returns true on success.
 
-  bool IsWindowActive(const Window* window) const;
+  Window* GetActiveWindow() const;
   void SetWindowActive(Window* window);
 
   static KeyTree keytree;
 
 private:
+  KeyTreeCursor cursor;
+
   // The layout of the highlevel Ui is hardcoded into the bellow structure.
   // Where every "box" is a Tabs structure.
   //
@@ -352,18 +354,22 @@ private:
 public: // Actions.
   // WARNING:
   //
-  // Note that since Window's first parent is not EventHander we cannot safly do
-  // the bellow case:
+  // Note that since Window's first parent is not ActionExecutor we cannot safly
+  // do the bellow case:
   //
-  //   EventHandler* e = (EventHander*)(ptr_of_window); // This will fail.
+  //   ActionExecutor* e = (ActionExecutor*)(ptr_of_window); // This will fail.
   //
   // And that's why we're using EventHander* in the Action methods bellow.
   // Unlike other child classes of event handers.
-  static bool Action_PopupFilesFinder(EventHandler* self);
-  static bool Action_PopupLiveGrep(EventHandler* self);
-  static bool Action_NewDocument(EventHandler* self);
-  static bool Action_TabNext(EventHandler* self);
-  static bool Action_TabPrev(EventHandler* self);
+  static bool Action_PopupFilesFinder(ActionExecutor* self);
+  static bool Action_PopupLiveGrep(ActionExecutor* self);
+  static bool Action_NewDocument(ActionExecutor* self);
+  static bool Action_TabNext(ActionExecutor* self);
+  static bool Action_TabPrev(ActionExecutor* self);
+  static bool Action_NextWindow(ActionExecutor* self);
+  static bool Action_Vsplit(ActionExecutor* self);
+  static bool Action_Hsplit(ActionExecutor* self);
+
 };
 
 
@@ -375,6 +381,7 @@ public: // Actions.
 // DocumentWindow is the window that handles events and display the undeling
 // buffer it's more of a text editor with number line and scroll bar etc.
 class DocumentWindow : public Window, public DocumentListener {
+  DEFINE_GET_CLASS_NAME(DocumentWindow);
 
 public:
   DocumentWindow();
@@ -464,10 +471,10 @@ public: // Actions.
 
 
 class FindWindow : public Window {
+  DEFINE_GET_CLASS_NAME(FindWindow);
 
 public:
   FindWindow(std::unique_ptr<Finder> finder);
-
   Type GetType() const override;
 
 private:
@@ -520,9 +527,7 @@ public: // Actions.
 
 
 class FileTree : public Window {
-
-public:
-  std::unique_ptr<Window> Copy() const override;
+  DEFINE_GET_CLASS_NAME(FileTree);
 
 private:
   bool _HandleEvent(const Event& event) override;

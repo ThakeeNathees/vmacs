@@ -8,12 +8,9 @@
 
 #include "ui.hpp"
 
-KeyTree FindWindow::keytree;
-
 // FIXME(grep) The finder might not have the requirnment installed, handle it.
 
-FindWindow::FindWindow(std::unique_ptr<Finder> finder_)
-  : Window(&keytree), finder(std::move(finder_)) {
+FindWindow::FindWindow(std::unique_ptr<Finder> finder_) : finder(std::move(finder_)) {
 
   finder->RegisterItemsChangeListener([&](){ this->OnItemsChanged(); });
   finder->Initialize();

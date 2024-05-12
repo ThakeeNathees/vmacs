@@ -9,17 +9,9 @@
 #include "ui.hpp"
 
 
-// Static member initialization.
-KeyTree Tab::keytree;
-KeyTree Ui::keytree;
-
-
 // -----------------------------------------------------------------------------
 // Window.
 // -----------------------------------------------------------------------------
-
-
-Window::Window(const KeyTree* keytree) : EventHandler(keytree) {}
 
 
 Window::Type Window::GetType() const {
@@ -47,9 +39,6 @@ bool Window::HandleEvent(const Event& event) {
     ASSERT(IsPointIncluded(Position(event.mouse.x, event.mouse.y)), OOPS);
   }
 
-  // We'll true handle the event from the key bindings and if there isn't any
-  // key is binded to the event we'll pass that to the child window.
-  if (EventHandler::HandleEvent(event)) return true;
   return _HandleEvent(event);
 }
 
@@ -62,7 +51,7 @@ void Window::SetActive(bool active) {
 bool Window::IsActive() const {
   Ui* ui = (Ui*)Editor::Singleton()->GetUi();
   ASSERT(ui != nullptr, OOPS);
-  return ui->IsWindowActive(this);
+  return ui->GetActiveWindow() == this;
 }
 
 
@@ -376,22 +365,18 @@ void Split::Draw(FrameBuffer& buff, Position pos, Area area) {
 // -----------------------------------------------------------------------------
 
 
-Tab::Tab(std::unique_ptr<Split> root_, Split* active_)
-  : EventHandler(&keytree), root(std::move(root_)) {
+Tab::Tab(std::unique_ptr<Split> root_) : root(std::move(root_)) {
 
   // TODO: Validate the root and all of it's childs are met our invariant.
   ASSERT(root != nullptr, "Root split was nullptr.");
 
-  if (active_ == nullptr) {
-    active_ = root->Iterate().Get(); // Get the first leaf of the tree.
-  }
-
-  ASSERT(active_ != nullptr, OOPS);
-  ASSERT(active_->GetType() == Split::Type::LEAF, OOPS);
-  ASSERT(active_->GetRoot() == root.get(), "Given active spit should be part of the given split tree.");
+  // Set the first leaf node as the active split.
+  active = root->Iterate().Get();
+  ASSERT(active != nullptr, OOPS);
+  ASSERT(active->GetType() == Split::Type::LEAF, OOPS);
+  ASSERT(active->GetRoot() == root.get(), "Given active spit should be part of the given split tree.");
 
   root->SetTab(this);
-  this->active = active_;
 
   Window* window = this->active->GetWindow();
   ASSERT(window != nullptr, "A split with un-initialized window did you forget to set one?");
@@ -424,25 +409,10 @@ std::string Tab::GetName() const {
 
 
 bool Tab::HandleEvent(const Event& event) {
-
-  // If we're at the middle of listening key combination don't send the event
-  // to the bellow layers.
-  if (ListeningCombination()) {
-    bool ret = EventHandler::HandleEvent(event);
-    ASSERT(ret == true, OOPS);
-    return ret;
-  }
-
-  #define return_true do { ResetCursor(); return true; } while (false)
-  // Send the event to the inner most child to handle if it cannot we do
-  // event bubbling.
   if (active != nullptr && active->GetWindow() != nullptr) {
-    if (active->GetWindow()->HandleEvent(event)) return_true;
+    return active->GetWindow()->HandleEvent(event);
   }
-  #undef return_true
-
-  // No one consumed the event, we'll handle ourself.
-  return EventHandler::HandleEvent(event);
+  return false;
 }
 
 
@@ -489,55 +459,55 @@ void Tab::Draw(FrameBuffer& buff, Position pos, Area area) {
 }
 
 
-bool Tab::Action_NextWindow(Tab* self) {
-  ASSERT(self->active != nullptr, OOPS);
-  auto it = Split::Iterator(self->active);
+bool Tab::NextWindow() {
+  ASSERT(active != nullptr, OOPS);
+  auto it = Split::Iterator(active);
   ASSERT(it.Get() != nullptr, OOPS);
   it.Next(); // Increment the leaf by one.
 
-  ASSERT(self->active->GetWindow() != nullptr, OOPS);
-  self->active->GetWindow()->SetActive(false);
+  ASSERT(active->GetWindow() != nullptr, OOPS);
+  active->GetWindow()->SetActive(false);
   if (it.Get() != nullptr) {
-    self->active = it.Get();
+    active = it.Get();
   } else { // Reached the end of the tree.
-    self->active = self->root->Iterate().Get();
+    active = root->Iterate().Get();
   }
-  ASSERT(self->active->GetWindow() != nullptr, OOPS);
-  self->active->GetWindow()->SetActive(true);
+  ASSERT(active->GetWindow() != nullptr, OOPS);
+  active->GetWindow()->SetActive(true);
   return true;
 }
 
 
-bool Tab::Action_Vsplit(Tab* self) {
-  ASSERT(self->active != nullptr, OOPS);
-  ASSERT(self->active->GetType() == Split::Type::LEAF, OOPS);
+bool Tab::Vsplit() {
+  ASSERT(active != nullptr, OOPS);
+  ASSERT(active->GetType() == Split::Type::LEAF, OOPS);
   bool right = true; // TODO: Get split pos from config like vim.
-  std::unique_ptr<Window> copy = self->active->GetWindow()->Copy();
+  std::unique_ptr<Window> copy = active->GetWindow()->Copy();
   if (copy == nullptr) return false;
 
-  self->active->GetWindow()->SetActive(false);
+  active->GetWindow()->SetActive(false);
   {
-    self->active = self->active->Vsplit(right);
-    self->active->SetWindow(std::move(copy));
+    active = active->Vsplit(right);
+    active->SetWindow(std::move(copy));
   }
-  self->active->GetWindow()->SetActive(true);
+  active->GetWindow()->SetActive(true);
   return true;
 }
 
 
-bool Tab::Action_Hsplit(Tab* self) {
-  ASSERT(self->active != nullptr, OOPS);
-  ASSERT(self->active->GetType() == Split::Type::LEAF, OOPS);
+bool Tab::Hsplit() {
+  ASSERT(active != nullptr, OOPS);
+  ASSERT(active->GetType() == Split::Type::LEAF, OOPS);
   bool bottom = true; // TODO: Get split pos from config like vim.
-  std::unique_ptr<Window> copy = self->active->GetWindow()->Copy();
+  std::unique_ptr<Window> copy = active->GetWindow()->Copy();
   if (copy == nullptr) return false;
 
-  self->active->GetWindow()->SetActive(false);
+  active->GetWindow()->SetActive(false);
   {
-    self->active = self->active->Hsplit(bottom);
-    self->active->SetWindow(std::move(copy));
+    active = active->Hsplit(bottom);
+    active->SetWindow(std::move(copy));
   }
-  self->active->GetWindow()->SetActive(true);
+  active->GetWindow()->SetActive(true);
   return true;
 }
 
@@ -695,8 +665,9 @@ bool Tabs::Action_TabPrev(Tabs* self) {
 // -----------------------------------------------------------------------------
 
 
-Ui::Ui() : EventHandler(&keytree) {
-}
+KeyTree Ui::keytree; // Static memeber definition.
+
+Ui::Ui() : cursor(&Ui::keytree) {}
 
 
 bool Ui::HandleEvent(const Event& event) {
@@ -714,7 +685,7 @@ bool Ui::HandleEvent(const Event& event) {
       bool is_scroll = event.mouse.button == Event::MOUSE_WHEEL_UP ||
                        event.mouse.button == Event::MOUSE_WHEEL_DOWN;
 
-      if (!is_scroll) ResetCursor();
+      if (!is_scroll) cursor.ResetCursor();
       return window->HandleEvent(event);
     }
 
@@ -723,29 +694,56 @@ bool Ui::HandleEvent(const Event& event) {
     return false;
   }
 
-  // If we're at the middle of listening key combination don't send the event
-  // to the bellow layers.
-  if (ListeningCombination()) {
-    bool ret = EventHandler::HandleEvent(event);
-    ASSERT(ret == true, OOPS);
-    return ret;
+
+  bool consumed = cursor.ConsumeEvent(event);
+  if (!consumed) {
+    bool listening = !cursor.IsCursorRoot();
+    cursor.ResetCursor();
+
+    // Sent the event to the child windows to manually handle without bindnigs.
+    if (!listening) {
+      if (popup) {
+        if (popup->HandleEvent(event)) {
+          if (popup->IsShouldClose()) popup = nullptr;
+          return true;
+        }
+      } else if (active) {
+        if (active->HandleEvent(event)) return true;
+      }
+    }
+
+    // If it was listening, we reset the cursor and accept the event as handled.
+    return listening;
   }
 
-  #define return_true do { ResetCursor(); return true; } while (false)
   // Note that if the popup is available we won't send the event to the active
-  // child split nodes.
+  // child window.
+  #define return_true do { cursor.ResetCursor(); return true; } while (false)
   if (popup) {
-    if (popup->HandleEvent(event)) {
-      if (popup->IsShouldClose()) popup = nullptr; // This will destroy the popup.
+    if (cursor.TryEvent(popup.get())) {
+      if (popup->IsShouldClose()) popup = nullptr;
       return_true;
     }
-  } else if (active) {
-    if (active->HandleEvent(event)) return_true;
+  } else {
+    Window* window = GetActiveWindow();
+    if (window && cursor.TryEvent(window)) return_true;
   }
   #undef return_true
 
-  // No one consumed the event.
-  return EventHandler::HandleEvent(event);
+  // No one consumed.
+  if (cursor.TryEvent(this)) {
+    cursor.ResetCursor();
+    return true;
+  }
+
+  if (cursor.HasMore()) return true;
+
+  if (!cursor.IsCursorRoot()) {
+    cursor.ResetCursor();
+    return true;
+  }
+
+  return false;
 }
 
 
@@ -945,16 +943,16 @@ Window* Ui::GetWindowAt(Position pos) const {
 }
 
 
-bool Ui::IsWindowActive(const Window* window) const {
+Window* Ui::GetActiveWindow() const {
   // active_tabs -> active_tab -> active_split -> window.
-  if (active == nullptr) return false; // No tabs is active.
+  if (active == nullptr) return nullptr; // No tabs is active.
 
   const Tab* tab = active->GetActive();
-  if (tab == nullptr) return false; // Empty tabs container.
+  if (tab == nullptr) return nullptr; // Empty tabs container.
 
   ASSERT(tab->GetActive(), OOPS);
   ASSERT(tab->GetActive()->GetWindow(), OOPS);
-  return tab->GetActive()->GetWindow() == window;
+  return tab->GetActive()->GetWindow();
 }
 
 
@@ -987,24 +985,24 @@ DocumentWindow* Ui::GetDocumentWindow(const Path& path) const {
 }
 
 
-bool Ui::Action_PopupFilesFinder(EventHandler* eh) {
-  Ui* self = (Ui*) eh;
+bool Ui::Action_PopupFilesFinder(ActionExecutor* ae) {
+  Ui* self = (Ui*) ae;
   if (self->popup != nullptr) return false;
   self->popup = std::make_unique<FindWindow>(std::make_unique<FilesFinder>());
   return true;
 }
 
 
-bool Ui::Action_PopupLiveGrep(EventHandler* eh) {
-  Ui* self = (Ui*) eh;
+bool Ui::Action_PopupLiveGrep(ActionExecutor* ae) {
+  Ui* self = (Ui*) ae;
   if (self->popup != nullptr) return false;
   self->popup = std::make_unique<FindWindow>(std::make_unique<LiveGrep>());
   return true;
 }
 
 
-bool Ui::Action_NewDocument(EventHandler* eh) {
-  Ui* self = (Ui*) eh;
+bool Ui::Action_NewDocument(ActionExecutor* ae) {
+  Ui* self = (Ui*) ae;
   // FIXME: Do I need to register the document at the editor registry, In that
   // case what path should i use?
   std::shared_ptr<Document> document = std::make_shared<Document>();
@@ -1016,15 +1014,42 @@ bool Ui::Action_NewDocument(EventHandler* eh) {
 }
 
 
-bool Ui::Action_TabNext(EventHandler* eh) {
-  Ui* self = (Ui*) eh;
+bool Ui::Action_TabNext(ActionExecutor* ae) {
+  Ui* self = (Ui*) ae;
   if (!self->active) return false;
   return self->active->Action_TabNext(self->active);
 }
 
 
-bool Ui::Action_TabPrev(EventHandler* eh) {
-  Ui* self = (Ui*) eh;
+bool Ui::Action_TabPrev(ActionExecutor* ae) {
+  Ui* self = (Ui*) ae;
   if (!self->active) return false;
   return self->active->Action_TabPrev(self->active);
+}
+
+
+bool Ui::Action_NextWindow(ActionExecutor* ae) {
+  Ui* self = (Ui*) ae;
+  if (!self->active) return false;
+  Tab* tab = self->active->GetActive();
+  if (!tab) return false;
+  return tab->NextWindow();
+}
+
+
+bool Ui::Action_Vsplit(ActionExecutor* ae) {
+  Ui* self = (Ui*) ae;
+  if (!self->active) return false;
+  Tab* tab = self->active->GetActive();
+  if (!tab) return false;
+  return tab->Vsplit();
+}
+
+
+bool Ui::Action_Hsplit(ActionExecutor* ae) {
+  Ui* self = (Ui*) ae;
+  if (!self->active) return false;
+  Tab* tab = self->active->GetActive();
+  if (!tab) return false;
+  return tab->Hsplit();
 }
