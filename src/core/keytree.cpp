@@ -9,22 +9,43 @@
 #include "core.hpp"
 
 
+// -----------------------------------------------------------------------------
+// ActionExecutor.
+// -----------------------------------------------------------------------------
+
+
+const std::string& ActionExecutor::GetMode() const {
+  return mode;
+}
+
+
+void ActionExecutor::SetMode(const std::string& mode) {
+  this->mode = mode;
+}
+
+
+// -----------------------------------------------------------------------------
+// KeyTree.
+// -----------------------------------------------------------------------------
+
+
 KeyTree::KeyTree() {
   root = std::make_unique<Node>();
 }
 
 
-void KeyTree::RegisterAction(const std::string& action_name, FuncAction action) {
-  actions[action_name] = action;
+void KeyTree::RegisterAction(const ActExName& class_name, const ActionName& action_name, FuncAction action) {
+  ActionKey key = std::make_pair(class_name, action_name);
+  actions[key] = action;
 }
 
 
-void KeyTree::RegisterBinding(const std::string& key_combination, const std::string& action_name) {
-  RegisterBinding("", key_combination, action_name);
+void KeyTree::RegisterBinding(const ActExName& actex_name, const std::string& key_combination, const std::string& action_name) {
+  RegisterBinding(actex_name, "", key_combination, action_name);
 }
 
 
-void KeyTree::RegisterBinding(const std::string& mode, const std::string& key_combination, const std::string& action_name) {
+void KeyTree::RegisterBinding(const ActExName& actex_name, const ModeName& mode, const std::string& key_combination, const std::string& action_name) {
   std::vector<event_t> events;
 
   if (!ParseKeyBindingString(events, key_combination.c_str())) {
@@ -32,7 +53,8 @@ void KeyTree::RegisterBinding(const std::string& mode, const std::string& key_co
     return;
   }
 
-  auto it = actions.find(action_name);
+  ActionKey action_key = std::make_pair(actex_name, action_name);
+  auto it = actions.find(action_key);
   if (it == actions.end()) {
     // TODO: Error(""); // Report to user.
     return;
@@ -45,7 +67,9 @@ void KeyTree::RegisterBinding(const std::string& mode, const std::string& key_co
     }
     curr = curr->children[event].get();
   }
-  curr->actions[mode] = it->second;
+
+  BindingKey binding_key = std::make_pair(actex_name, mode);
+  curr->bindings[binding_key] = it->second;
 }
 
 
@@ -72,86 +96,42 @@ bool KeyTreeCursor::IsCursorRoot() const {
 }
 
 
-void KeyTreeCursor::SetMode(const std::string& mode) {
-  this->mode = mode;
-  ResetCursor();
+bool KeyTreeCursor::HasMore() const {
+  ASSERT(node != nullptr, OOPS);
+  return !node->children.empty();
 }
 
 
-FuncAction KeyTreeCursor::ConsumeEvent(event_t event, bool* more) {
+bool KeyTreeCursor::ConsumeEvent(const Event& event) {
   ASSERT(tree != nullptr, OOPS);
 
-  FuncAction action = nullptr;
-  auto it_node = node->children.find(event);
+  event_t key = EncodeKeyEvent(event.key);
+
+  auto it_node = node->children.find(key);
   if (it_node == node->children.end()) {
-    if (more) *more = false;
-    return nullptr;
+    return false;
   }
 
   node = it_node->second.get();
   ASSERT(node != nullptr, OOPS);
+  recorded_events.push_back(key);
 
-  recorded_events.push_back(event);
-  auto it_action = node->actions.find(mode);
-  if (it_action != node->actions.end()) {
-    action = it_action->second;
-  }
-  if (more) *more = node->children.size() != 0;
-  return action;
+  return true;
 }
 
 
-bool KeyTreeCursor::TryEvent(EventHandler* handler, const Event& event) {
-  bool more = false;
+bool KeyTreeCursor::TryEvent(ActionExecutor* actex) {
+  ASSERT(actex != nullptr, OOPS);
 
-  FuncAction action = ConsumeEvent(EncodeKeyEvent(event.key), &more);
-  // if (action && more) { } // TODO: Timeout and perform action.
-
-  if (action) {
-    bool ret = action(handler);
-    ResetCursor();
-    return ret;
-  }
-
-  // Don't do anything, just wait for the next keystroke and perform on it.
-  if (more) return true;
-
-  // Sequence is not registered, reset and listen from start. We'll be sending
-  // true and treat this event to reset the cursor.
-  if (!IsCursorRoot()) {
-    ResetCursor();
-    return true;
+  BindingKey key = std::make_pair(actex->GetClassName(), actex->GetMode());
+  auto it_action = node->bindings.find(key);
+  if (it_action != node->bindings.end()) {
+    FuncAction action = it_action->second;
+    ASSERT(action != nullptr, OOPS);
+    return action(actex);
   }
 
   return false;
 }
 
-
-// ----------------------------------------------------------------------------
-// Event handler.
-// ----------------------------------------------------------------------------
-
-
-EventHandler::EventHandler(const KeyTree* keytree)
-  : keytree(keytree), cursor(keytree) { }
-
-
-bool EventHandler::HandleEvent(const Event& event) {
-  return cursor.TryEvent(this, event);
-}
-
-
-void EventHandler::ResetCursor() {
-  cursor.ResetCursor();
-}
-
-
-bool EventHandler::ListeningCombination() const {
-  return !cursor.IsCursorRoot();
-}
-
-
-void EventHandler::SetMode(const std::string& mode) {
-  cursor.SetMode(mode);
-}
 

@@ -405,104 +405,113 @@ int main(int argc, char** argv) {
 
   // FIXME: This shoul be called after the editor is initialized to send errors.
 
-  Ui::keytree.RegisterAction("popup_files_finder",  Ui::Action_PopupFilesFinder);
-  Ui::keytree.RegisterAction("popup_live_grep",  Ui::Action_PopupLiveGrep);
-  Ui::keytree.RegisterAction("new_file",  Ui::Action_NewDocument);
-  Ui::keytree.RegisterAction("tab_next",  Ui::Action_TabNext);
-  Ui::keytree.RegisterAction("tab_prev",  Ui::Action_TabPrev);
+  std::string name;
 
-  Ui::keytree.RegisterBinding("<esc>", "close_popup");
-  Ui::keytree.RegisterBinding("<C-o>", "popup_files_finder");
-  Ui::keytree.RegisterBinding("<C-g>", "popup_live_grep");
-  Ui::keytree.RegisterBinding("<C-n>", "new_file");
-  Ui::keytree.RegisterBinding("<C-l>", "tab_next");
-  Ui::keytree.RegisterBinding("<C-h>", "tab_prev");
+  name = Ui::ClassName();
+
+  Ui::keytree.RegisterAction(name, "popup_files_finder",  Ui::Action_PopupFilesFinder);
+  Ui::keytree.RegisterAction(name, "popup_live_grep", Ui::Action_PopupLiveGrep);
+  Ui::keytree.RegisterAction(name, "new_file", Ui::Action_NewDocument);
+  Ui::keytree.RegisterAction(name, "tab_next", Ui::Action_TabNext);
+  Ui::keytree.RegisterAction(name, "tab_prev", Ui::Action_TabPrev);
+  Ui::keytree.RegisterAction(name, "next_window", Ui::Action_NextWindow);
+  Ui::keytree.RegisterAction(name, "vsplit", Ui::Action_Vsplit);
+  Ui::keytree.RegisterAction(name, "hsplit", Ui::Action_Hsplit);
+
+  Ui::keytree.RegisterBinding(name, "<C-o>", "popup_files_finder");
+  Ui::keytree.RegisterBinding(name, "<C-g>", "popup_live_grep");
+  Ui::keytree.RegisterBinding(name, "<C-n>", "new_file");
+  Ui::keytree.RegisterBinding(name, "<C-l>", "tab_next");
+  Ui::keytree.RegisterBinding(name, "<C-h>", "tab_prev");
+  Ui::keytree.RegisterBinding(name, "<C-w>w", "next_window");
+  Ui::keytree.RegisterBinding(name, "<C-w><C-w>", "next_window");
+  Ui::keytree.RegisterBinding(name, "<C-w><C-v>", "vsplit");
+  Ui::keytree.RegisterBinding(name, "<C-w>v", "vsplit");
+  Ui::keytree.RegisterBinding(name, "<C-w><C-h>", "hsplit");
+  Ui::keytree.RegisterBinding(name, "<C-w>h", "hsplit");
+
+  name = DocumentWindow::ClassName();
+
+  Ui::keytree.RegisterAction(name, "cursor_up", (FuncAction) DocumentWindow::Action_CursorUp);
+  Ui::keytree.RegisterAction(name, "cursor_down", (FuncAction) DocumentWindow::Action_CursorDown);
+  Ui::keytree.RegisterAction(name, "cursor_left", (FuncAction) DocumentWindow::Action_CursorLeft);
+  Ui::keytree.RegisterAction(name, "cursor_right", (FuncAction) DocumentWindow::Action_CursorRight);
+  Ui::keytree.RegisterAction(name, "cursor_end", (FuncAction) DocumentWindow::Action_CursorEnd);
+  Ui::keytree.RegisterAction(name, "cursor_home", (FuncAction) DocumentWindow::Action_CursorHome);
+  Ui::keytree.RegisterAction(name, "select_right", (FuncAction) DocumentWindow::Action_SelectRight);
+  Ui::keytree.RegisterAction(name, "select_left", (FuncAction) DocumentWindow::Action_SelectLeft);
+  Ui::keytree.RegisterAction(name, "select_up", (FuncAction) DocumentWindow::Action_SelectUp);
+  Ui::keytree.RegisterAction(name, "select_down", (FuncAction) DocumentWindow::Action_SelectDown);
+  Ui::keytree.RegisterAction(name, "select_home", (FuncAction) DocumentWindow::Action_SelectHome);
+  Ui::keytree.RegisterAction(name, "select_end", (FuncAction) DocumentWindow::Action_SelectEnd);
+  Ui::keytree.RegisterAction(name, "add_cursor_down", (FuncAction) DocumentWindow::Action_AddCursor_down);
+  Ui::keytree.RegisterAction(name, "add_cursor_up", (FuncAction) DocumentWindow::Action_AddCursor_up);
+  Ui::keytree.RegisterAction(name, "insert_space", (FuncAction) DocumentWindow::Action_InsertSpace);
+  Ui::keytree.RegisterAction(name, "insert_newline", (FuncAction) DocumentWindow::Action_InsertNewline);
+  Ui::keytree.RegisterAction(name, "insert_tab", (FuncAction) DocumentWindow::Action_InsertTab);
+  Ui::keytree.RegisterAction(name, "backspace", (FuncAction) DocumentWindow::Action_Backspace);
+  Ui::keytree.RegisterAction(name, "undo", (FuncAction) DocumentWindow::Action_Undo);
+  Ui::keytree.RegisterAction(name, "redo", (FuncAction) DocumentWindow::Action_Redo);
+  Ui::keytree.RegisterAction(name, "trigger_completion", (FuncAction) DocumentWindow::Action_TriggerCompletion);
+  Ui::keytree.RegisterAction(name, "cycle_completion_list", (FuncAction) DocumentWindow::Action_CycleCompletionList);
+  Ui::keytree.RegisterAction(name, "cycle_completion_list_reversed", (FuncAction) DocumentWindow::Action_CycleCompletionListReversed);
+  Ui::keytree.RegisterAction(name, "clear", (FuncAction) DocumentWindow::Action_Clear);
+
+  Ui::keytree.RegisterBinding(name, "insert", "<up>",        "cursor_up");
+  Ui::keytree.RegisterBinding(name, "insert", "<down>",      "cursor_down");
+  Ui::keytree.RegisterBinding(name, "insert", "<left>",      "cursor_left");
+  Ui::keytree.RegisterBinding(name, "insert", "<right>",     "cursor_right");
+  Ui::keytree.RegisterBinding(name, "insert", "<home>",      "cursor_home");
+  Ui::keytree.RegisterBinding(name, "insert", "<end>",       "cursor_end");
+  Ui::keytree.RegisterBinding(name, "insert", "<S-right>",   "select_right");
+  Ui::keytree.RegisterBinding(name, "insert", "<S-left>",    "select_left");
+  Ui::keytree.RegisterBinding(name, "insert", "<S-up>",      "select_up");
+  Ui::keytree.RegisterBinding(name, "insert", "<S-down>",    "select_down");
+  Ui::keytree.RegisterBinding(name, "insert", "<S-home>",    "select_home");
+  Ui::keytree.RegisterBinding(name, "insert", "<S-end>",     "select_end");
+  Ui::keytree.RegisterBinding(name, "insert", "<A-down>",    "add_cursor_down");
+  Ui::keytree.RegisterBinding(name, "insert", "<A-up>",      "add_cursor_up");
+  Ui::keytree.RegisterBinding(name, "insert", "<space>",     "insert_space");
+  Ui::keytree.RegisterBinding(name, "insert", "<enter>",     "insert_newline");
+  Ui::keytree.RegisterBinding(name, "insert", "<tab>",       "insert_tab");
+  Ui::keytree.RegisterBinding(name, "insert", "<backspace>", "backspace");
+  Ui::keytree.RegisterBinding(name, "insert", "<C-z>",       "undo");
+  Ui::keytree.RegisterBinding(name, "insert", "<C-y>",       "redo");
+  Ui::keytree.RegisterBinding(name, "insert", "<C-x><C-k>",  "trigger_completion");
+  Ui::keytree.RegisterBinding(name, "insert", "<C-n>",       "cycle_completion_list");
+  Ui::keytree.RegisterBinding(name, "insert", "<C-p>",       "cycle_completion_list_reversed");
+  Ui::keytree.RegisterBinding(name, "insert", "<esc>",       "clear");
+
+  name = FindWindow::ClassName();
+
+  Ui::keytree.RegisterAction(name, "cursor_right", (FuncAction) FindWindow::Action_CursorRight);
+  Ui::keytree.RegisterAction(name, "cursor_left", (FuncAction) FindWindow::Action_CursorLeft);
+  Ui::keytree.RegisterAction(name, "cursor_home", (FuncAction) FindWindow::Action_CursorHome);
+  Ui::keytree.RegisterAction(name, "cursor_end", (FuncAction) FindWindow::Action_CursorEnd);
+  Ui::keytree.RegisterAction(name, "backspace", (FuncAction) FindWindow::Action_Backspace);
+  Ui::keytree.RegisterAction(name, "cycle_selection", (FuncAction) FindWindow::Action_CycleSelection);
+  Ui::keytree.RegisterAction(name, "cycle_selection_reversed", (FuncAction) FindWindow::Action_CycleSelectionReversed);
+  Ui::keytree.RegisterAction(name, "accept_selection", (FuncAction) FindWindow::Action_AcceptSelection);
+  Ui::keytree.RegisterAction(name, "close", (FuncAction) FindWindow::Action_Close);
+
+  Ui::keytree.RegisterBinding(name, "<right>", "cursor_right");
+  Ui::keytree.RegisterBinding(name, "<left>",  "cursor_left");
+  Ui::keytree.RegisterBinding(name, "<home>",  "cursor_home");
+  Ui::keytree.RegisterBinding(name, "<end>",  "cursor_end");
+  Ui::keytree.RegisterBinding(name, "<backspace>",  "backspace");
+  Ui::keytree.RegisterBinding(name, "<C-n>",  "cycle_selection");
+  Ui::keytree.RegisterBinding(name, "<C-p>",  "cycle_selection_reversed");
+  Ui::keytree.RegisterBinding(name, "<down>",  "cycle_selection");
+  Ui::keytree.RegisterBinding(name, "<up>",  "cycle_selection_reversed");
+  Ui::keytree.RegisterBinding(name, "<tab>",  "cycle_selection");
+  Ui::keytree.RegisterBinding(name, "<S-tab>", "cycle_selection_reversed");
+  Ui::keytree.RegisterBinding(name, "<enter>", "accept_selection");
+  Ui::keytree.RegisterBinding(name, "<esc>", "close");
 
 
-  Tab::keytree.RegisterAction("next_window", (FuncAction) Tab::Action_NextWindow);
-  Tab::keytree.RegisterAction("vsplit", (FuncAction) Tab::Action_Vsplit);
-  Tab::keytree.RegisterAction("hsplit", (FuncAction) Tab::Action_Hsplit);
-
-  Tab::keytree.RegisterBinding("<C-w>w", "next_window");
-  Tab::keytree.RegisterBinding("<C-w><C-w>", "next_window");
-  Tab::keytree.RegisterBinding("<C-w><C-v>", "vsplit");
-  Tab::keytree.RegisterBinding("<C-w><C-h>", "hsplit");
-
-  DocumentWindow::keytree.RegisterAction("cursor_up", (FuncAction) DocumentWindow::Action_CursorUp);
-  DocumentWindow::keytree.RegisterAction("cursor_down", (FuncAction) DocumentWindow::Action_CursorDown);
-  DocumentWindow::keytree.RegisterAction("cursor_left", (FuncAction) DocumentWindow::Action_CursorLeft);
-  DocumentWindow::keytree.RegisterAction("cursor_right", (FuncAction) DocumentWindow::Action_CursorRight);
-  DocumentWindow::keytree.RegisterAction("cursor_end", (FuncAction) DocumentWindow::Action_CursorEnd);
-  DocumentWindow::keytree.RegisterAction("cursor_home", (FuncAction) DocumentWindow::Action_CursorHome);
-  DocumentWindow::keytree.RegisterAction("select_right", (FuncAction) DocumentWindow::Action_SelectRight);
-  DocumentWindow::keytree.RegisterAction("select_left", (FuncAction) DocumentWindow::Action_SelectLeft);
-  DocumentWindow::keytree.RegisterAction("select_up", (FuncAction) DocumentWindow::Action_SelectUp);
-  DocumentWindow::keytree.RegisterAction("select_down", (FuncAction) DocumentWindow::Action_SelectDown);
-  DocumentWindow::keytree.RegisterAction("select_home", (FuncAction) DocumentWindow::Action_SelectHome);
-  DocumentWindow::keytree.RegisterAction("select_end", (FuncAction) DocumentWindow::Action_SelectEnd);
-  DocumentWindow::keytree.RegisterAction("add_cursor_down", (FuncAction) DocumentWindow::Action_AddCursor_down);
-  DocumentWindow::keytree.RegisterAction("add_cursor_up", (FuncAction) DocumentWindow::Action_AddCursor_up);
-  DocumentWindow::keytree.RegisterAction("insert_space", (FuncAction) DocumentWindow::Action_InsertSpace);
-  DocumentWindow::keytree.RegisterAction("insert_newline", (FuncAction) DocumentWindow::Action_InsertNewline);
-  DocumentWindow::keytree.RegisterAction("insert_tab", (FuncAction) DocumentWindow::Action_InsertTab);
-  DocumentWindow::keytree.RegisterAction("backspace", (FuncAction) DocumentWindow::Action_Backspace);
-  DocumentWindow::keytree.RegisterAction("undo", (FuncAction) DocumentWindow::Action_Undo);
-  DocumentWindow::keytree.RegisterAction("redo", (FuncAction) DocumentWindow::Action_Redo);
-  DocumentWindow::keytree.RegisterAction("trigger_completion", (FuncAction) DocumentWindow::Action_TriggerCompletion);
-  DocumentWindow::keytree.RegisterAction("cycle_completion_list", (FuncAction) DocumentWindow::Action_CycleCompletionList);
-  DocumentWindow::keytree.RegisterAction("cycle_completion_list_reversed", (FuncAction) DocumentWindow::Action_CycleCompletionListReversed);
-  DocumentWindow::keytree.RegisterAction("clear", (FuncAction) DocumentWindow::Action_Clear);
-
-  DocumentWindow::keytree.RegisterBinding("insert", "<up>",        "cursor_up");
-  DocumentWindow::keytree.RegisterBinding("insert", "<down>",      "cursor_down");
-  DocumentWindow::keytree.RegisterBinding("insert", "<left>",      "cursor_left");
-  DocumentWindow::keytree.RegisterBinding("insert", "<right>",     "cursor_right");
-  DocumentWindow::keytree.RegisterBinding("insert", "<home>",      "cursor_home");
-  DocumentWindow::keytree.RegisterBinding("insert", "<end>",       "cursor_end");
-  DocumentWindow::keytree.RegisterBinding("insert", "<S-right>",   "select_right");
-  DocumentWindow::keytree.RegisterBinding("insert", "<S-left>",    "select_left");
-  DocumentWindow::keytree.RegisterBinding("insert", "<S-up>",      "select_up");
-  DocumentWindow::keytree.RegisterBinding("insert", "<S-down>",    "select_down");
-  DocumentWindow::keytree.RegisterBinding("insert", "<S-home>",    "select_home");
-  DocumentWindow::keytree.RegisterBinding("insert", "<S-end>",     "select_end");
-  DocumentWindow::keytree.RegisterBinding("insert", "<A-down>",    "add_cursor_down");
-  DocumentWindow::keytree.RegisterBinding("insert", "<A-up>",      "add_cursor_up");
-  DocumentWindow::keytree.RegisterBinding("insert", "<space>",     "insert_space");
-  DocumentWindow::keytree.RegisterBinding("insert", "<enter>",     "insert_newline");
-  DocumentWindow::keytree.RegisterBinding("insert", "<tab>",       "insert_tab");
-  DocumentWindow::keytree.RegisterBinding("insert", "<backspace>", "backspace");
-  DocumentWindow::keytree.RegisterBinding("insert", "<C-z>",       "undo");
-  DocumentWindow::keytree.RegisterBinding("insert", "<C-y>",       "redo");
-  DocumentWindow::keytree.RegisterBinding("insert", "<C-x><C-k>",  "trigger_completion");
-  DocumentWindow::keytree.RegisterBinding("insert", "<C-n>",       "cycle_completion_list");
-  DocumentWindow::keytree.RegisterBinding("insert", "<C-p>",       "cycle_completion_list_reversed");
-  DocumentWindow::keytree.RegisterBinding("insert", "<esc>",       "clear");
-
-
-  FindWindow::keytree.RegisterAction("cursor_right", (FuncAction) FindWindow::Action_CursorRight);
-  FindWindow::keytree.RegisterAction("cursor_left", (FuncAction) FindWindow::Action_CursorLeft);
-  FindWindow::keytree.RegisterAction("cursor_home", (FuncAction) FindWindow::Action_CursorHome);
-  FindWindow::keytree.RegisterAction("cursor_end", (FuncAction) FindWindow::Action_CursorEnd);
-  FindWindow::keytree.RegisterAction("backspace", (FuncAction) FindWindow::Action_Backspace);
-  FindWindow::keytree.RegisterAction("cycle_selection", (FuncAction) FindWindow::Action_CycleSelection);
-  FindWindow::keytree.RegisterAction("cycle_selection_reversed", (FuncAction) FindWindow::Action_CycleSelectionReversed);
-  FindWindow::keytree.RegisterAction("accept_selection", (FuncAction) FindWindow::Action_AcceptSelection);
-  FindWindow::keytree.RegisterAction("close", (FuncAction) FindWindow::Action_Close);
-
-  FindWindow::keytree.RegisterBinding("<right>", "cursor_right");
-  FindWindow::keytree.RegisterBinding("<left>",  "cursor_left");
-  FindWindow::keytree.RegisterBinding("<home>",  "cursor_home");
-  FindWindow::keytree.RegisterBinding("<end>",  "cursor_end");
-  FindWindow::keytree.RegisterBinding("<backspace>",  "backspace");
-  FindWindow::keytree.RegisterBinding("<C-n>",  "cycle_selection");
-  FindWindow::keytree.RegisterBinding("<C-p>",  "cycle_selection_reversed");
-  FindWindow::keytree.RegisterBinding("<down>",  "cycle_selection");
-  FindWindow::keytree.RegisterBinding("<up>",  "cycle_selection_reversed");
-  FindWindow::keytree.RegisterBinding("<tab>",  "cycle_selection");
-  FindWindow::keytree.RegisterBinding("<S-tab>", "cycle_selection_reversed");
-  FindWindow::keytree.RegisterBinding("<enter>", "accept_selection");
-  FindWindow::keytree.RegisterBinding("<esc>", "close");
-
+  // For testing.
+  Ui::keytree.RegisterBinding("DocumentWindow", "insert", "<C-e>a",     "cursor_up");
+  Ui::keytree.RegisterBinding("Ui", "<C-e>b",     "next_window");
 
 
   std::shared_ptr<Editor> editor = Editor::Singleton();

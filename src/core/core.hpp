@@ -513,7 +513,7 @@ struct Config {
 
 
 // -----------------------------------------------------------------------------
-// KeyTree.
+// Thread Safe Queue.
 // -----------------------------------------------------------------------------
 
 
@@ -556,11 +556,45 @@ private:
 // -----------------------------------------------------------------------------
 
 
+// Use This macros on ActionExecutor classes to define the GetClassName method.
+#define DEFINE_GET_CLASS_NAME(T)               \
+  public:                                      \
+  static const std::string& ClassName() {      \
+    static const std::string& class_name = #T; \
+    return class_name;                         \
+  }                                            \
+                                               \
+  const std::string& GetClassName() const override { \
+    return ClassName();                        \
+  }                                            \
+  private:
+
+
 // Actions are functions which are "bindable" to keys, and associated with a
 // key/key combination that invoke the action. The function should return true
 // when the event is consumed and no need to propegate to the other listeners.
-class EventHandler;
-typedef bool (*FuncAction)(EventHandler*);
+
+class ActionExecutor {
+public:
+  virtual ~ActionExecutor() = default;
+  virtual const std::string& GetClassName() const = 0;
+
+  const std::string& GetMode() const;
+  void SetMode(const std::string& mode);
+
+protected:
+  std::string mode;
+};
+
+
+// Just to make the action struct more readable. No need to create structs and
+// make it more complicated.
+typedef std::string ActExName;
+typedef std::string ModeName;
+typedef std::string ActionName;
+typedef std::pair<ActExName, ModeName> BindingKey;
+typedef std::pair<ActExName, ActionName> ActionKey;
+typedef bool (*FuncAction)(ActionExecutor*);
 
 
 // The tree acts like a Trie for Events to handle sequence events.
@@ -572,21 +606,21 @@ public:
   // change depend on the mode it's in.
   struct Node {
     std::map<event_t, std::unique_ptr<Node>> children;
-    std::map<std::string, FuncAction> actions;
+    std::map<BindingKey, FuncAction> bindings;
   };
 
   KeyTree();
 
   // Before calling register binding, the action must be registered with the given name.
-  void RegisterAction(const std::string& action_name, FuncAction action);
+  void RegisterAction(const ActExName& class_name, const ActionName& action_name, FuncAction action);
 
   // If registered without specifing a mode an empty string will be used as the mode.
-  void RegisterBinding(const std::string& key_combination, const std::string& action_name);
-  void RegisterBinding(const std::string& mode, const std::string& key_combination, const std::string& action_name);
+  void RegisterBinding(const ActExName& actex_name, const std::string& key_combination, const std::string& action_name);
+  void RegisterBinding(const ActExName& actex_name, const ModeName& mode, const std::string& key_combination, const std::string& action_name);
 
 private:
   // A registry of actions associated with it's name.
-  std::unordered_map<std::string, FuncAction> actions;
+  std::map<ActionKey, FuncAction> actions;
   std::unique_ptr<Node> root; // Root node of the tree.
 
   // Cursor can access private things so I don't have to have public getter and
@@ -600,10 +634,20 @@ private:
 class KeyTreeCursor {
 public:
   KeyTreeCursor(const KeyTree* tree);
-  void SetMode(const std::string& mode);
 
-  // Try to execute the event with the bindings, if success returns true.
-  bool TryEvent(EventHandler* handler, const Event& event);
+  // When an event is encountered we feed that event to the keytree here to
+  // update it's internal cursor, this will return true if the event is consumed.
+  bool ConsumeEvent(const Event& event);
+
+  // Try to execute action at the current node on the give acetion executor, returns
+  // true if an even is bind to the current node and run action was success otherwise
+  // false.
+  bool TryEvent(ActionExecutor* actex);
+
+  // Returns true if the current node we're in has more bindings to listen, This
+  // is usefull to check if the current event is not consumed by any handlers
+  // we know that there are more bindings along the tree.
+  bool HasMore() const;
 
   // Clear all the tracks of cursor and set back to the root node.
   void ResetCursor();
@@ -613,49 +657,10 @@ public:
   bool IsCursorRoot() const;
 
 private:
-  const KeyTree* tree = nullptr; // The tree we're traversing.
-  std::string mode;              // Current mode we're in.
-  KeyTree::Node* node;           // Node we're currenly in initially the root.
+  const KeyTree* tree = nullptr;   // The tree we're traversing.
+  KeyTree::Node* node;             // Node we're currenly in initially the root.
 
   std::vector<event_t> recorded_events; // Previous events which leads here.
-
-private:
-  // When an event is encountered we feed that event to the keytree here to
-  // update it's internal cursor, this will return the action for this event
-  // if exists otherwise nullptr.
-  //
-  // It'll set the boolean more true if there are more sequence of keys down the
-  // tree starting with the current sequence. The calling function can decide
-  // what to do about the returned action and what to do with the reset of the
-  // sequence (e.g. use a timeout).
-  FuncAction ConsumeEvent(event_t event, bool* more);
-};
-
-
-// An abstract definition of classes that can register events to key tree and
-// execute with keytreecursor.
-class EventHandler {
-public:
-  EventHandler(const KeyTree* keytree);
-  virtual ~EventHandler() = default;
-
-  // It'll try execute the event with the cursor and return the result.
-  virtual bool HandleEvent(const Event& event);
-
-  // Reset the cursor if we're already listening to some key combinations.
-  void ResetCursor();
-
-  // This will return true if we're at the middle of listening an event
-  // combination like "<C-w><C-l>" etc.
-  bool ListeningCombination() const;
-
-  void SetMode(const std::string& mode);
-
-private:
-  // This supposed to be the static key tree registry of the class of this
-  // isntance. Will be initialized at the constructor.
-  const KeyTree* keytree = nullptr;
-  KeyTreeCursor cursor;
 };
 
 

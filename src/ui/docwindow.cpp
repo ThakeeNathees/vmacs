@@ -9,15 +9,11 @@
 #include "ui.hpp"
 
 
-// Static type initialization.
-KeyTree DocumentWindow::keytree;
-
-
 DocumentWindow::DocumentWindow() : DocumentWindow(std::make_shared<Document>()) {}
 
 
 DocumentWindow::DocumentWindow(std::shared_ptr<Document> document_)
-  : Window(&keytree), document(document_), cursors_backup(document->buffer.get()) {
+  : document(document_), cursors_backup(document->buffer.get()) {
 
   cursors_backup = document->cursors;
   document->RegisterListener(this);
