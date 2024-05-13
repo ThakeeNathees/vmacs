@@ -637,7 +637,11 @@ public:
 
   // When an event is encountered we feed that event to the keytree here to
   // update it's internal cursor, this will return true if the event is consumed.
-  bool ConsumeEvent(const Event& event);
+  //
+  // Note that It'll take an actex instance and check if the event can be further
+  // consumed by the given actex instance, and if not it'll return false. If the
+  // actex is nullptr it won't crash but returns false.
+  bool ConsumeEvent(ActionExecutor* actex, const Event& event);
 
   // Try to execute action at the current node on the give acetion executor, returns
   // true if an even is bind to the current node and run action was success otherwise
@@ -661,6 +665,10 @@ private:
   KeyTree::Node* node;             // Node we're currenly in initially the root.
 
   std::vector<event_t> recorded_events; // Previous events which leads here.
+
+private:
+  // Returns true if the actex+mode can further consume the event from the given node.
+  bool CanConsume(const BindingKey& key, KeyTree::Node* curr) const;
 };
 
 

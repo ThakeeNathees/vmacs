@@ -696,8 +696,12 @@ bool Ui::HandleEvent(const Event& event) {
     return false;
   }
 
-
-  bool consumed = cursor.ConsumeEvent(event);
+  // Try to consume the event for the active window (which could also be the popup)
+  // and if it cannot consumed, we try to consume the event to the ui as long as
+  // we don't have a popup.
+  Window* window = GetActiveWindow();
+  bool consumed = cursor.ConsumeEvent(window, event) ||
+                  (!popup && cursor.ConsumeEvent(this, event));
 
   if (!consumed) {
     bool listening = !cursor.IsCursorRoot();
@@ -719,23 +723,15 @@ bool Ui::HandleEvent(const Event& event) {
     return listening;
   }
 
-  // Note that if the popup is available we won't send the event to the active
-  // window or ui.
   #define return_true do { cursor.ResetCursor(); return true; } while (false)
-  if (popup) {
-    if (cursor.TryEvent(popup.get())) {
-      if (popup->IsShouldClose()) popup = nullptr;
-      return_true;
-    }
-  } else {
-    Window* window = GetActiveWindow();
-    if (window && cursor.TryEvent(window)) return_true;
-    if (cursor.TryEvent(this)) return_true;
+  if (window && cursor.TryEvent(window)) { // Window could also be the popup.
+    if (popup && popup->IsShouldClose()) popup = nullptr;
+    return_true;
   }
+  // If a popup is available we don't pass the event to the ui.
+  if (!popup && cursor.TryEvent(this)) return_true;
   #undef return_true
 
-  // TODO: Note that if we have a popup and the HasMore is not contains any
-  // bindngs related to the popup, it's actually not HasMore.
   if (cursor.HasMore()) return true;
 
   if (!cursor.IsCursorRoot()) {
@@ -978,6 +974,9 @@ Window* Ui::GetWindowAt(Position pos) const {
 Window* Ui::GetActiveWindow() const {
   // active_tabs -> active_tab -> active_split -> window.
   if (active == nullptr) return nullptr; // No tabs is active.
+
+  // If a popup is available, it's the active window we disregard everything else.
+  if (popup != nullptr) return popup.get();
 
   const Tab* tab = active->GetActive();
   if (tab == nullptr) return nullptr; // Empty tabs container.

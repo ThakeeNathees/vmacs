@@ -102,8 +102,25 @@ bool KeyTreeCursor::HasMore() const {
 }
 
 
-bool KeyTreeCursor::ConsumeEvent(const Event& event) {
+bool KeyTreeCursor::CanConsume(const BindingKey& key, KeyTree::Node* curr) const {
+  ASSERT(curr != nullptr, OOPS);
+
+  auto it_action = curr->bindings.find(key);
+  if (it_action != curr->bindings.end()) {
+    return true;
+  }
+
+  for (auto& it_node : curr->children) {
+    if (CanConsume(key, it_node.second.get())) return true;
+  }
+
+  return false;
+}
+
+
+bool KeyTreeCursor::ConsumeEvent(ActionExecutor* actex, const Event& event) {
   ASSERT(tree != nullptr, OOPS);
+  if (actex == nullptr) return false;
 
   event_t key = EncodeKeyEvent(event.key);
 
@@ -111,6 +128,10 @@ bool KeyTreeCursor::ConsumeEvent(const Event& event) {
   if (it_node == node->children.end()) {
     return false;
   }
+
+  // Check if the actex+mode can consume the event.
+  BindingKey bk = std::make_pair(actex->GetClassName(), actex->GetMode());
+  if (!CanConsume(bk, it_node->second.get())) return false;
 
   node = it_node->second.get();
   ASSERT(node != nullptr, OOPS);
