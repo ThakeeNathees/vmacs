@@ -423,6 +423,7 @@ int main(int argc, char** argv) {
   Ui::keytree.RegisterAction(name, "next_window", Ui::Action_NextWindow);
   Ui::keytree.RegisterAction(name, "vsplit", Ui::Action_Vsplit);
   Ui::keytree.RegisterAction(name, "hsplit", Ui::Action_Hsplit);
+  Ui::keytree.RegisterAction(name, "toggle_filetree", Ui::Action_ToggleFiletree);
 
   Ui::keytree.RegisterBinding(name, "<C-o>", "popup_files_finder");
   Ui::keytree.RegisterBinding(name, "<C-g>", "popup_live_grep");
@@ -435,6 +436,7 @@ int main(int argc, char** argv) {
   Ui::keytree.RegisterBinding(name, "<C-w>v", "vsplit");
   Ui::keytree.RegisterBinding(name, "<C-w><C-h>", "hsplit");
   Ui::keytree.RegisterBinding(name, "<C-w>h", "hsplit");
+  Ui::keytree.RegisterBinding(name, "<C-f>", "toggle_filetree");
 
   name = DocumentWindow::ClassName();
 
@@ -462,6 +464,8 @@ int main(int argc, char** argv) {
   Ui::keytree.RegisterAction(name, "cycle_completion_list", (FuncAction) DocumentWindow::Action_CycleCompletionList);
   Ui::keytree.RegisterAction(name, "cycle_completion_list_reversed", (FuncAction) DocumentWindow::Action_CycleCompletionListReversed);
   Ui::keytree.RegisterAction(name, "clear", (FuncAction) DocumentWindow::Action_Clear);
+  Ui::keytree.RegisterAction(name, "normal_mode", (FuncAction) DocumentWindow::Action_NormalMode);
+  Ui::keytree.RegisterAction(name, "insert_mode", (FuncAction) DocumentWindow::Action_InsertMode);
 
   Ui::keytree.RegisterBinding(name, "insert", "<up>",        "cursor_up");
   Ui::keytree.RegisterBinding(name, "insert", "<down>",      "cursor_down");
@@ -487,6 +491,13 @@ int main(int argc, char** argv) {
   Ui::keytree.RegisterBinding(name, "insert", "<C-n>",       "cycle_completion_list");
   Ui::keytree.RegisterBinding(name, "insert", "<C-p>",       "cycle_completion_list_reversed");
   Ui::keytree.RegisterBinding(name, "insert", "<esc>",       "clear");
+
+  Ui::keytree.RegisterBinding(name, "insert", "<C-d>",       "normal_mode");
+  Ui::keytree.RegisterBinding(name, "normal", "i",           "insert_mode");
+  Ui::keytree.RegisterBinding(name, "normal", "h",           "cursor_left");
+  Ui::keytree.RegisterBinding(name, "normal", "l",           "cursor_right");
+  Ui::keytree.RegisterBinding(name, "normal", "k",           "cursor_up");
+  Ui::keytree.RegisterBinding(name, "normal", "j",           "cursor_down");
 
   name = FindWindow::ClassName();
 
@@ -624,9 +635,8 @@ int main(int argc, char** argv) {
   // root->SetWindow(std::move(win));
 #endif
 
-  std::shared_ptr<FileTree> tree = std::make_shared<FileTree>(Path("."));
-  std::unique_ptr<FileTreeWindow> filetree = std::make_unique<FileTreeWindow>(tree);
-  ui->AddTab(Tab::FromWindow(std::move(filetree)), -1);
+  // std::unique_ptr<FileTreeWindow> filetree = std::make_unique<FileTreeWindow>(tree);
+  // ui->AddTab(Tab::FromWindow(std::move(filetree)), -1);
 
   editor->SetUi(std::move(ui));
   editor->MainLoop();

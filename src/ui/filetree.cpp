@@ -177,18 +177,19 @@ int FileTreeWindow::DrawDirItems(FileTree::Item* dir, FrameBuffer& buff, Positio
 
     if (item->path.IsDirectory()) {
 
-      pos.x += indent; // Temproarly move forward to draw.
+      // Temproarly move forward to draw.
+      pos.x += indent; area.width -= indent;
       if (item->expand) {
         DrawIcon(buff, icons.angle_down, pos, style_expand);
       } else {
         DrawIcon(buff, icons.angle_right, pos, style_expand);
       }
-      pos.x += 2; // Space betwen icon and name.
+      pos.x += 2; area.width -= 2; // Space betwen icon and name.
       {
-        DrawTextLine(buff, item->path.FileName().c_str(), pos, area.width, style_dir, icons, false, true);
+        DrawTextLine(buff, item->path.FileName().c_str(), pos, area.width, style_dir, icons, false);
         pos.y++;
       }
-      pos.x -= (indent+2); // Bring back the position.
+      pos.x -= (indent+2); area.width += (indent+2); // Bring back the position.
 
       // Draw recursively the child if they opened.
       if (item->expand) {
@@ -196,12 +197,12 @@ int FileTreeWindow::DrawDirItems(FileTree::Item* dir, FrameBuffer& buff, Positio
       }
 
     } else {
-      pos.x += indent+2;
+      pos.x += indent+2; area.width -= (indent+2);
       {
-        DrawTextLine(buff, item->path.FileName().c_str(), pos, area.width, style_file, icons, false, true);
+        DrawTextLine(buff, item->path.FileName().c_str(), pos, area.width, style_file, icons, false);
         pos.y++;
       }
-      pos.x -= indent+2;
+      pos.x -= indent+2; area.width += (indent+2);
     }
   }
 

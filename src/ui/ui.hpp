@@ -25,6 +25,8 @@ class Tabs;
 class Ui;
 class DocumentWindow;
 class FindWindow;
+class FileTree;
+class FileTreeWindow;
 
 
 // Note that since Window is a subtype of event handler. And HandleEvent() is
@@ -169,7 +171,6 @@ public:
   Iterator Iterate();
 
   Window* GetWindowAt(const Position& pos);
-  DocumentWindow* GetDocumentWindow(const Path& path);
   void Draw(FrameBuffer& buff, Position pos, Area area);
 
 private:
@@ -309,6 +310,7 @@ public:
 
   bool JumpToDocument(const Path& path, Coord coord); // Returns true on success.
 
+  // FIXME: Try making these methods private.
   Window* GetActiveWindow() const;
   void SetWindowActive(Window* window);
 
@@ -334,7 +336,9 @@ private:
   Tabs left;
   Tabs documents;
   Tabs right;
+
   std::unique_ptr<Window> popup;
+  std::shared_ptr<FileTree> tree;
 
   // The currently active tabs container.
   // Tabs* active = &documents;
@@ -353,6 +357,9 @@ private:
   // already opened for the given path, it'll return nullptr.
   DocumentWindow* GetDocumentWindow(const Path& path) const;
 
+  // Returns if any filetree window available, search from left and right tabs.
+  FileTreeWindow* GetFileTreeWindow() const;
+
   void DrawHomeScreen(FrameBuffer& buff, Position pos, Area area);
   void DrawPromptBar(FrameBuffer& buff); // Will draw at the bottom line.
 
@@ -368,13 +375,13 @@ public: // Actions.
   // Unlike other child classes of event handers.
   static bool Action_PopupFilesFinder(ActionExecutor* self);
   static bool Action_PopupLiveGrep(ActionExecutor* self);
+  static bool Action_ToggleFiletree(ActionExecutor* self);
   static bool Action_NewDocument(ActionExecutor* self);
   static bool Action_TabNext(ActionExecutor* self);
   static bool Action_TabPrev(ActionExecutor* self);
   static bool Action_NextWindow(ActionExecutor* self);
   static bool Action_Vsplit(ActionExecutor* self);
   static bool Action_Hsplit(ActionExecutor* self);
-
 };
 
 
@@ -442,6 +449,8 @@ private:
   void CheckCellStatusForDrawing(int index, bool* in_cursor, bool* in_selection);
 
 public: // Actions.
+  static bool Action_NormalMode(DocumentWindow* self);
+  static bool Action_InsertMode(DocumentWindow* self);
   static bool Action_CursorUp(DocumentWindow* self);
   static bool Action_CursorDown(DocumentWindow* self);
   static bool Action_CursorLeft(DocumentWindow* self);

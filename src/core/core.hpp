@@ -700,7 +700,11 @@ public:
   int trim_indicator = 0x2026; // …
   int whitespace_tab = 0x2192; // →
 
-  // Ui Related icons.
+  // Ui Related icons (nerd font).
+  int angle_up     = 0xf106;  // 
+  int angle_down   = 0xf107;  // 
+  int angle_left   = 0xf104;  // 
+  int angle_right  = 0xf105;  // 
   int empty_file   = 0xf15b;  // 
   int find         = 0xe68f;  // 
   int find_in_file = 0xf021e; // 󰈞
@@ -708,11 +712,7 @@ public:
   int Bookmark     = 0xf02e;  // 
   int palette      = 0xe22b;  // 
   int pin          = 0xf0403; // 󰐃
-
-  int angle_up     = 0xf106;  // 
-  int angle_down   = 0xf107;  // 
-  int angle_left   = 0xf104;  // 
-  int angle_right  = 0xf105;  // 
+  int filetree     = 0xf0645; // 󰙅
 
   // TODO: The count 25 is hardcoded which is got from the LSP specification
   // as of May of 2024.

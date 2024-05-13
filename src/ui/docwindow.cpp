@@ -40,11 +40,13 @@ std::shared_ptr<Document> DocumentWindow::GetDocument() const {
 
 bool DocumentWindow::_HandleEvent(const Event& event) {
   if (event.type == Event::Type::KEY && event.key.unicode != 0) {
-    char c = (char) event.key.unicode;
-    document->EnterCharacter(c);
-    EnsureCursorOnView();
-    ResetCursorBlink();
-    return true;
+    if (GetMode() == "insert") { // FIXME: Modename is hardcoded.
+      char c = (char) event.key.unicode;
+      document->EnterCharacter(c);
+      EnsureCursorOnView();
+      ResetCursorBlink();
+      return true;
+    }
 
   } else if (event.type == Event::Type::MOUSE) {
 
@@ -525,6 +527,8 @@ void DocumentWindow::DrawAutoCompletions(FrameBuffer& buff, Position pos, Area a
     self->EnsureCursorOnView(); self->ResetCursorBlink(); return true; \
   } while (false)
 
+bool DocumentWindow::Action_NormalMode(DocumentWindow* self) { self->SetMode("normal"); COMMON_ACTION_END(); }
+bool DocumentWindow::Action_InsertMode(DocumentWindow* self) { self->SetMode("insert"); COMMON_ACTION_END(); }
 bool DocumentWindow::Action_CursorUp(DocumentWindow* self) { self->document->CursorUp(); COMMON_ACTION_END(); }
 bool DocumentWindow::Action_CursorDown(DocumentWindow* self) { self->document->CursorDown(); COMMON_ACTION_END(); }
 bool DocumentWindow::Action_CursorLeft(DocumentWindow* self) { self->document->CursorLeft(); COMMON_ACTION_END(); }

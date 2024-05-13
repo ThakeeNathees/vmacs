@@ -292,27 +292,6 @@ Window* Split::GetWindowAt(const Position& pos) {
 }
 
 
-DocumentWindow* Split::GetDocumentWindow(const Path& path) {
-  if (children.size() == 0) { // Leaf node.
-    ASSERT(type == Split::Type::LEAF, OOPS);
-    if (window != nullptr && window->GetType() == Window::Type::DOCUMENT) {
-      DocumentWindow* docwin = (DocumentWindow*) window.get();
-      if (docwin->GetDocument()->GetPath() == path) return docwin;
-    }
-    return nullptr;
-  }
-
-  ASSERT(type != Split::Type::LEAF, OOPS);
-
-  for (auto& child : children) {
-    DocumentWindow* docwin = child->GetDocumentWindow(path);
-    if (docwin) return docwin;
-  }
-
-  return nullptr;
-}
-
-
 void Split::Draw(FrameBuffer& buff, Position pos, Area area) {
   if (children.size() == 0) { // Leaf node.
     ASSERT(type == Split::Type::LEAF, OOPS);
@@ -669,7 +648,9 @@ bool Tabs::Action_TabPrev(Tabs* self) {
 
 KeyTree Ui::keytree; // Static memeber definition.
 
-Ui::Ui() : cursor(&Ui::keytree) {}
+Ui::Ui() : cursor(&Ui::keytree) {
+  tree = std::make_shared<FileTree>(Path("."));
+}
 
 
 bool Ui::HandleEvent(const Event& event) {
@@ -758,7 +739,7 @@ void Ui::Draw(FrameBuffer& buff) {
 
   if (left.Count()) {
 
-    const int percent = 25; // FIXME: The size is hardcoded.
+    const int percent = 20; // FIXME: The size is hardcoded.
     const int w = (area.width * percent) / 100;
     left.Draw(buff, pos, Area(w-1, area.height)); // -1 for vertical split.
 
@@ -819,13 +800,12 @@ void Ui::DrawHomeScreen(FrameBuffer& buff, Position pos, Area area) {
   // FIXME: This is temproary.
   // --------------------------------------------------------------------------
   std::vector<std::pair<std::string, std::string>> items;
-  items.push_back({ Utf8UnicodeToString(icons.empty_file)   + " New file",       "<C-n>" });
+  items.push_back({ Utf8UnicodeToString(icons.empty_file)   + " New File",       "<C-n>" });
   items.push_back({ Utf8UnicodeToString(icons.find)         + " Find Files",     "<C-o>" });
-  items.push_back({ Utf8UnicodeToString(icons.textbox)      + " Recent Files",   "<C-r>" });
+  items.push_back({ Utf8UnicodeToString(icons.filetree)     + " File Tree",      "<C-f>" });
   items.push_back({ Utf8UnicodeToString(icons.find_in_file) + " Live Grep",      "<C-g>" });
   items.push_back({ Utf8UnicodeToString(icons.palette)      + " Themes",         "<C-t>" });
   // --------------------------------------------------------------------------
-
 
   // Get the maximum length of the display text so we need the padding length.
   size_t max_len_text = 0, max_len_bind = 0;
@@ -993,6 +973,9 @@ void Ui::SetWindowActive(Window* window) {
   ASSERT(window->GetSplit()->GetTab() != nullptr, OOPS);
   ASSERT(window->GetSplit()->GetTab()->GetTabs() != nullptr, OOPS);
 
+  Window* last_active = GetActiveWindow();
+  if (last_active) last_active->SetActive(false); // This will trigger the focus events.
+
   Tabs* next_active = window->GetSplit()->GetTab()->GetTabs();
   for (int i = 0; i < next_active->Count(); i++) {
     Tab* child = next_active->Child(i);
@@ -1008,11 +991,43 @@ void Ui::SetWindowActive(Window* window) {
 
 
 DocumentWindow* Ui::GetDocumentWindow(const Path& path) const {
+  // Only documents tabs will contain a document.
   for (int i = 0; i < documents.Count(); i++) {
     Split* root = documents.Child(i)->GetRoot();
-    DocumentWindow* window = root->GetDocumentWindow(path);
-    if (window) return window;
+
+    Split::Iterator it(root);
+    while (it.Get()) {
+      Window* window = it.Get()->GetWindow();
+      if (window->GetType() == Window::Type::DOCUMENT) {
+        DocumentWindow* docwin = (DocumentWindow*) window;
+        if (docwin->GetDocument()->GetPath() == path) return docwin;
+      }
+      it.Next();
+    }
+
   }
+  return nullptr;
+}
+
+
+FileTreeWindow* Ui::GetFileTreeWindow() const {
+  const std::vector<const Tabs*> search = {&left, &right};
+
+  for (const Tabs* tabs : search) {
+    for (int i = 0; i < tabs->Count(); i++) {
+      Split* root = tabs->Child(i)->GetRoot();
+
+      Split::Iterator it(root);
+      while (it.Get()) {
+        Window* window = it.Get()->GetWindow();
+        if (window->GetType() == Window::Type::FILETREE) {
+          return (FileTreeWindow*) window;
+        }
+        it.Next();
+      }
+    }
+  }
+
   return nullptr;
 }
 
@@ -1029,6 +1044,20 @@ bool Ui::Action_PopupLiveGrep(ActionExecutor* ae) {
   Ui* self = (Ui*) ae;
   if (self->popup != nullptr) return false;
   self->popup = std::make_unique<FindWindow>(std::make_unique<LiveGrep>());
+  return true;
+}
+
+
+bool Ui::Action_ToggleFiletree(ActionExecutor* ae) {
+  Ui* self = (Ui*) ae;
+  FileTreeWindow* win = self->GetFileTreeWindow();
+
+  if (win == nullptr) {
+    std::unique_ptr<FileTreeWindow> filetree = std::make_unique<FileTreeWindow>(self->tree);
+    self->AddTab(Tab::FromWindow(std::move(filetree)), -1);
+  } else {
+    TODO; // Implement closing splits properly before implementing this.
+  }
   return true;
 }
 
