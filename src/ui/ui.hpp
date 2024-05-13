@@ -38,6 +38,7 @@ public:
   enum class Type {
     DOCUMENT,
     FINDER,
+    FILETREE,
     OTHER,
   };
 
@@ -300,7 +301,12 @@ public:
   void Warning(const std::string& error);
   void Error(const std::string& error);
 
-  void AddTab(std::unique_ptr<Tab> tab);
+  // TODO: Since the layout is hardcoded, it has 3 containers (left, documents, right)
+  // we take an optional parameter container which should be either (-1, 0, +1)
+  // indicating which container to add the tab to. This is ugly and the layout
+  // should be dynamic. Fix it in the future.
+  void AddTab(std::unique_ptr<Tab> tab, int container=0);
+
   bool JumpToDocument(const Path& path, Coord coord); // Returns true on success.
 
   Window* GetActiveWindow() const;
@@ -314,15 +320,15 @@ private:
   // The layout of the highlevel Ui is hardcoded into the bellow structure.
   // Where every "box" is a Tabs structure.
   //
-  //     ┌────────┐ ┌────────────┐ ┌────────┐
-  //     │        │ │            │ │        │
-  //     │        │ │            │ │        │
-  //     │        │ │            │ │        │
-  //     │  Left  │ │  Documents │ │ Right  │
-  //     │        │ │            │ │        │
-  //     │        │ │            │ │        │
-  //     │        │ │            │ │        │
-  //     └────────┘ └────────────┘ └────────┘
+  //     ┌────────┐ ┌─────────────┐ ┌────────┐
+  //     │        │ │             │ │        │
+  //     │        │ │             │ │        │
+  //     │        │ │             │ │        │
+  //     │  Left  │ │  Documents  │ │ Right  │
+  //     │        │ │             │ │        │
+  //     │        │ │             │ │        │
+  //     │        │ │             │ │        │
+  //     └────────┘ └─────────────┘ └────────┘
   //
 
   Tabs left;
@@ -331,7 +337,8 @@ private:
   std::unique_ptr<Window> popup;
 
   // The currently active tabs container.
-  Tabs* active = &documents;
+  // Tabs* active = &documents;
+  Tabs* active = &left;
 
   // FIXME(grep): This is temproary.
   std::string info_bar_text;
@@ -435,7 +442,6 @@ private:
   void CheckCellStatusForDrawing(int index, bool* in_cursor, bool* in_selection);
 
 public: // Actions.
-  static KeyTree keytree;
   static bool Action_CursorUp(DocumentWindow* self);
   static bool Action_CursorDown(DocumentWindow* self);
   static bool Action_CursorLeft(DocumentWindow* self);
@@ -506,7 +512,6 @@ private:
                  const std::vector<std::string>* items);
 
 public: // Actions.
-  static KeyTree keytree;
   static bool Action_CursorRight(FindWindow* self);
   static bool Action_CursorLeft(FindWindow* self);
   static bool Action_CursorHome(FindWindow* self);
@@ -523,13 +528,63 @@ public: // Actions.
 // Find Window.
 // -----------------------------------------------------------------------------
 
+class FileTree {
+public:
 
-class FileTree : public Window {
-  DEFINE_GET_CLASS_NAME(FileTree);
+  // The path should be a directory path where it'll be the root path.
+  FileTree(const Path& path);
+
+  struct Item {
+    // The path of the item.
+    Path path;
+
+    // If it's a directory and expanded in the ui, we'll set this to true.
+    bool expand = false;
+
+    // The pointer reference to the parent. Nullptr if it's root.
+    Item* parent = nullptr;
+
+    // If it's a directory the bellow list will be the child items.
+    std::vector<std::unique_ptr<Item>> items;
+
+    // If it's incomplete we need to load the items from the system.
+    bool is_incomplete = true;
+
+    void LoadItems();
+    Item* GetNextSibling() const; // nullptr if there isn't any.
+    int GetIndexInParent() const; // returns -1 if root.
+  };
+
+  Item* GetRoot();
+
+private: // FIXME: make it private.
+  std::unique_ptr<Item> root;
+};
+
+
+class FileTreeWindow : public Window {
+  DEFINE_GET_CLASS_NAME(FileTreeWindow);
+
+public:
+  FileTreeWindow(std::shared_ptr<FileTree> tree);
+
+  Type GetType() const override;
+
+private:
+  std::shared_ptr<FileTree> tree;
+  FileTree::Item* cursor = nullptr; // The current cursor position.
 
 private:
   bool _HandleEvent(const Event& event) override;
   void _Update() override;
   void _Draw(FrameBuffer& buff, Position pos, Area area) override;
 
+  // Draw the directory and returns the number of lines (height) it drew.
+  int DrawDirItems(FileTree::Item* dir, FrameBuffer& buff, Position pos, Area area, int indent);
+
+public:
+  static bool Action_CursorUp(FileTreeWindow* self);
+  static bool Action_CursorDown(FileTreeWindow* self);
+  static bool Action_GotoParent(FileTreeWindow* self);
+  static bool Action_SelectPath(FileTreeWindow* self);
 };

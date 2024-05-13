@@ -42,6 +42,16 @@ bool Path::Exists() const {
 }
 
 
+bool Path::IsDirectory() const {
+  return fs::is_directory(path);
+}
+
+
+bool Path::IsRegularFile() const {
+  return fs::is_regular_file(path);
+}
+
+
 bool Path::operator ==(const Path& other) const {
   return path == other.path;
 }
@@ -82,12 +92,14 @@ bool Platform::ReadFile(std::string* ret, const Path& path) {
 }
 
 
-bool Platform::ListDirectory(std::vector<std::string>* items, const Path& path) {
+bool Platform::ListDirectory(std::vector<Path>* items, const Path& path) {
   ASSERT(items != nullptr, OOPS);
+  ASSERT(path.IsDirectory(), "ListDirectory called on a path which is not a directory.");
+
   // FIXME(grep): Handle if this throws.
   for (const auto & entry : fs::directory_iterator(path.String())) {
-    std::string filename = entry.path().filename().string();
-    items->push_back(std::move(filename));
+    Path item = Path(entry.path().string());
+    items->push_back(std::move(item));
   }
   return true;
 }

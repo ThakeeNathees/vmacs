@@ -13,14 +13,13 @@
 // loading resources from file (mainly theme and treesitter language).
 //
 // Now:
-//
+//  Theme (ui) is a huge todo.
 //
 //
 // Pending:
 //  - Remove tomlcpp library. We don't need it (maybe?)
 //  - calculate area manually instead of draw so they can setup the view at start.
 //  - Check if the LSP client exists and show an error message otherwise.
-//  - Only Ui has keytree (bind spc f: find file, spc w: save file -- possible).
 //  - Event binding refactor.
 //  - fzf, rg check if exists.
 //  - Opening new file should open in the split if the current tab has multi splits.
@@ -28,13 +27,13 @@
 //  - Clicking on tabname should change the tab.
 //  - Jump to document should make the view center.
 //  - open document in editor where language and lsp are solved from the path.
-//   check lsp for un saved (not in path) files.
-//   glue split positions (viw shouldn't move and the selection wont' change after modify in another split)
-//   check what happens with empty Path with lsp server and handle.
-//   open empty, search for a file with file picker.
-//   Add another language server client and test. show errors and ask inputs.
-//   Global config (tabsize), dropdown icons, dropdown list max count. lsp config.
-//   Better draw diagnostics.
+//    check lsp for un saved (not in path) files.
+//    glue split positions (viw shouldn't move and the selection wont' change after modify in another split)
+//    check what happens with empty Path with lsp server and handle.
+//    open empty, search for a file with file picker.
+//    Add another language server client and test. show errors and ask inputs.
+//    Global config (tabsize), dropdown icons, dropdown list max count. lsp config.
+//    Better draw diagnostics.
 //  - Support true and 256 color from config.
 //  - autocompletion:
 //    - An abstract class for completion list.
@@ -65,6 +64,13 @@
 //   open/close files.
 //   copy paste clipboard.
 //   terminal (maybe)
+//
+// FileTree:
+//   cannot goto file tree from docwindow.
+//   scroll if cursor is bellow
+//   implement an iterator.
+//   icons
+//   newfile/rename/move/copy/delete.
 //
 // LSP:
 //   pylsp completion insert text position has issue, it should replace only the text after '.'.
@@ -508,6 +514,21 @@ int main(int argc, char** argv) {
   Ui::keytree.RegisterBinding(name, "<enter>", "accept_selection");
   Ui::keytree.RegisterBinding(name, "<esc>", "close");
 
+  name = FileTreeWindow::ClassName();
+
+  Ui::keytree.RegisterAction(name, "cursor_up", (FuncAction) FileTreeWindow::Action_CursorUp);
+  Ui::keytree.RegisterAction(name, "cursor_down", (FuncAction) FileTreeWindow::Action_CursorDown);
+  Ui::keytree.RegisterAction(name, "select", (FuncAction) FileTreeWindow::Action_SelectPath);
+  Ui::keytree.RegisterAction(name, "goto_parent", (FuncAction) FileTreeWindow::Action_GotoParent);
+
+  Ui::keytree.RegisterBinding(name, "<up>",    "cursor_up");
+  Ui::keytree.RegisterBinding(name, "<down>",  "cursor_down");
+  Ui::keytree.RegisterBinding(name, "k",       "cursor_up");
+  Ui::keytree.RegisterBinding(name, "j",       "cursor_down");
+  Ui::keytree.RegisterBinding(name, "<enter>", "select");
+  Ui::keytree.RegisterBinding(name, "o",       "select");
+  Ui::keytree.RegisterBinding(name, "p",       "goto_parent");
+
 
   // For testing.
   Ui::keytree.RegisterBinding("DocumentWindow", "insert", "<C-e>a",     "cursor_up");
@@ -603,8 +624,11 @@ int main(int argc, char** argv) {
   // root->SetWindow(std::move(win));
 #endif
 
-  editor->SetUi(std::move(ui));
+  std::shared_ptr<FileTree> tree = std::make_shared<FileTree>(Path("."));
+  std::unique_ptr<FileTreeWindow> filetree = std::make_unique<FileTreeWindow>(tree);
+  ui->AddTab(Tab::FromWindow(std::move(filetree)), -1);
 
+  editor->SetUi(std::move(ui));
   editor->MainLoop();
   return 0;
 }

@@ -483,6 +483,8 @@ bool Tab::Vsplit() {
   ASSERT(active->GetType() == Split::Type::LEAF, OOPS);
   bool right = true; // TODO: Get split pos from config like vim.
   std::unique_ptr<Window> copy = active->GetWindow()->Copy();
+
+  // FIXME: Show an error to the ui, that the window cannot be splitted.
   if (copy == nullptr) return false;
 
   active->GetWindow()->SetActive(false);
@@ -696,6 +698,7 @@ bool Ui::HandleEvent(const Event& event) {
 
 
   bool consumed = cursor.ConsumeEvent(event);
+
   if (!consumed) {
     bool listening = !cursor.IsCursorRoot();
     cursor.ResetCursor();
@@ -757,6 +760,24 @@ void Ui::Draw(FrameBuffer& buff) {
   Position pos(0, 0);
   Area area(buff.width, buff.height-1);
 
+  if (left.Count()) {
+
+    const int percent = 25; // FIXME: The size is hardcoded.
+    const int w = (area.width * percent) / 100;
+    left.Draw(buff, pos, Area(w-1, area.height)); // -1 for vertical split.
+
+    const Theme& theme = Editor::GetTheme();
+
+    // FIXME: Properly fetch the style from the editor or somewhere else.
+    Style style_sep = theme.GetStyle("ui.text")
+      .Apply(theme.GetStyle("ui.background"))
+      .Apply(theme.GetStyle("ui.background.separator"));
+    DrawVerticalLine(buff, Position(pos.x + w-1, pos.y), area.height, style_sep, Editor::GetIcons());
+
+    pos.x += w;
+    area.width -= w;
+  }
+
   if (documents.Count()) {
     documents.Draw(buff, pos, area);
   } else {
@@ -765,13 +786,15 @@ void Ui::Draw(FrameBuffer& buff) {
 
   DrawPromptBar(buff);
 
+  // FIXME: The size is "hardcoded".
   if (popup) {
-    // popup->Draw(buff, pos, area);
     const int percent = 70;
-    const int w = (area.width * percent) / 100;
-    const int h = (area.height * percent) / 100;
-    const int x = (area.width - w) / 2;
-    const int y = (area.height - h) / 2;
+    const int W = buff.width;
+    const int H = buff.height;
+    const int w = (W * percent) / 100;
+    const int h = (H * percent) / 100;
+    const int x = (W - w) / 2;
+    const int y = (H - h) / 2;
     popup->Draw(buff, Position(x, y), Area(w, h));
   }
 }
@@ -888,8 +911,13 @@ void Ui::Error(const std::string& msg) {
 }
 
 
-void Ui::AddTab(std::unique_ptr<Tab> tab) {
-  documents.AddTab(std::move(tab));
+void Ui::AddTab(std::unique_ptr<Tab> tab, int container) {
+  ASSERT(-1 <= container && container <= 1, "Invalid container id.");
+  switch (container) {
+    case -1: left.AddTab(std::move(tab)); return;
+    case  0: documents.AddTab(std::move(tab)); return;
+    case +1: right.AddTab(std::move(tab)); return;
+  }
 }
 
 
@@ -926,6 +954,7 @@ bool Ui::JumpToDocument(const Path& path, Coord coord) {
 
   // We call this here since otherwise the pos/area of the window didn't updated.
   // which is needed to set the view of the coordinate.
+  SetWindowActive(ptr_docwin);
   ptr_docwin->JumpTo(coord);
 
   return true;
@@ -975,6 +1004,7 @@ void Ui::SetWindowActive(Window* window) {
       break;
     }
   }
+  active = next_active;
 }
 
 

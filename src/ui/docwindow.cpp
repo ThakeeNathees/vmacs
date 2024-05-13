@@ -73,6 +73,7 @@ void DocumentWindow::_Update() {
     if (now - cursor_last_blink >= cursor_blink_period) {
       cursor_last_blink = now;
       cursor_blink_show = !cursor_blink_show;
+      Editor::ReDraw();
     }
   }
 }
@@ -85,6 +86,7 @@ void DocumentWindow::OnDocumentChanged() {
 
 void DocumentWindow::OnFocusChanged(bool focus) {
 
+  ResetCursorBlink();
   document->ClearCompletionItems();
 
   // If we lost focus, take a backup of the cursors.

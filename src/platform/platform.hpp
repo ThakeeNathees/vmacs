@@ -29,6 +29,7 @@ typedef std::function<void(void* user_data, const char* buff, size_t length)> Fu
 typedef std::function<void(void* user_data, int exit_code)> FuncExitCallback;
 
 
+// TODO: Handle symlinks.
 class Path {
 
 public:
@@ -42,6 +43,9 @@ public:
 
   bool Empty() const;
   bool Exists() const;
+
+  bool IsDirectory() const;
+  bool IsRegularFile() const;
 
   bool operator ==(const Path& other) const;
   Path operator /(const std::string& inner) const;
@@ -88,7 +92,7 @@ public:
   // Reads an entire file and return the content. if the path is invalid or an error,
   // this will return false.
   static bool ReadFile(std::string* ret, const Path& path);
-  static bool ListDirectory(std::vector<std::string>* items, const Path& path);
+  static bool ListDirectory(std::vector<Path>* items, const Path& path);
 
   // Check if the given command exists by appending the given command to all the
   // paths of the PATH environment variables and check if the path exists. Note

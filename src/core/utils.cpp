@@ -196,7 +196,8 @@ void DrawTextLine(
     int width,
     Style style,
     const Icons& icons,
-    bool fill_area) {
+    bool fill_area,
+    bool tail) {
 
   if (text == NULL || *text == '\0') return;
   if (pos.col < 0 || pos.row < 0) return;
@@ -204,16 +205,29 @@ void DrawTextLine(
   if (pos.col + width > buff.width) width = buff.width - pos.col;
   if (width <= 0) return;
 
+  // Current x position we're drawing.
+  int x = pos.col;
+  const char* c = text;
+
+  // |-- length ----------------|
+  // |-- width ------|          |
+  // cccccccccccccccccccccccccccc
+  // |-- text_len ---||-- skip -| (if tail we skip the head).
+  // |               '---.
+  // '-------------------+- trim_indicator (either head or tail).
+
   int length = Utf8Strlen(text);
   int text_len = MIN(length, width);
   int trim_indicator = icons.trim_indicator;
 
   bool trimming = (length > width);
-  if (trimming) text_len -= 1;
 
-  // Current x position we're drawing.
-  int x = pos.col;
-  const char* c = text;
+  if (trimming && tail) {
+    int skip = length - width;
+    while (skip--) {
+      c += Utf8CharToUnicode(NULL, c);
+    }
+  }
 
   for (; x < pos.col + text_len; x++) {
     uint32_t ch;
@@ -222,12 +236,24 @@ void DrawTextLine(
     SET_CELL(buff, x, pos.row, ch, style);
   }
 
-  if (trimming) SET_CELL(buff, x++, pos.row, trim_indicator, style);
+  if (trimming) {
+    if (tail) {
+      SET_CELL(buff, pos.col, pos.row, trim_indicator, style);
+    } else {
+      SET_CELL(buff, x-1, pos.row, trim_indicator, style);
+    }
+  }
+
   if (fill_area) {
     while (x < (pos.col + width)) {
       SET_CELL(buff, x++, pos.row, ' ', style);
     }
   }
+}
+
+
+void DrawIcon(FrameBuffer& buff, int icon, Position pos, Style style) {
+  SET_CELL(buff, pos.x, pos.y, icon, style);
 }
 
 
@@ -356,7 +382,7 @@ int Utf8CharToUnicode(uint32_t *out, const char *c) {
     result |= c[i] & 0x3f;
   }
 
-  *out = result;
+  if (out != NULL) *out = result;
   return (int)len;
 }
 

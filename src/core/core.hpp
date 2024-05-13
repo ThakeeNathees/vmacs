@@ -692,12 +692,19 @@ public:
   int trim_indicator = 0x2026; // …
   int whitespace_tab = 0x2192; // →
 
+  // Ui Related icons.
   int empty_file   = 0xf15b;  // 
   int find         = 0xe68f;  // 
   int find_in_file = 0xf021e; // 󰈞
   int textbox      = 0xf021a; // 󰈚
-  int Bookmakr     = 0xf02e;  // 
+  int Bookmark     = 0xf02e;  // 
   int palette      = 0xe22b;  // 
+  int pin          = 0xf0403; // 󰐃
+
+  int angle_up     = 0xf106;  // 
+  int angle_down   = 0xf107;  // 
+  int angle_left   = 0xf104;  // 
+  int angle_right  = 0xf105;  // 
 
   // TODO: The count 25 is hardcoded which is got from the LSP specification
   // as of May of 2024.
@@ -857,8 +864,11 @@ void DrawTextLine(
     int width,          // If the text goes beyond the width it'll terminate.
     Style style,
     const Icons& icons, // Needed to draw text terminated indicator.
-    bool fill_area);    // If true all the width is filled with the bg othereise
-                        // only the text is drawn with the given bg.
+    bool fill_area,     // If true all the width is filled with the bg othereise only the text is drawn with the given bg.
+    bool tail=false);   // If the text is too long it'll draw the tail of the text.
+
+// Draws an icon which is a single codepoint.
+void DrawIcon(FrameBuffer& buff, int icon, Position pos, Style style);
 
 void DrawRectangleFill(FrameBuffer& buff, Position pos, Area area, Style style);
 void DrawRectangleLine(FrameBuffer& buff, Position pos, Area area, Style style, const Icons& icons, bool fill);
