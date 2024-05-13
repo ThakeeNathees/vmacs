@@ -75,7 +75,7 @@ std::string FindWindow::GetSelectedItem() {
 }
 
 
-void FindWindow::_Draw(FrameBuffer& buff, Position pos_windows, Area area) {
+void FindWindow::_Draw(FrameBuffer& buff, Position pos, Area area) {
 
   const Theme& theme = Editor::GetTheme();
   const Icons& icons = Editor::GetIcons();
@@ -91,25 +91,20 @@ void FindWindow::_Draw(FrameBuffer& buff, Position pos_windows, Area area) {
   // The default fg,bg,attrib for drawing bellow.
   const Style style = style_bg.Apply(style_text);
 
-  // FIXME: Window.pos/area should be properly handled and this values should be
-  // considered as well.
-  //
-  // Dimentions.
-  const int percent = 70;
-  const int w = (area.width * percent) / 100;
-  const int h = (area.height * percent) / 100;
-  const int x = (area.width - w) / 2;
-  const int y = (area.height - h) / 2;
+  const int x = pos.x;
+  const int y = pos.y;
+  const int w = area.width;
+  const int h = area.height;
 
   // We need a witdh of at least 4 cells (two borders and two for spacing).
-  if (w-4 <= 0) return;
+  if (area.width-4 <= 0) return;
 
   // TODO: Check if the input area is enough and h-scroll if reached the end.
   // And drawing the filter_ratio shouldn't block the input if the input is reached
   // the end.
 
   // Draw the border.
-  DrawRectangleLine(buff, Position(x, y), Area(w, h), style_border, icons, true);
+  DrawRectangleLine(buff, pos, area, style_border, icons, true);
 
   // Draw the input area.
   const std::string& input_text = finder->GetSearchText();

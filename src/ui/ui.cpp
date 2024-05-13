@@ -717,7 +717,7 @@ bool Ui::HandleEvent(const Event& event) {
   }
 
   // Note that if the popup is available we won't send the event to the active
-  // child window.
+  // window or ui.
   #define return_true do { cursor.ResetCursor(); return true; } while (false)
   if (popup) {
     if (cursor.TryEvent(popup.get())) {
@@ -727,15 +727,12 @@ bool Ui::HandleEvent(const Event& event) {
   } else {
     Window* window = GetActiveWindow();
     if (window && cursor.TryEvent(window)) return_true;
+    if (cursor.TryEvent(this)) return_true;
   }
   #undef return_true
 
-  // No one consumed.
-  if (cursor.TryEvent(this)) {
-    cursor.ResetCursor();
-    return true;
-  }
-
+  // TODO: Note that if we have a popup and the HasMore is not contains any
+  // bindngs related to the popup, it's actually not HasMore.
   if (cursor.HasMore()) return true;
 
   if (!cursor.IsCursorRoot()) {
@@ -769,7 +766,13 @@ void Ui::Draw(FrameBuffer& buff) {
   DrawPromptBar(buff);
 
   if (popup) {
-    popup->Draw(buff, pos, area);
+    // popup->Draw(buff, pos, area);
+    const int percent = 70;
+    const int w = (area.width * percent) / 100;
+    const int h = (area.height * percent) / 100;
+    const int x = (area.width - w) / 2;
+    const int y = (area.height - h) / 2;
+    popup->Draw(buff, Position(x, y), Area(w, h));
   }
 }
 

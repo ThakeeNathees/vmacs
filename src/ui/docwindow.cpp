@@ -376,9 +376,8 @@ void DocumentWindow::DrawAutoCompletions(FrameBuffer& buff, Position pos, Area a
   int count_lines_above_cursor  = cursor_coord.line - view_start.row;
   int count_lines_bellow_cursor = view_start.row + area.height - cursor_coord.line - 1;
 
-  // Check if we're focused before calling this to pass the bellow assertion.
-  ASSERT(count_lines_above_cursor >= 0, OOPS);
-  ASSERT(count_lines_bellow_cursor >= 0, OOPS);
+  // If we've scrolled, the values become < 0, and we aren't drawing the completion.
+  if (count_lines_above_cursor < 0 || count_lines_bellow_cursor < 0) return;
 
   // Determine where we'll be drawgin the popup.
   bool drawing_bellow_cursor = true;

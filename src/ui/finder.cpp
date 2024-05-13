@@ -138,8 +138,15 @@ void FilesFinder::TriggerFuzzyFilter() {
   opt.user_data      = this;
   opt.file           = "fzf";
   opt.argv           = { "--filter", search_text };
+
+  // std::string s; // "s.*e.*a.*r.*c.*h";
+  // for (int i = 0; i < search_text.size(); i++) {
+  //   s += search_text[i];
+  //   if (i != search_text.size()-1) s+=".*";
+  // }
   // opt.file           = "grep"; // Use grep if fzf not available.
-  // opt.argv           = { search_text };
+  // opt.argv           = { s };
+
   opt.timeout_sec    = 2;
   opt.sending_inputs = true;
   opt.stdout_cb      = [&](void* data, const char* buff, size_t length) {
