@@ -68,6 +68,8 @@ public:
   const Area& GetArea() const;
   bool IsPointIncluded(const Position& point) const;
 
+  // Note that "caching" the owner here is error prune, we should query
+  // the parent from the ui maybe?
   Split* GetSplit() const;
   void SetSplit(Split* split);
 
@@ -131,21 +133,19 @@ public:
     Split* curr = nullptr; // Current leaf node we're in (we always land on a leaf node).
   };
 
+  // Returns the type of the split, hsplit, vsplit, or leaf.
+  Split::Type GetType() const;
+
   // The split method, make sure to call this on leaf nodes otherwise this will
   // fail an assertion. This will return a raw pointer to the created split instance.
   Split* Vsplit(bool right);
   Split* Hsplit(bool bottom);
 
-  // Returns the child a the given index, this will fail an assertion if the
-  // given index is out of bounds in the child list.
+  int GetChildCount() const;
   Split* GetChild(int index) const;
-
-  // Return the index of this window on it's parent, this will fail an assertion
-  // if the parent is nullptr.
   int GetIndexInParent() const;
 
-  // Set the window of a leaf node, this will fail an assertion if the split isn't
-  // a leaf, check before calling.
+  void RemoveChild(int index);
   void SetWindow(std::unique_ptr<Window> window);
 
   // Return the undeling window if available, otherwise it'll return nullptr.
@@ -159,13 +159,13 @@ public:
   // never return nullptr.
   Split* GetRoot();
 
+  Split* GetParent() const;
+  Tab* GetTab() const;
+
   // Set the tab of this split and all of it's children. Note that since we can
   // create the splits before adding it to a tab, we need to set the tab recursively
   // for all the splits in the tree here.
   void SetTab(Tab* tab);
-
-  Split::Type GetType() const;
-  Tab* GetTab() const;
 
   // Returns an iterater which iterates on the leaf nodes.
   Iterator Iterate();
@@ -255,8 +255,11 @@ private:
 // Simply a container for tabs.
 class Tabs {
 public:
-  // Insert tab and make it active.
+
+  // Add and remove tab.
   void AddTab(std::unique_ptr<Tab> tab);
+  void RemoveTab(const Tab* tab);
+
   int Count() const;
   Tab* Child(int index) const;
 
@@ -353,6 +356,9 @@ private:
   // at the given position and to pass the event to the window at that position.
   Window* GetWindowAt(Position pos) const;
 
+  // This is re-usable called from Actions, returns true if the action is executed.
+  bool CloseWindow(Window* window);
+
   // Returns the document window for the document at the given path, if no document
   // already opened for the given path, it'll return nullptr.
   DocumentWindow* GetDocumentWindow(const Path& path) const;
@@ -382,6 +388,7 @@ public: // Actions.
   static bool Action_NextWindow(ActionExecutor* self);
   static bool Action_Vsplit(ActionExecutor* self);
   static bool Action_Hsplit(ActionExecutor* self);
+  static bool Action_CloseWindow(ActionExecutor* self);
 };
 
 

@@ -13,21 +13,29 @@
 // loading resources from file (mainly theme and treesitter language).
 //
 // Now:
+//  close splits/tabs.
 //  Theme (ui) is a huge todo.
+//  autocompletion popup handle properly + (consider which key popup, etc).
+//  Window pos/area.
+//
+// Gap Buffer:
+//   tree-sitter read callback
+//   abstract the interface
+//   user integers as characters
+//   implement gap buffer.
 //
 //
 // Pending:
+//  - Loading config from file + (lsp config from config file).
 //  - Remove tomlcpp library. We don't need it (maybe?)
 //  - calculate area manually instead of draw so they can setup the view at start.
 //  - Check if the LSP client exists and show an error message otherwise.
-//  - Event binding refactor.
 //  - fzf, rg check if exists.
 //  - Opening new file should open in the split if the current tab has multi splits.
 //    it's a single window tab, we start in a new tab.
 //  - Clicking on tabname should change the tab.
 //  - Jump to document should make the view center.
 //  - open document in editor where language and lsp are solved from the path.
-//    check lsp for un saved (not in path) files.
 //    glue split positions (viw shouldn't move and the selection wont' change after modify in another split)
 //    check what happens with empty Path with lsp server and handle.
 //    open empty, search for a file with file picker.
@@ -56,7 +64,6 @@
 //   mouse support.
 //   load configs.
 //   status line
-//
 //   prompt line + autocompletion (if them auto update).
 //   number line + diagnos gutter.
 //   scrollbar
@@ -85,8 +92,6 @@
 //   the signature help contains multiple signatures only send the active signature to the caller not an array.
 //
 // BUG:
-//   opening the same file twise from finder will create another tab (it shoud just show the already opened tab).
-//   not scrolling if not focused
 //   drawing popup needs to be reviewed since if it goes out of the window, we just trim it but it needs to be pushed inside. (better draw primitives required)
 //   signature help will hide pressing space after comma.
 //   [bug in termbox] color 0x000000 (black) cannot be used as it will be replaced
@@ -97,10 +102,10 @@
 //    Registry of language server, and language => lsp mapping in the Editor:
 //      { "clangd" : LspClient(), "pyright" : LspClient(), ...  }
 //      { "c" : "clangd", "c++": "clangd",  "python" : "pyright", etc. }
-//    Global Configs.
 //
 //
 // Unfinished, working things:
+//   Filetree: everything is unfinished.
 //   Icons api, provide nerd/unicode/ascii icons based on config.
 //   autocompletion + (show documnt, symbol helper for parameter, icon, etc.)
 //   autocompletion selection of items. icon config.
@@ -420,23 +425,25 @@ int main(int argc, char** argv) {
   Ui::keytree.RegisterAction(name, "new_file", Ui::Action_NewDocument);
   Ui::keytree.RegisterAction(name, "tab_next", Ui::Action_TabNext);
   Ui::keytree.RegisterAction(name, "tab_prev", Ui::Action_TabPrev);
-  Ui::keytree.RegisterAction(name, "next_window", Ui::Action_NextWindow);
   Ui::keytree.RegisterAction(name, "vsplit", Ui::Action_Vsplit);
   Ui::keytree.RegisterAction(name, "hsplit", Ui::Action_Hsplit);
   Ui::keytree.RegisterAction(name, "toggle_filetree", Ui::Action_ToggleFiletree);
+  Ui::keytree.RegisterAction(name, "next_window", Ui::Action_NextWindow);
+  Ui::keytree.RegisterAction(name, "close_window", Ui::Action_CloseWindow);
 
   Ui::keytree.RegisterBinding(name, "<C-o>", "popup_files_finder");
   Ui::keytree.RegisterBinding(name, "<C-g>", "popup_live_grep");
   Ui::keytree.RegisterBinding(name, "<C-n>", "new_file");
   Ui::keytree.RegisterBinding(name, "<C-l>", "tab_next");
   Ui::keytree.RegisterBinding(name, "<C-h>", "tab_prev");
-  Ui::keytree.RegisterBinding(name, "<C-w>w", "next_window");
   Ui::keytree.RegisterBinding(name, "<C-w><C-w>", "next_window");
   Ui::keytree.RegisterBinding(name, "<C-w><C-v>", "vsplit");
   Ui::keytree.RegisterBinding(name, "<C-w>v", "vsplit");
   Ui::keytree.RegisterBinding(name, "<C-w><C-h>", "hsplit");
   Ui::keytree.RegisterBinding(name, "<C-w>h", "hsplit");
   Ui::keytree.RegisterBinding(name, "<C-f>", "toggle_filetree");
+  Ui::keytree.RegisterBinding(name, "<C-w>w", "next_window");
+  Ui::keytree.RegisterBinding(name, "<C-w>c", "close_window");
 
   name = DocumentWindow::ClassName();
 
@@ -498,6 +505,9 @@ int main(int argc, char** argv) {
   Ui::keytree.RegisterBinding(name, "normal", "l",           "cursor_right");
   Ui::keytree.RegisterBinding(name, "normal", "k",           "cursor_up");
   Ui::keytree.RegisterBinding(name, "normal", "j",           "cursor_down");
+  Ui::keytree.RegisterBinding(name, "normal", "gh",          "cursor_home");
+  Ui::keytree.RegisterBinding(name, "normal", "gl",          "cursor_end");
+  Ui::keytree.RegisterBinding(name, "normal", "diw",         "backspace");
 
   name = FindWindow::ClassName();
 

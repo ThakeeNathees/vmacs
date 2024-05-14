@@ -157,6 +157,11 @@ Split* Split::Hsplit(bool bottom) {
 }
 
 
+int Split::GetChildCount() const {
+  return children.size();
+}
+
+
 Split* Split::GetChild(int index) const {
   ASSERT(index >= 0 && index < children.size(), OOPS);
   return children[index].get();
@@ -170,6 +175,58 @@ int Split::GetIndexInParent() const {
   }
   UNREACHABLE();
   return -1;
+}
+
+
+void Split::RemoveChild(int index) {
+  ASSERT(index >= 0 && index < children.size(), OOPS);
+  ASSERT(children.size() >= 2, "A split should contains at least 2 child or leaf node.");
+  children.erase(children.begin() + index);
+  if (children.size() > 1) return;
+
+  // If we reached here we have only one child, in that case we "take ownership"
+  // of that child.
+  Split* child = children[0].get();
+
+  this->type = child->type;
+  if (tab->GetActive() == child) {
+    tab->SetActive(this);
+  }
+
+  if (child->type == Split::Type::LEAF) {
+    ASSERT(child->children.size() == 0, OOPS);
+    this->SetWindow(std::move(child->window));
+    this->children.clear();
+
+  } else {
+    ASSERT(child->children.size() >= 2, OOPS);
+
+    // We need to store the child splits somewhere before removing the child.
+    std::vector<std::unique_ptr<Split>> temp = std::move(child->children);
+
+    // We shouldn't have a vsplit has a child which is also a vsplit and vice
+    // versa. In that case we merge this with parent.
+    if (parent && parent->type == child->type) {
+
+      if (tab->GetActive() == this) tab->SetActive(parent);
+
+      for (auto& child : temp) {
+        child->parent = this->parent;
+        parent->children.push_back(std::move(child));
+      }
+
+      // WARNING !! This will remove itself and this pointer will become invalid
+      // after the bellow call, don't use.
+      int index = GetIndexInParent();
+      parent->children.erase(parent->children.begin() + index);
+      return; // Return immediately.
+
+    } else {
+      for (auto& child : temp) child->parent = this;
+      children = std::move(temp);
+    }
+
+  }
 }
 
 
@@ -188,6 +245,11 @@ Window* Split::GetWindow() {
 
 const Window* Split::GetWindow() const {
   return window.get();
+}
+
+
+Split* Split::GetParent() const {
+  return parent;
 }
 
 
@@ -232,8 +294,8 @@ Split* Split::Iterator::LeftMostLeaf(Split* node) const {
   ASSERT(node != nullptr, OOPS);
   Split* curr = node;
   while (curr->type != Split::Type::LEAF) {
-    ASSERT(!curr->children.empty(), "Invalid split configuration, non leaf"
-                                    "split should contains child splits.");
+    ASSERT(curr->children.size() >= 2, "Invalid split configuration, non leaf"
+                                       "split should contains child at least 2 child splits.");
     curr = curr->children[0].get();
   }
   return curr;
@@ -428,6 +490,7 @@ Split* Tab::GetActive() const {
 void Tab::SetActive(Split* split) {
   ASSERT(split != nullptr, OOPS);
   ASSERT(split->GetTab() == this, OOPS);
+  ASSERT(split->GetType() == Split::Type::LEAF, OOPS);
   active = split;
 }
 
@@ -502,6 +565,27 @@ void Tabs::AddTab(std::unique_ptr<Tab> tab) {
   tab->SetTabs(this);
   active_tab_index = tabs.size();
   tabs.push_back(std::move(tab));
+}
+
+
+void Tabs::RemoveTab(const Tab* tab) {
+
+  int index = -1;
+  for (int i = 0; i < tabs.size(); i++) {
+    if (tabs[i].get() == tab) {
+      index = i;
+      break;
+    }
+  }
+
+  // Tab is not a child tab (maybe assert here?).
+  if (index == -1) return;
+  tabs.erase(tabs.begin() + index);
+
+  // If the tabs.size() is 0, active_tabs will become -1 (nothing is active).
+  if (index <= active_tab_index) {
+    active_tab_index--;
+  }
 }
 
 
@@ -1032,6 +1116,48 @@ FileTreeWindow* Ui::GetFileTreeWindow() const {
 }
 
 
+bool Ui::CloseWindow(Window* window) {
+  if (!window) return false;
+
+  Split* split = window->GetSplit();
+  ASSERT(split != nullptr, OOPS);
+  ASSERT(split->GetWindow() == window, OOPS);
+
+  Tab* tab = split->GetTab();
+  Split* parent = split->GetParent();
+
+  // if parent is nullptr, it's the root, remove the entire tab.
+  if (parent == nullptr) {
+    ASSERT(tab && tab->GetRoot() == split, OOPS);
+    ASSERT(tab->GetTabs() != nullptr, OOPS);
+    // This will delete the tab and do the cleanups and change the active tab (if has any).
+    tab->GetTabs()->RemoveTab(tab);
+    return true;
+  }
+
+  // Since this split is the current active split, we need to change the active split.
+  Split::Iterator it(split);
+  ASSERT(it.Get() != nullptr, OOPS);
+  it.Next(); // Increment the iterator.
+
+  // Before removing we set the active split to the next split.
+  Split* next = it.Get();
+  if (next == nullptr) {
+    it = Split::Iterator(tab->GetRoot());
+    next = it.Get();
+  }
+  ASSERT(next != nullptr && next != split, OOPS);
+  tab->SetActive(next); // Change the next active split.
+
+  // Now remove the split.
+  int index = split->GetIndexInParent();
+  parent->RemoveChild(index);
+
+  return true;
+
+}
+
+
 bool Ui::Action_PopupFilesFinder(ActionExecutor* ae) {
   Ui* self = (Ui*) ae;
   if (self->popup != nullptr) return false;
@@ -1055,10 +1181,11 @@ bool Ui::Action_ToggleFiletree(ActionExecutor* ae) {
   if (win == nullptr) {
     std::unique_ptr<FileTreeWindow> filetree = std::make_unique<FileTreeWindow>(self->tree);
     self->AddTab(Tab::FromWindow(std::move(filetree)), -1);
-  } else {
-    TODO; // Implement closing splits properly before implementing this.
+    self->active = &self->left;
+    return true;
   }
-  return true;
+
+  return self->CloseWindow(win);
 }
 
 
@@ -1114,3 +1241,11 @@ bool Ui::Action_Hsplit(ActionExecutor* ae) {
   if (!tab) return false;
   return tab->Hsplit();
 }
+
+
+bool Ui::Action_CloseWindow(ActionExecutor* ae) {
+  Ui* self = (Ui*) ae;
+  Window* window = self->GetActiveWindow();
+  return self->CloseWindow(window);
+}
+
