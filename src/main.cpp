@@ -13,7 +13,6 @@
 // loading resources from file (mainly theme and treesitter language).
 //
 // Now:
-//  close splits/tabs.
 //  Theme (ui) is a huge todo.
 //  autocompletion popup handle properly + (consider which key popup, etc).
 //  Window pos/area.

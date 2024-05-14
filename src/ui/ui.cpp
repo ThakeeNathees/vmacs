@@ -583,7 +583,9 @@ void Tabs::RemoveTab(const Tab* tab) {
   tabs.erase(tabs.begin() + index);
 
   // If the tabs.size() is 0, active_tabs will become -1 (nothing is active).
-  if (index <= active_tab_index) {
+  if (index == active_tab_index && index == 0) {
+    active_tab_index = tabs.size() - 1;
+  } else if (index <= active_tab_index) {
     active_tab_index--;
   }
 }
@@ -1185,7 +1187,9 @@ bool Ui::Action_ToggleFiletree(ActionExecutor* ae) {
     return true;
   }
 
-  return self->CloseWindow(win);
+  bool ret = self->CloseWindow(win);
+  self->active = &self->documents;
+  return ret;
 }
 
 
