@@ -180,7 +180,8 @@ bool FilesFinder::SelectItem(const std::string& item) {
 
   Coord coord(-1, -1); // Invalid coord will jump to the current cursor of that document.
   Editor* e = Editor::Singleton().get();
-  return ((Ui*)e->GetUi())->JumpToDocument(path, coord);
+  Ui* ui = GETUI();
+  return ui->JumpToDocument(path, coord);
 }
 
 
@@ -267,5 +268,6 @@ bool LiveGrep::SelectItem(const std::string& item) {
 
 
   Editor* e = Editor::Singleton().get();
-  return ((Ui*)e->GetUi())->JumpToDocument(path, coord);
+  Ui* ui = GETUI();
+  return ui->JumpToDocument(path, coord);
 }

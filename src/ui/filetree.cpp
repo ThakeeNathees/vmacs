@@ -281,5 +281,6 @@ bool FileTreeWindow::Action_SelectPath(FileTreeWindow* self) {
 
   // If we reached here, the selection is a regular file.
   Editor* e = Editor::Singleton().get();
-  return ((Ui*)e->GetUi())->JumpToDocument(self->cursor->path, {0, 0});
+  Ui* ui = static_cast<Ui*>(e->GetUi());
+  return ui->JumpToDocument(self->cursor->path, {0, 0});
 }

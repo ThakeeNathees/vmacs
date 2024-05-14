@@ -13,6 +13,7 @@
 #include "editor/editor.hpp"
 #include "finder.hpp"
 
+#define GETUI() static_cast<Ui*>(Editor::Singleton()->GetUi());
 
 // -----------------------------------------------------------------------------
 // Window.

@@ -307,7 +307,7 @@ private:
 
 private:
   static int StdinCallback(void* user_data, int fd, bool* pending) {
-    IpcPosix* self = (IpcPosix*) user_data;
+    IpcPosix* self = static_cast<IpcPosix*>(user_data);
 
     int count = 0;
     while (!self->queue_to_stdin.Empty()) {
@@ -330,21 +330,21 @@ private:
 
 
   static void StdoutCallback(void* user_data, const char* buff, size_t length) {
-    IpcPosix* self = (IpcPosix*) user_data;
+    IpcPosix* self = static_cast<IpcPosix*>(user_data);
     FuncStdoutCallback cb = self->opt.stdout_cb;
     if (cb) cb(self->opt.user_data, buff, length);
   }
 
 
   static void StderrCallback(void* user_data, const char* buff, size_t length) {
-    IpcPosix* self = (IpcPosix*) user_data;
+    IpcPosix* self = static_cast<IpcPosix*>(user_data);
     FuncStdoutCallback cb = self->opt.stderr_cb;
     if (cb) cb(self->opt.user_data, buff, length);
   }
 
 
   static void ExitCallback(void* user_data, int exit_type, int exit_code) {
-    IpcPosix* self = (IpcPosix*) user_data;
+    IpcPosix* self = static_cast<IpcPosix*>(user_data);
     FuncExitCallback cb = self->opt.exit_cb;
     if (cb) cb(self->opt.user_data, exit_code);
   }

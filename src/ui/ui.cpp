@@ -49,7 +49,7 @@ void Window::SetActive(bool active) {
 
 
 bool Window::IsActive() const {
-  Ui* ui = (Ui*)Editor::Singleton()->GetUi();
+  Ui* ui = GETUI();
   ASSERT(ui != nullptr, OOPS);
   return ui->GetActiveWindow() == this;
 }
@@ -439,7 +439,7 @@ std::string Tab::GetName() const {
   Window* window = active->GetWindow();
   ASSERT(window != nullptr, OOPS);
   if (window->GetType() == Window::Type::DOCUMENT) {
-    DocumentWindow* docwin = (DocumentWindow*) window;
+    DocumentWindow* docwin = static_cast<DocumentWindow*>(window);
     std::shared_ptr<Document> document = docwin->GetDocument();
     if (document == nullptr) return "";
     return document->GetPath().FileName();
@@ -1085,7 +1085,7 @@ DocumentWindow* Ui::GetDocumentWindow(const Path& path) const {
     while (it.Get()) {
       Window* window = it.Get()->GetWindow();
       if (window->GetType() == Window::Type::DOCUMENT) {
-        DocumentWindow* docwin = (DocumentWindow*) window;
+        DocumentWindow* docwin = static_cast<DocumentWindow*>(window);
         if (docwin->GetDocument()->GetPath() == path) return docwin;
       }
       it.Next();
@@ -1107,7 +1107,7 @@ FileTreeWindow* Ui::GetFileTreeWindow() const {
       while (it.Get()) {
         Window* window = it.Get()->GetWindow();
         if (window->GetType() == Window::Type::FILETREE) {
-          return (FileTreeWindow*) window;
+          return static_cast<FileTreeWindow*>(window);
         }
         it.Next();
       }
@@ -1161,7 +1161,7 @@ bool Ui::CloseWindow(Window* window) {
 
 
 bool Ui::Action_PopupFilesFinder(ActionExecutor* ae) {
-  Ui* self = (Ui*) ae;
+  Ui* self = static_cast<Ui*>(ae);
   if (self->popup != nullptr) return false;
   self->popup = std::make_unique<FindWindow>(std::make_unique<FilesFinder>());
   return true;
@@ -1169,7 +1169,7 @@ bool Ui::Action_PopupFilesFinder(ActionExecutor* ae) {
 
 
 bool Ui::Action_PopupLiveGrep(ActionExecutor* ae) {
-  Ui* self = (Ui*) ae;
+  Ui* self = static_cast<Ui*>(ae);
   if (self->popup != nullptr) return false;
   self->popup = std::make_unique<FindWindow>(std::make_unique<LiveGrep>());
   return true;
@@ -1177,7 +1177,7 @@ bool Ui::Action_PopupLiveGrep(ActionExecutor* ae) {
 
 
 bool Ui::Action_ToggleFiletree(ActionExecutor* ae) {
-  Ui* self = (Ui*) ae;
+  Ui* self = static_cast<Ui*>(ae);
   FileTreeWindow* win = self->GetFileTreeWindow();
 
   if (win == nullptr) {
@@ -1194,7 +1194,7 @@ bool Ui::Action_ToggleFiletree(ActionExecutor* ae) {
 
 
 bool Ui::Action_NewDocument(ActionExecutor* ae) {
-  Ui* self = (Ui*) ae;
+  Ui* self = static_cast<Ui*>(ae);
   // FIXME: Do I need to register the document at the editor registry, In that
   // case what path should i use?
   std::shared_ptr<Document> document = std::make_shared<Document>();
@@ -1207,21 +1207,21 @@ bool Ui::Action_NewDocument(ActionExecutor* ae) {
 
 
 bool Ui::Action_TabNext(ActionExecutor* ae) {
-  Ui* self = (Ui*) ae;
+  Ui* self = static_cast<Ui*>(ae);
   if (!self->active) return false;
   return self->active->Action_TabNext(self->active);
 }
 
 
 bool Ui::Action_TabPrev(ActionExecutor* ae) {
-  Ui* self = (Ui*) ae;
+  Ui* self = static_cast<Ui*>(ae);
   if (!self->active) return false;
   return self->active->Action_TabPrev(self->active);
 }
 
 
 bool Ui::Action_NextWindow(ActionExecutor* ae) {
-  Ui* self = (Ui*) ae;
+  Ui* self = static_cast<Ui*>(ae);
   if (!self->active) return false;
   Tab* tab = self->active->GetActive();
   if (!tab) return false;
@@ -1230,7 +1230,7 @@ bool Ui::Action_NextWindow(ActionExecutor* ae) {
 
 
 bool Ui::Action_Vsplit(ActionExecutor* ae) {
-  Ui* self = (Ui*) ae;
+  Ui* self = static_cast<Ui*>(ae);
   if (!self->active) return false;
   Tab* tab = self->active->GetActive();
   if (!tab) return false;
@@ -1239,7 +1239,7 @@ bool Ui::Action_Vsplit(ActionExecutor* ae) {
 
 
 bool Ui::Action_Hsplit(ActionExecutor* ae) {
-  Ui* self = (Ui*) ae;
+  Ui* self = static_cast<Ui*>(ae);
   if (!self->active) return false;
   Tab* tab = self->active->GetActive();
   if (!tab) return false;
@@ -1248,7 +1248,7 @@ bool Ui::Action_Hsplit(ActionExecutor* ae) {
 
 
 bool Ui::Action_CloseWindow(ActionExecutor* ae) {
-  Ui* self = (Ui*) ae;
+  Ui* self = static_cast<Ui*>(ae);
   Window* window = self->GetActiveWindow();
   return self->CloseWindow(window);
 }

@@ -539,7 +539,7 @@ bool LspClient::JsonToCompletionItem(CompletionItem* item, const Json& json) {
 
 void LspClient::StdoutCallback(void* user_data, const char* buff, size_t length) {
 
-  LspClient* self = (LspClient*) user_data;
+  LspClient* self = static_cast<LspClient*>(user_data);
   std::string_view data(buff, length);
 
   do {
