@@ -99,7 +99,6 @@ void Window::OnFocusChanged(bool focus) {}
 Split* Split::InsertChild(int index, std::unique_ptr<Split> child) {
   ASSERT(index >= 0 && index <= children.size(), OOPS);
   child->parent = this;
-  child->tab = tab;
   children.insert(children.begin() + index, std::move(child));
   return children[index].get();
 }
@@ -178,6 +177,9 @@ void Split::RemoveChild(int index) {
   // of that child.
   Split* child = children[0].get();
 
+  Ui* ui = GETUI(); ASSERT(ui != nullptr, OOPS);
+  Tab* tab = ui->GetSplitTab(this); ASSERT(tab, OOPS);
+
   this->type = child->type;
   if (tab->GetActiveSplit() == child) {
     tab->SetActiveSplit(this);
@@ -242,21 +244,31 @@ Split* Split::GetParent() const {
 }
 
 
-void Split::SetTab(Tab* tab) {
-  this->tab = tab;
-  for (std::unique_ptr<Split>& child: children) {
-    child->SetTab(tab);
+Split* Split::GetRoot() {
+  Split* curr = this;
+  while (curr) {
+    if (curr->parent == nullptr) return curr;
+    curr = curr->parent;
   }
+  UNREACHABLE();
+  return nullptr;
 }
+
+
+const Split* Split::GetRoot() const {
+  const Split* curr = this;
+  while (curr) {
+    if (curr->parent == nullptr) return curr;
+    curr = curr->parent;
+  }
+  UNREACHABLE();
+  return nullptr;
+}
+
 
 
 Split::Type Split::GetType() const {
   return type;
-}
-
-
-Tab* Split::GetTab() const {
-  return tab;
 }
 
 
@@ -396,8 +408,6 @@ Tab::Tab(std::unique_ptr<Split> root_) : root(std::move(root_)) {
   ASSERT(active != nullptr, OOPS);
   ASSERT(active->GetType() == Split::Type::LEAF, OOPS);
 
-  root->SetTab(this);
-
   Window* window = this->active->GetWindow();
   ASSERT(window != nullptr, "A split with un-initialized window did you forget to set one?");
   window->SetActive(true);
@@ -458,7 +468,7 @@ Split* Tab::GetActiveSplit() const {
 
 void Tab::SetActiveSplit(Split* split) {
   ASSERT(split != nullptr, OOPS);
-  ASSERT(split->GetTab() == this, OOPS);
+  ASSERT(split->GetRoot() == GetRoot(), OOPS);
   ASSERT(split->GetType() == Split::Type::LEAF, OOPS);
   active = split;
 }
@@ -533,7 +543,6 @@ bool Tab::Hsplit() {
 KeyTree Ui::keytree; // Static memeber definition.
 
 Ui::Ui() : cursor(&Ui::keytree) {
-  tree = std::make_shared<FileTree>(Path("."));
 }
 
 
@@ -848,16 +857,16 @@ bool Ui::JumpToDocument(const Path& path, Coord coord) {
   std::shared_ptr<Document> doc = e->OpenDocument(path);
   if (doc == nullptr) return false;
 
-  // TODO: Implement tab from window and call it here.
   std::unique_ptr<DocumentWindow> docwin = std::make_unique<DocumentWindow>(doc);
-  DocumentWindow* ptr_docwin = docwin.get();  // Needed to set the view location.
+  DocumentWindow* pdocwin = docwin.get();  // Needed to set the view location.
+
   std::unique_ptr<Tab> tab = Tab::FromWindow(std::move(docwin));
   AddTab(std::move(tab));
 
   // We call this here since otherwise the pos/area of the window didn't updated.
   // which is needed to set the view of the coordinate.
-  SetWindowActive(ptr_docwin);
-  ptr_docwin->JumpTo(coord);
+  SetWindowActive(pdocwin);
+  pdocwin->JumpTo(coord);
 
   return true;
 }
@@ -905,9 +914,8 @@ Window* Ui::GetWindowAt(Position pos) const {
   // It's possible for the active tab to be null, if we're at the wellcome screen.
   const Tab* tab = GetActiveTab();
   if (tab == nullptr) return nullptr;
-  Split* root = tab->GetRoot();
-  ASSERT(root != nullptr, OOPS);
-  return root->GetWindowAt(pos);
+  ASSERT(tab->GetRoot() != nullptr, OOPS);
+  return tab->GetRoot()->GetWindowAt(pos);
 }
 
 
@@ -921,6 +929,15 @@ Split* Ui::GetWindowSplit(const Window* window) const {
       }
       it.Next();
     }
+  }
+  return nullptr;
+}
+
+
+Tab* Ui::GetSplitTab(const Split* split) const {
+  const Split* root = split->GetRoot();
+  for (auto& tab : tabs) {
+    if (tab->GetRoot() == root) return tab.get();
   }
   return nullptr;
 }
@@ -946,14 +963,16 @@ void Ui::SetWindowActive(Window* window) {
 
   Split* split = GetWindowSplit(window);
   ASSERT(split != nullptr, OOPS);
-  ASSERT(split->GetTab() != nullptr, OOPS); // FIXME(now) : Remove this line.
+
+  Tab* tab = GetSplitTab(split);
+  ASSERT(tab != nullptr, OOPS);
 
   Window* last_active = GetActiveWindow();
   if (last_active) last_active->SetActive(false); // This will trigger the focus events.
 
   for (int i = 0; i < tabs.size(); i++) {
     Tab* child = tabs[i].get();
-    if (child == split->GetTab()) {
+    if (child == tab) {
       active_tab_index = i;
       child->SetActiveSplit(split);
       window->SetActive(true);
@@ -990,7 +1009,7 @@ bool Ui::CloseWindow(Window* window) {
   ASSERT(split != nullptr, OOPS);
   ASSERT(split->GetWindow() == window, OOPS);
 
-  Tab* tab = split->GetTab();
+  Tab* tab = GetSplitTab(split);
   Split* parent = split->GetParent();
 
   // if parent is nullptr, it's the root, remove the entire tab.
@@ -1020,7 +1039,6 @@ bool Ui::CloseWindow(Window* window) {
   parent->RemoveChild(index);
 
   return true;
-
 }
 
 

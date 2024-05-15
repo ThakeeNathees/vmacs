@@ -20,15 +20,6 @@
 // -----------------------------------------------------------------------------
 
 
-class Split;
-class Tab;
-class Ui;
-class DocumentWindow;
-class FindWindow;
-class FileTree;
-class FileTreeWindow;
-
-
 // Note that since Window is a subtype of event handler. And HandleEvent() is
 // already defined.
 class Window : public ActionExecutor {
@@ -40,7 +31,6 @@ public:
   enum class Type {
     DOCUMENT,
     FINDER,
-    FILETREE,
     OTHER,
   };
 
@@ -147,12 +137,9 @@ public:
   const Window* GetWindow() const;
 
   Split* GetParent() const;
-  Tab* GetTab() const;
 
-  // Set the tab of this split and all of it's children. Note that since we can
-  // create the splits before adding it to a tab, we need to set the tab recursively
-  // for all the splits in the tree here.
-  void SetTab(Tab* tab);
+  const Split* GetRoot() const;
+  Split* GetRoot();
 
   // Returns an iterater which iterates on the leaf nodes.
   Iterator Iterate();
@@ -166,7 +153,6 @@ private:
   // TODO: There is no size (w, h) for the split and will take equally at the
   // moment, fix it.
 
-  Tab* tab = nullptr;      // The tab it belongs to.
   Split* parent = nullptr; // If parent is nullptr, its the root of the tab.
   std::vector<std::unique_ptr<Split>> children;
 
@@ -235,6 +221,8 @@ private:
 // -----------------------------------------------------------------------------
 
 
+class DocumentWindow;
+
 class Ui : public IUi, public ActionExecutor {
   DEFINE_GET_CLASS_NAME(Ui);
 
@@ -253,7 +241,10 @@ public:
   void AddTab(std::unique_ptr<Tab> tab);
   bool JumpToDocument(const Path& path, Coord coord); // Returns true on success.
 
-  // FIXME: Try making these methods private.
+  // Returns the owner of the bellow things.
+  Split* GetWindowSplit(const Window* window) const;
+  Tab* GetSplitTab(const Split* split) const;
+
   Window* GetActiveWindow() const;
   void SetWindowActive(Window* window);
 
@@ -268,7 +259,6 @@ private:
   std::vector<std::unique_ptr<Tab>> tabs;
 
   std::unique_ptr<Window> popup;
-  std::shared_ptr<FileTree> tree;
 
   // FIXME(grep): This is temproary.
   std::string info_bar_text;
@@ -277,16 +267,11 @@ private:
 
   Tab* GetActiveTab() const;
 
-  DocumentWindow* GetDocumentWindow(const Path& path) const;
   Window* GetWindowAt(Position pos) const;
-  Split* GetWindowSplit(const Window* window) const;
+  DocumentWindow* GetDocumentWindow(const Path& path) const;
 
   void RemoveTab(const Tab* tab);
   bool CloseWindow(Window* window);
-
-  // FIXME(now): Remove this.
-  // Returns if any filetree window available, search from left and right tabs.
-  FileTreeWindow* GetFileTreeWindow() const;
 
   void DrawHomeScreen(FrameBuffer& buff, Position pos, Area area);
   void DrawPromptBar(FrameBuffer& buff); // Will draw at the bottom line.
@@ -461,68 +446,3 @@ public: // Actions.
   static bool Action_Close(FindWindow* self);
 };
 
-
-// -----------------------------------------------------------------------------
-// Find Window.
-// -----------------------------------------------------------------------------
-
-class FileTree {
-public:
-
-  // The path should be a directory path where it'll be the root path.
-  FileTree(const Path& path);
-
-  struct Item {
-    // The path of the item.
-    Path path;
-
-    // If it's a directory and expanded in the ui, we'll set this to true.
-    bool expand = false;
-
-    // The pointer reference to the parent. Nullptr if it's root.
-    Item* parent = nullptr;
-
-    // If it's a directory the bellow list will be the child items.
-    std::vector<std::unique_ptr<Item>> items;
-
-    // If it's incomplete we need to load the items from the system.
-    bool is_incomplete = true;
-
-    void LoadItems();
-    Item* GetNextSibling() const; // nullptr if there isn't any.
-    int GetIndexInParent() const; // returns -1 if root.
-  };
-
-  Item* GetRoot();
-
-private: // FIXME: make it private.
-  std::unique_ptr<Item> root;
-};
-
-
-class FileTreeWindow : public Window {
-  DEFINE_GET_CLASS_NAME(FileTreeWindow);
-
-public:
-  FileTreeWindow(std::shared_ptr<FileTree> tree);
-
-  Type GetType() const override;
-
-private:
-  std::shared_ptr<FileTree> tree;
-  FileTree::Item* cursor = nullptr; // The current cursor position.
-
-private:
-  bool _HandleEvent(const Event& event) override;
-  void _Update() override;
-  void _Draw(FrameBuffer& buff, Position pos, Area area) override;
-
-  // Draw the directory and returns the number of lines (height) it drew.
-  int DrawDirItems(FileTree::Item* dir, FrameBuffer& buff, Position pos, Area area, int indent);
-
-public:
-  static bool Action_CursorUp(FileTreeWindow* self);
-  static bool Action_CursorDown(FileTreeWindow* self);
-  static bool Action_GotoParent(FileTreeWindow* self);
-  static bool Action_SelectPath(FileTreeWindow* self);
-};

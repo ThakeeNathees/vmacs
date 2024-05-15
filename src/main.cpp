@@ -532,20 +532,20 @@ int main(int argc, char** argv) {
   Ui::keytree.RegisterBinding(name, "<enter>", "accept_selection");
   Ui::keytree.RegisterBinding(name, "<esc>", "close");
 
-  name = FileTreeWindow::ClassName();
+  // name = FileTreeWindow::ClassName();
 
-  Ui::keytree.RegisterAction(name, "cursor_up", (FuncAction) FileTreeWindow::Action_CursorUp);
-  Ui::keytree.RegisterAction(name, "cursor_down", (FuncAction) FileTreeWindow::Action_CursorDown);
-  Ui::keytree.RegisterAction(name, "select", (FuncAction) FileTreeWindow::Action_SelectPath);
-  Ui::keytree.RegisterAction(name, "goto_parent", (FuncAction) FileTreeWindow::Action_GotoParent);
+  // Ui::keytree.RegisterAction(name, "cursor_up", (FuncAction) FileTreeWindow::Action_CursorUp);
+  // Ui::keytree.RegisterAction(name, "cursor_down", (FuncAction) FileTreeWindow::Action_CursorDown);
+  // Ui::keytree.RegisterAction(name, "select", (FuncAction) FileTreeWindow::Action_SelectPath);
+  // Ui::keytree.RegisterAction(name, "goto_parent", (FuncAction) FileTreeWindow::Action_GotoParent);
 
-  Ui::keytree.RegisterBinding(name, "<up>",    "cursor_up");
-  Ui::keytree.RegisterBinding(name, "<down>",  "cursor_down");
-  Ui::keytree.RegisterBinding(name, "k",       "cursor_up");
-  Ui::keytree.RegisterBinding(name, "j",       "cursor_down");
-  Ui::keytree.RegisterBinding(name, "<enter>", "select");
-  Ui::keytree.RegisterBinding(name, "o",       "select");
-  Ui::keytree.RegisterBinding(name, "p",       "goto_parent");
+  // Ui::keytree.RegisterBinding(name, "<up>",    "cursor_up");
+  // Ui::keytree.RegisterBinding(name, "<down>",  "cursor_down");
+  // Ui::keytree.RegisterBinding(name, "k",       "cursor_up");
+  // Ui::keytree.RegisterBinding(name, "j",       "cursor_down");
+  // Ui::keytree.RegisterBinding(name, "<enter>", "select");
+  // Ui::keytree.RegisterBinding(name, "o",       "select");
+  // Ui::keytree.RegisterBinding(name, "p",       "goto_parent");
 
 
   // For testing.
