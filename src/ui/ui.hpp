@@ -349,8 +349,10 @@ private:
   MultiCursor cursors_backup;
 
   // The coordinate where we start drawing the buffer from, this will change
-  // after h-scroll and v-scroll.
+  // after h-scroll and v-scroll. and the area is the are of the buffer excluding
+  // the line number and scrollbars (used to ensure the cursor on view of the buffer).
   Position view_start = {0, 0};
+  Area buffer_area = {0, 0};
 
   // We set it to the time it was blinked last time and
   // if (time_now - last_blink > blink_period) we blink again.
@@ -368,6 +370,7 @@ private:
   void EnsureCursorOnView();
 
   void DrawBuffer(FrameBuffer& buff, Position pos, Area area);
+  int DrawLineNums(FrameBuffer& buff, Position pos, Area area);
 
   // Draw the autocompletion list and signature help on a overlay buffer and push
   // it to the ui's overlay queue. So it' doesn't need the frame buffer and an

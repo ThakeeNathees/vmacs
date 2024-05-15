@@ -117,14 +117,13 @@ void Syntax::CacheHighlightSlices(const TSQuery* query, const Buffer* buffer) {
 }
 
 
-// FIXME: This function is incomplete and will crash if a TODO; statement is met.
 // The logic is stolen from: https://github.com/tree-sitter/tree-sitter/blob/a0cf0a7104f4a64eac04bd916297524db83d09c0/lib/binding_web/binding.js#L844
 static bool TreeSitterCheckPredicate(const char* source, const TSQuery* query, TSQueryMatch match) {
 
   // Incase of error we'll return true ignoring the predicate.
-#define return_error return true
-#define get_str(id) ts_query_string_value_for_id(query, (id), &length)
-#define get_capture(id) ts_query_capture_name_for_id(query, (id), &length)
+  #define return_error return true
+  #define get_str(id) ts_query_string_value_for_id(query, (id), &length)
+  #define get_capture(id) ts_query_capture_name_for_id(query, (id), &length)
 
   uint32_t step_count;
   const TSQueryPredicateStep* steps = ts_query_predicates_for_pattern(query, match.pattern_index, &step_count);
@@ -223,23 +222,23 @@ static bool TreeSitterCheckPredicate(const char* source, const TSQuery* query, T
 
     } break;
 
-// Not supporting these predicates, If needed someone contribute.
-//    case "set!"_hash:
-//    break;
-//
-//    case "is?"_hash: {
-//      [[fallthrough]];
-//
-//    case "is-not?"_hash:
-//    } break;
+    // Not supporting these predicates, If needed someone contribute.
+    //  case "set!"_hash:
+    //  break;
+    //
+    //  case "is?"_hash: {
+    //    [[fallthrough]];
+    //
+    //  case "is-not?"_hash:
+    //  } break;
 
   }
 
   return true;
 
-#undef get_capture
-#undef get_str
-#undef return_error
+  #undef get_capture
+  #undef get_str
+  #undef return_error
 }
 
 
@@ -254,7 +253,7 @@ void Syntax::CacheBufferStyle(const Theme* theme, const Buffer* buffer) {
   size_t buffer_size = buffer->GetSize();
   highlights.assign(
     buffer_size,
-    theme->GetStyle("ui.text"));
+    theme->GetStyle("ui.text")); // FIXME:
 
   for (auto it = slices.begin(); it != slices.end(); ++it) {
     Style style = theme->GetStyle(it->capture);

@@ -9,11 +9,17 @@
 
 
 // TODO:
-// The goal should be all pack together in as a single binary but also supports
-// loading resources from file (mainly theme and treesitter language).
+//
+//    TEST IN WINDOWS AND LINUX
 //
 // Now:
+//  Ensure cursor on view is not properly work since the line number takes
+//  some area, properly implement it.
+//
+//  -------------------------
 //  Theme (ui) is a huge todo.
+//  -------------------------
+//
 //  Editor::Error(), etc.
 //  Window pos/area.
 //
@@ -154,8 +160,6 @@
 //   ipc timeout value hardcoded fix.
 //   Maybe rename.
 //
-
-
 
 
 // FIXME: remove this.

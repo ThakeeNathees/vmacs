@@ -116,22 +116,20 @@ void DocumentWindow::EnsureCursorOnView() {
   int row = cursor.GetCoord().line;
   int col = document->buffer->IndexToColumn(cursor.GetIndex());
 
-  const Area& area = GetArea();
-
   int scrolloff = GetConfig().scrolloff;
   scrolloff = MAX(0, scrolloff);
-  scrolloff = CLAMP(0, scrolloff, area.height / 2);
+  scrolloff = CLAMP(0, scrolloff, buffer_area.height / 2);
 
   if (col <= view_start.col) {
     view_start.col = col;
-  } else if (view_start.col + area.width <= col) {
-    view_start.col = col - MAX(0, area.width - 1);
+  } else if (view_start.col + buffer_area.width <= col) {
+    view_start.col = col - MAX(0, buffer_area.width - 1);
   }
 
   if ((row - scrolloff) <= view_start.row) {
     view_start.row = MAX(0, row - scrolloff);
-  } else if (view_start.row + area.height <= (row + scrolloff)) {
-    view_start.row = row + scrolloff - MAX(0, area.height - 1);
+  } else if (view_start.row + buffer_area.height <= (row + scrolloff)) {
+    view_start.row = row + scrolloff - MAX(0, buffer_area.height - 1);
   }
 }
 
@@ -164,32 +162,66 @@ void DocumentWindow::JumpTo(const Coord& coord) {
 
 
 void DocumentWindow::_Draw(FrameBuffer& buff, Position pos, Area area) {
+
+  if (Editor::GetConfig().show_linenum) {
+    int width = DrawLineNums(buff, pos, area);
+    pos.x      += width;
+    area.width -= width;
+  }
+
   DrawBuffer(buff, pos, area);
   if (IsActive()) DrawAutoCompletions(pos);
 }
 
 
-void DocumentWindow::CheckCellStatusForDrawing(int index, bool* in_cursor, bool* in_selection) {
-  ASSERT(in_cursor != nullptr, OOPS);
-  ASSERT(in_selection != nullptr, OOPS);
-  *in_cursor = false;
-  *in_selection = false;
+int DocumentWindow::DrawLineNums(FrameBuffer& buff, Position pos, Area area) {
 
-  // If it's not active we don't draw the cursor or selection.
-  if (!IsActive()) return;
+  // TODO: Draw selected line in a different color.
 
-  for (const Cursor& cursor : document->cursors.Get()) {
-    if (index == cursor.GetIndex()) *in_cursor = true;
-    Slice selection = cursor.GetSelection();
-    if (selection.start <= index && index < selection.end) {
-      *in_selection = true;
+  const Theme& theme = Editor::GetTheme();
+  const Icons& icons = Editor::GetIcons();
+  const Config& config = Editor::GetConfig();
+
+  // FIXME: Move this to themes.
+  // --------------------------------------------------------------------------
+  // TODO: Use ui.cursor for secondary cursor same as selection.
+  Style style_text       = theme.GetStyle("ui.text");
+  Style style_bg         = theme.GetStyle("ui.background");
+  Style style_linenr     = theme.GetStyle("ui.linenr");
+  Style style            = style_bg.Apply(style_text).Apply(style_linenr);
+  // --------------------------------------------------------------------------
+
+  int line_count = document->buffer->GetLineCount(); // Total lines in the buffer.
+
+  // Calculate the width of the line gutter.
+  const int end_line = MIN(view_start.row + area.height, line_count);
+  const int margin_right = 1; // Leaving 1 space right for the buffer.
+  const int width = MAX(3, std::to_string(end_line).size()) + margin_right;
+
+  // y is the current relative y coordinate from pos we're drawing.
+  for (int y = 0; y < area.height; y++) {
+
+    // Check if we're done writing the lines (buffer end reached).
+    int line_index = view_start.row + y;
+    if (line_index >= line_count) break;
+
+    // Add spacing before the number to make all the numbers align right.
+    std::string linenr = std::to_string(line_index+1);
+    if (linenr.size() < (width - margin_right)) {
+      linenr = std::string(width - margin_right - linenr.size(), ' ') + linenr;
     }
+
+    DrawTextLine(buff, linenr.c_str(), Position(pos.x, pos.y+y), (width-margin_right), style, icons, true);
   }
+
+  return width;
 }
 
 
 void DocumentWindow::DrawBuffer(FrameBuffer& buff, Position pos, Area area) {
   ASSERT(this->document != nullptr, OOPS);
+
+  buffer_area = area;
 
   const Theme& theme = Editor::GetTheme();
   const Icons& icons = Editor::GetIcons();
@@ -425,7 +457,7 @@ void DocumentWindow::DrawAutoCompletions(Position pos) {
   // ---------------------------------------------------------------------------
 
   drawpos = Position(pos.x + menu_start.x, pos.y + menu_start.y);
-  drawpos.row += (drawing_bellow_cursor) ? 1 : (-count_dispaynig_items);
+  drawpos.y += (drawing_bellow_cursor) ? 1 : (-count_dispaynig_items);
 
   // Adding 4 because  1 for icons, 2 for padding at both edge, 1 for spacing
   // between icon and the label.
@@ -522,6 +554,28 @@ void DocumentWindow::DrawAutoCompletions(Position pos) {
 
   ui->PushOverlay(drawpos, std::move(buff_label));
 }
+
+
+void DocumentWindow::CheckCellStatusForDrawing(int index, bool* in_cursor, bool* in_selection) {
+  ASSERT(in_cursor != nullptr, OOPS);
+  ASSERT(in_selection != nullptr, OOPS);
+  *in_cursor = false;
+  *in_selection = false;
+
+  // If it's not active we don't draw the cursor or selection.
+  if (!IsActive()) return;
+
+  for (const Cursor& cursor : document->cursors.Get()) {
+    if (index == cursor.GetIndex()) *in_cursor = true;
+    Slice selection = cursor.GetSelection();
+    if (selection.start <= index && index < selection.end) {
+      *in_selection = true;
+    }
+  }
+}
+
+
+
 
 // -----------------------------------------------------------------------------
 // Actions.
