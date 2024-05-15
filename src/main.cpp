@@ -426,7 +426,6 @@ int main(int argc, char** argv) {
   Ui::keytree.RegisterAction(name, "tab_prev", Ui::Action_TabPrev);
   Ui::keytree.RegisterAction(name, "vsplit", Ui::Action_Vsplit);
   Ui::keytree.RegisterAction(name, "hsplit", Ui::Action_Hsplit);
-  Ui::keytree.RegisterAction(name, "toggle_filetree", Ui::Action_ToggleFiletree);
   Ui::keytree.RegisterAction(name, "next_window", Ui::Action_NextWindow);
   Ui::keytree.RegisterAction(name, "close_window", Ui::Action_CloseWindow);
 
@@ -440,7 +439,6 @@ int main(int argc, char** argv) {
   Ui::keytree.RegisterBinding(name, "<C-w>v", "vsplit");
   Ui::keytree.RegisterBinding(name, "<C-w><C-h>", "hsplit");
   Ui::keytree.RegisterBinding(name, "<C-w>h", "hsplit");
-  Ui::keytree.RegisterBinding(name, "<C-f>", "toggle_filetree");
   Ui::keytree.RegisterBinding(name, "<C-w>w", "next_window");
   Ui::keytree.RegisterBinding(name, "<C-w>c", "close_window");
 

@@ -22,7 +22,6 @@
 
 class Split;
 class Tab;
-class Tabs;
 class Ui;
 class DocumentWindow;
 class FindWindow;
@@ -225,9 +224,6 @@ public:
   void Draw(FrameBuffer& buff, Position pos, Area area);
 
   Split* GetRoot() const;
-  Tabs* GetTabs() const;
-  void SetTabs(Tabs* tabs);
-
   Split* GetActive() const;
   void SetActive(Split* split);
 
@@ -239,7 +235,6 @@ public:
 
 private:
   std::unique_ptr<Split> root;
-  Tabs* tabs = nullptr; // The tabs container it belongs to.
 
   // Currently active leaf split in the split tree. Note that this is not the
   // overall active split in the Ui, since the ui can contain multiple tabs
@@ -254,36 +249,34 @@ private:
 
 
 // Simply a container for tabs.
-class Tabs {
-public:
+// class Tabs {
+// public:
 
-  // Add and remove tab.
-  void AddTab(std::unique_ptr<Tab> tab);
-  void RemoveTab(const Tab* tab);
+//   // Add and remove tab.
+//   void AddTab(std::unique_ptr<Tab> tab);
+//   void RemoveTab(const Tab* tab);
 
-  int Count() const;
-  Tab* Child(int index) const;
+//   int Count() const;
+//   Tab* Child(int index) const;
 
-  Tab* GetActive() const;
-  void SetActive(int index);
+//   Tab* GetActive() const;
+//   void SetActive(int index);
 
-  Window* GetWindowAt(Position pos) const;
+//   Window* GetWindowAt(Position pos) const;
 
-  bool HandleEvent(const Event& event);
-  void Update();
-  void Draw(FrameBuffer& buff, Position pos, Area area);
+//   bool HandleEvent(const Event& event);
+//   void Update();
+//   void Draw(FrameBuffer& buff, Position pos, Area area);
 
-private:
-  int active_tab_index = -1; // Index of the active tab.
-  std::vector<std::unique_ptr<Tab>> tabs;
+// private:
 
-private:
-  void DrawTabsBar(FrameBuffer& buff, Position pos, Area area);
+// private:
+//   void DrawTabsBar(FrameBuffer& buff, Position pos, Area area);
 
-public:
-  static bool Action_TabNext(Tabs* self);
-  static bool Action_TabPrev(Tabs* self);
-};
+// public:
+//   static bool Action_TabNext(Tabs* self);
+//   static bool Action_TabPrev(Tabs* self);
+// };
 
 
 // -----------------------------------------------------------------------------
@@ -306,12 +299,7 @@ public:
   void Warning(const std::string& error);
   void Error(const std::string& error);
 
-  // TODO: Since the layout is hardcoded, it has 3 containers (left, documents, right)
-  // we take an optional parameter container which should be either (-1, 0, +1)
-  // indicating which container to add the tab to. This is ugly and the layout
-  // should be dynamic. Fix it in the future.
-  void AddTab(std::unique_ptr<Tab> tab, int container=0);
-
+  void AddTab(std::unique_ptr<Tab> tab);
   bool JumpToDocument(const Path& path, Coord coord); // Returns true on success.
 
   // FIXME: Try making these methods private.
@@ -323,35 +311,21 @@ public:
 private:
   KeyTreeCursor cursor;
 
-  // The layout of the highlevel Ui is hardcoded into the bellow structure.
-  // Where every "box" is a Tabs structure.
-  //
-  //     ┌────────┐ ┌─────────────┐ ┌────────┐
-  //     │        │ │             │ │        │
-  //     │        │ │             │ │        │
-  //     │        │ │             │ │        │
-  //     │  Left  │ │  Documents  │ │ Right  │
-  //     │        │ │             │ │        │
-  //     │        │ │             │ │        │
-  //     │        │ │             │ │        │
-  //     └────────┘ └─────────────┘ └────────┘
-  //
-
-  Tabs left;
-  Tabs documents;
-  Tabs right;
+  // active_tab_index will always points to a tab in the tabs list bellow if it
+  // contains at least one element, otherwise -1.
+  int active_tab_index = -1;
+  std::vector<std::unique_ptr<Tab>> tabs;
 
   std::unique_ptr<Window> popup;
   std::shared_ptr<FileTree> tree;
-
-  // The currently active tabs container.
-  // Tabs* active = &documents;
-  Tabs* active = &left;
 
   // FIXME(grep): This is temproary.
   std::string info_bar_text;
 
 private:
+
+  Tab* GetActiveTab() const;
+  void RemoveTab(const Tab* tab);
 
   // Returns the window at the given position, used when a mouse event occured
   // at the given position and to pass the event to the window at that position.
@@ -369,6 +343,7 @@ private:
 
   void DrawHomeScreen(FrameBuffer& buff, Position pos, Area area);
   void DrawPromptBar(FrameBuffer& buff); // Will draw at the bottom line.
+  void DrawTabsBar(FrameBuffer& buff, Position pos, Area area);
 
 public: // Actions.
   // WARNING:
@@ -382,7 +357,6 @@ public: // Actions.
   // Unlike other child classes of event handers.
   static bool Action_PopupFilesFinder(ActionExecutor* self);
   static bool Action_PopupLiveGrep(ActionExecutor* self);
-  static bool Action_ToggleFiletree(ActionExecutor* self);
   static bool Action_NewDocument(ActionExecutor* self);
   static bool Action_TabNext(ActionExecutor* self);
   static bool Action_TabPrev(ActionExecutor* self);
