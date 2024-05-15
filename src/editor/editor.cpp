@@ -117,6 +117,11 @@ void Editor::SetFrontEnd(std::unique_ptr<IFrontEnd> frontend) {
 }
 
 
+Area Editor::GetDrawArea() const {
+  return Area(buff.width, buff.height);
+}
+
+
 void Editor::SetUi(std::unique_ptr<IUi> ui) {
   this->ui = std::move(ui);
 }
@@ -207,6 +212,20 @@ void Editor::EventLoop() {
       event_queue.Enqueue(event);
     }
   }
+}
+
+
+FrameBuffer Editor::NewFrameBuffer(Area area) {
+  FrameBuffer buff;
+
+  buff.cells.resize(area.width * area.height);
+  buff.width  = area.width;
+  buff.height = area.height;
+
+  // Clear the background.
+  Style style_bg = Editor::GetTheme().GetStyle("ui.background"); // FIXME:
+  DrawRectangleFill(buff, {0,0}, {buff.width, buff.height}, style_bg);
+  return buff;
 }
 
 

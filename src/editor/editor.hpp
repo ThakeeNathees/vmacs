@@ -38,10 +38,15 @@ public:
   static const Icons& GetIcons();
   static Config& GetConfig();
 
+  // Returns the frame buffer with the given area and clears the frame with the
+  // background color.
+  static FrameBuffer NewFrameBuffer(Area area);
+
   int MainLoop();
 
   void SetFrontEnd(std::unique_ptr<IFrontEnd> frontend);
 
+  Area GetDrawArea() const; // Returns the size of the frame buffer.
   void SetUi(std::unique_ptr<IUi> window);
   IUi* GetUi();
 

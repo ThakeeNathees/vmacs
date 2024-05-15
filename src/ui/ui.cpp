@@ -667,13 +667,13 @@ void Ui::DrawOverlays(FrameBuffer& buff) {
 
     // Adjust the width and height of the overlay according to the framebuffer.
     int width  = MIN(overlay.width, buff.width - pos.x);
-    int height = MAX(overlay.height, buff.height - pos.y);
+    int height = MIN(overlay.height, buff.height - pos.y);
 
     // I'm sure there is a better way to do this like memcpy, but not now.
     for (int y = 0; y < height; y++) {
       for (int x = 0; x < width; x++) {
         Cell& cell = BUFF_CELL(overlay, x, y);
-        BUFF_CELL(buff, (pos.x + x), (pos.y+y)) = cell;
+        BUFF_CELL(buff, (pos.x+x), (pos.y+y)) = cell;
       }
     }
 
@@ -852,6 +852,11 @@ void Ui::Error(const std::string& msg) {
 void Ui::AddTab(std::unique_ptr<Tab> tab) {
   active_tab_index = tabs.size();
   tabs.push_back(std::move(tab));
+}
+
+
+void Ui::PushOverlay(Position pos, FrameBuffer&& buff) {
+  overlays.push(std::make_pair(pos, buff));
 }
 
 

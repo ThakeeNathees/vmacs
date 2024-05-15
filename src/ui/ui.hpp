@@ -368,7 +368,11 @@ private:
   void EnsureCursorOnView();
 
   void DrawBuffer(FrameBuffer& buff, Position pos, Area area);
-  void DrawAutoCompletions(FrameBuffer& buff, Position pos, Area area);
+
+  // Draw the autocompletion list and signature help on a overlay buffer and push
+  // it to the ui's overlay queue. So it' doesn't need the frame buffer and an
+  // area.
+  void DrawAutoCompletions(Position pos);
 
   // Check the given index is within selection or inside the cursor and sets the pointers.
   // This is needed to set the background color of a cell and re-usable. Note that this

@@ -165,7 +165,7 @@ void DocumentWindow::JumpTo(const Coord& coord) {
 
 void DocumentWindow::_Draw(FrameBuffer& buff, Position pos, Area area) {
   DrawBuffer(buff, pos, area);
-  if (IsActive()) DrawAutoCompletions(buff, pos, area);
+  if (IsActive()) DrawAutoCompletions(pos);
 }
 
 
@@ -340,10 +340,11 @@ void DocumentWindow::DrawBuffer(FrameBuffer& buff, Position pos, Area area) {
 }
 
 
-void DocumentWindow::DrawAutoCompletions(FrameBuffer& buff, Position pos, Area area) {
+void DocumentWindow::DrawAutoCompletions(Position pos) {
 
   const Icons& icons = Editor::GetIcons();
   const Theme& theme = Editor::GetTheme();
+  Ui* ui = GETUI();
 
   // FIXME: Cleanup this mess.-------------------------------------------------
   Style style_menu          = theme.GetStyle("ui.menu");
@@ -370,6 +371,8 @@ void DocumentWindow::DrawAutoCompletions(FrameBuffer& buff, Position pos, Area a
   // ---------------------------------------------------------------------------
   // Determine the size and the position to draw the list.
   // ---------------------------------------------------------------------------
+
+  Area area = Editor::Singleton()->GetDrawArea();
 
   // Cursor coordinate.
   Coord cursor_coord = document->cursors.GetPrimaryCursor().GetCoord();
@@ -398,7 +401,8 @@ void DocumentWindow::DrawAutoCompletions(FrameBuffer& buff, Position pos, Area a
     count_dispaynig_items = MIN(count_items, count_lines_above_cursor);
   }
 
-  // Compute the maximum width for the labels, (not considering the width of the window).
+  // Compute the maximum width for the labels this does not incudes the padding and
+  // icons which we'll add later bellow.
   int max_len = 0;
   for (int i = 0; i < count_dispaynig_items; i++) {
     int item_len = Utf8Strlen((*completion_items)[i].label.c_str());
@@ -413,22 +417,22 @@ void DocumentWindow::DrawAutoCompletions(FrameBuffer& buff, Position pos, Area a
   menu_start.col = document->buffer->IndexToColumn(menu_start_index) - view_start.col;
   menu_start.row = document->buffer->IndexToCoord(menu_start_index).line - view_start.row;
 
-  // Current drawing position (relative to the docpos).
-  Position curr = {0, 0};
+  // The draw position of the completion list.
+  Position drawpos;
 
   // ---------------------------------------------------------------------------
   // Drawing auto completion list.
   // ---------------------------------------------------------------------------
 
-  curr = menu_start;
-  curr.row += (drawing_bellow_cursor) ? 1 : (-count_dispaynig_items);
+  drawpos = Position(pos.x + menu_start.x, pos.y + menu_start.y);
+  drawpos.row += (drawing_bellow_cursor) ? 1 : (-count_dispaynig_items);
 
-  // FIXME: +2 because we draw the icon + 1 space but we should consider no icon
-  // configuration also and that should be handled properly.
-  //
-  // Adjust the max len depends on available space. +4 because we'll be drawing icon.
-  // and the margins.
-  max_len = MIN(max_len + 4, area.width - curr.col);
+  // Adding 4 because  1 for icons, 2 for padding at both edge, 1 for spacing
+  // between icon and the label.
+  max_len += 4;
+
+  FrameBuffer buff_compl = Editor::NewFrameBuffer(Area(max_len, count_dispaynig_items));
+  Position curr(0, 0); // Draw position relative to the buffer overlay.
 
   for (int i = 0; i < count_dispaynig_items; i++) {
     auto& item = (*completion_items)[i];
@@ -441,17 +445,17 @@ void DocumentWindow::DrawAutoCompletions(FrameBuffer& buff, Position pos, Area a
     std::string completion_icon = Utf8UnicodeToString(icons.completion_kind[icon_index]);
     std::string completion_item_line = " " + completion_icon + " " + item.label + " ";
     DrawTextLine(
-        buff,
+        buff_compl,
         completion_item_line.c_str(),
-        Position(
-          pos.col + curr.col,
-          pos.row + curr.row),
+        curr,
         max_len,
         style,
         icons,
         true);
     curr.row++;
   }
+
+  ui->PushOverlay(drawpos, std::move(buff_compl));
 
   // --------------------------------------------------------------------------
   // Drawing the signature help.
@@ -464,56 +468,59 @@ void DocumentWindow::DrawAutoCompletions(FrameBuffer& buff, Position pos, Area a
   int signature_index = CLAMP(0, signature_helps->active_signature, signature_size);
   const SignatureInformation& si = signature_helps->signatures[signature_index];
 
-  // TODO: This will draw the signature label and draw the parameter on top of it.
-  // pre mark the values when we recieve the signature help info from the other thread
-  // and just draw it here.
+  int label_size = si.label.size();
+  FrameBuffer buff_label = Editor::NewFrameBuffer(Area(label_size, 1));
 
-  // TODO: Highlight current parameter and draw documentation about the parameter.
-  // Prepare the coord for drawing the signature help.
-  drawing_bellow_cursor = count_items == 0 || !drawing_bellow_cursor;
+  // This do block exists so we can jump out of the block to the end immediately
+  // like goto with break statement.
+  do {
+    // Defining return to ? to enforce not to use return insde this do block.
+    #define return ?
 
-  // Prepare the coord for drawing the completions.
-  curr = menu_start;
-  curr.row += (drawing_bellow_cursor) ? 1 : -1;
+    // TODO: This will draw the signature label and draw the parameter on top of it.
+    // pre mark the values when we recieve the signature help info from the other thread
+    // and just draw it here.
 
-  // Adjust the max len depends on available space.
-  int label_max_len = MIN(si.label.size(), area.width - (curr.col-pos.col));
+    // TODO: Highlight current parameter and draw documentation about the parameter.
+    // Prepare the coord for drawing the signature help.
+    drawing_bellow_cursor = count_items == 0 || !drawing_bellow_cursor;
 
-  // Draw the label.
-  DrawTextLine(
-      buff,
+    // Prepare the coord for drawing the completions.
+    drawpos = Position(pos.x + menu_start.x, pos.y + menu_start.y);
+    drawpos.row += (drawing_bellow_cursor) ? 1 : -1;
+
+    DrawTextLine(
+      buff_label,
       si.label.c_str(),
-      Position(
-        pos.col + curr.col,
-        pos.row + curr.row),
-      label_max_len,
+      Position(0, 0),
+      label_size,
       style_menu,
       icons,
       true);
 
-  // Draw the current parameter highlighted.
-  if (si.parameters.size() == 0) return; // No parameter to highlight.
-  int param_index = CLAMP(0, signature_helps->active_parameter, si.parameters.size());
+    // Draw the current parameter highlighted.
+    if (si.parameters.size() == 0) break; // No parameter to highlight.
+    int param_index = CLAMP(0, signature_helps->active_parameter, si.parameters.size());
 
-  const ParameterInformation& pi = si.parameters[param_index];
-  if (pi.label.start < 0 || pi.label.end >= si.label.size() || pi.label.start > pi.label.end) return;
+    const ParameterInformation& pi = si.parameters[param_index];
+    if (pi.label.start < 0 || pi.label.end >= si.label.size() || pi.label.start > pi.label.end) break;
 
-  // Label starts after the width.
-  if (area.width <= curr.col+pi.label.start-pos.col) return;
+    std::string param_label = si.label.substr(pi.label.start, pi.label.end - pi.label.start + 1);
+    label_size = param_label.size();
 
-  std::string param_label = si.label.substr(pi.label.start, pi.label.end - pi.label.start + 1);
-  label_max_len = MIN(param_label.size(), area.width - (curr.col+pi.label.start-pos.col));
-
-  DrawTextLine(
-      buff,
+    DrawTextLine(
+      buff_label,
       param_label.c_str(),
-      Position(
-        pos.col + curr.col + pi.label.start,
-        pos.row + curr.row),
-      label_max_len,
+      Position(pi.label.start, 0),
+      label_size,
       style_menu.Apply(style_active_param),
       icons,
       true);
+
+    #undef return
+  } while (false);
+
+  ui->PushOverlay(drawpos, std::move(buff_label));
 }
 
 // -----------------------------------------------------------------------------

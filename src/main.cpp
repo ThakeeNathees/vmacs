@@ -15,7 +15,6 @@
 // Now:
 //  Theme (ui) is a huge todo.
 //  Editor::Error(), etc.
-//  autocompletion popup handle properly + (consider which key popup, etc).
 //  Window pos/area.
 //
 // Gap Buffer:
@@ -45,10 +44,10 @@
 //  - Support true and 256 color from config.
 //  - autocompletion:
 //    - An abstract class for completion list.
-//    - auto completion should override the split edge.
 //    - auto completion scrolling.
 //  - Draw diagnostics the same line.
 //  - Scroll if more tabs.
+
 //
 //   structure:
 //     theme: getting values and proper, dynamic changeing (listener);
