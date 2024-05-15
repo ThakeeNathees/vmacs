@@ -284,22 +284,22 @@ struct Style {
 // background colors. The color values are rgb values structured as 0xrrggbb
 // if you want the xterm-256 compatible single byte value. RgbToXterm() function
 // defined in the utils.
-typedef struct {
+struct Cell {
   uint32_t ch;     // Unicode codepoint.
   Color    fg;     // Foreground color.
   Color    bg;     // Background color.
   uint8_t  attrib; // Attribute of the cell. Set with VMACS_CELL_* macros.
-} Cell;
+};
 
 
 // DrawBuffer will be provided by the front end which will be filled with the
 // cell values, at the backend draw call which then will be displaied by the
 // front end.
-typedef struct {
+struct FrameBuffer {
   std::vector<Cell> cells;
-  int width;
-  int height;
-} FrameBuffer;
+  int width  = 0;
+  int height = 0;
+};
 
 
 // All the event enums here are copied from raylib, since the core should be
@@ -800,17 +800,14 @@ public:
 
   virtual std::vector<Event> GetEvents() = 0;
 
-  // The front end should own a draw buffer which needs to be passed to the
-  // backend by the bellow method. We'll be fill the buffer with the cells and
-  // call the display method, that'll display the filled buffer. Note that
-  // the display takes a cleaer color argument which needed to clear the color
-  // outside of the grid otherwise the color outside gride will be different and
-  // also raylib requires a clear_color swap a new buffer and start drawing.
-  virtual FrameBuffer& GetDrawBuffer() = 0;
+  // The frontend is considered as a grid of cells in a terminal and this method
+  // should return the area of the ui to generate a frame buffer and display with
+  // the bellow method.
+  virtual Area GetDrawArea() = 0;
 
-  // TODO: Remove the clear color and get the color for raylib from the theme
-  // config or somewhere.
-  virtual void Display() = 0; // Display the drawbuffer.
+  // Display the drawbuffer which has the same size which was fetched from the
+  // above method.
+  virtual void Display(FrameBuffer& buff) = 0;
 
   virtual ~IFrontEnd() = default;
 };

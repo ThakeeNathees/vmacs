@@ -14,6 +14,7 @@
 //
 // Now:
 //  Theme (ui) is a huge todo.
+//  Editor::Error(), etc.
 //  autocompletion popup handle properly + (consider which key popup, etc).
 //  Window pos/area.
 //

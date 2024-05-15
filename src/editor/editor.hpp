@@ -66,7 +66,9 @@ private:
 
   std::atomic<bool> redraw = true;
   std::atomic<bool> running = true;
+
   ThreadSafeQueue<Event> event_queue;
+  FrameBuffer buff; // The frame we'll be drawing on.
 
   // TODO: Note that the bellow maps are "global" registry where, and if it's
   // shared and modified between multiple threads, they needs to be locked and
@@ -90,6 +92,10 @@ private:
   void OnLspDiagnostics(const Path&, uint32_t version, std::vector<Diagnostic>&&);
   void OnLspCompletion(const Path&, bool is_incomplete, std::vector<CompletionItem>&&);
   void OnLspSignatureHelp(const Path&, SignatureItems&&);
+
+  // This will re-size the framebuffer if it's not up to date with the front end's
+  // draw area size and clear the frame with the background color.
+  void PrepareFrameBuffer();
 
   // blocking loop that collect event (blocking) from the front end and push it
   // to our event queue. Run this asyncronusly.

@@ -28,23 +28,12 @@ bool Termbox2::Cleanup() {
 }
 
 
-FrameBuffer& Termbox2::GetDrawBuffer() {
-
-  int width = tb_width();
-  int height = tb_height();
-
-  if (buff.cells.size() != width * height) {
-    buff.cells.resize(width*height);
-  }
-
-  buff.width  = width;
-  buff.height = height;
-
-  return buff;
+Area Termbox2::GetDrawArea() {
+  return Area(tb_width(), tb_height());
 }
 
 
-void Termbox2::Display() {
+void Termbox2::Display(FrameBuffer& buff) {
 
   int width = buff.width;
   int height = buff.height;

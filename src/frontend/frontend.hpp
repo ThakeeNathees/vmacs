@@ -14,15 +14,9 @@
 
 class Termbox2 : public IFrontEnd {
 public:
-  virtual bool Initialize() override;
-  virtual bool Cleanup() override;
-  virtual std::vector<Event> GetEvents() override;
-
-  virtual FrameBuffer& GetDrawBuffer() override;
-  virtual void Display() override;
-
-private:
-  FrameBuffer buff;
+  bool Initialize() override;
+  std::vector<Event> GetEvents() override;
+  Area GetDrawArea() override;
+  void Display(FrameBuffer& buff) override;
+  bool Cleanup() override;
 };
-
-

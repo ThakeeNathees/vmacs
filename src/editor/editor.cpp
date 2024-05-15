@@ -82,12 +82,12 @@ Config& Editor::GetConfig() {
 }
 
 
-// FIXME: This is not how we do it.
 Editor::Editor() {
 }
 
 
-Editor::~Editor() { }
+Editor::~Editor() {
+}
 
 
 bool Editor::SetTheme(const std::string theme_name) {
@@ -175,14 +175,10 @@ int Editor::MainLoop() {
 
     // Draw call.
     if (redraw) {
-      FrameBuffer& buff = frontend->GetDrawBuffer();
-
-      // Clear the background.
-      Style style_bg = Editor::GetTheme().GetStyle("ui.background"); // FIXME:
-      DrawRectangleFill(buff, {0,0}, {buff.width, buff.height}, style_bg);
+      PrepareFrameBuffer();
 
       ui->Draw(buff);
-      frontend->Display();
+      frontend->Display(buff);
 
       redraw = false;
     }
@@ -211,6 +207,22 @@ void Editor::EventLoop() {
       event_queue.Enqueue(event);
     }
   }
+}
+
+
+void Editor::PrepareFrameBuffer() {
+  Area area = frontend->GetDrawArea();
+
+  // Resize the buffer.
+  if (buff.cells.size() != area.width * area.height) {
+    buff.cells.resize(area.width * area.height);
+  }
+  buff.width  = area.width;
+  buff.height = area.height;
+
+  // Clear the background.
+  Style style_bg = Editor::GetTheme().GetStyle("ui.background"); // FIXME:
+  DrawRectangleFill(buff, {0,0}, {buff.width, buff.height}, style_bg);
 }
 
 
