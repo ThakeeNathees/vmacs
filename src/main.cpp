@@ -12,6 +12,19 @@
 //
 //    TEST IN WINDOWS AND LINUX
 //
+// Release:
+//   Well documented source code.
+//   Window support
+//   autocompletion icon color (properly handle icons nerd and non nerd).
+//   finder, autocompletion highlight fzf match.
+//   cleanup source fiels.
+//   proper highlight
+//   simple workflow (open edit save etc).
+//   configuration.
+//   proper binding and modes.
+//   ctrl+q properly handle.
+//
+//
 // Now:
 //  Ensure cursor on view is not properly work since the line number takes
 //  some area, properly implement it.

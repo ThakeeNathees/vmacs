@@ -355,8 +355,14 @@ void Split::Draw(FrameBuffer& buff, Position pos, Area area) {
 
   ASSERT(type != Split::Type::LEAF, OOPS);
 
+  // ---------------------------------------------------------------------------
   // FIXME: Properly fetch the style from the editor or somewhere else.
-  Style style = Editor::GetTheme().GetStyle("ui.background.separator");
+  const Theme& theme = Editor::GetTheme();
+  Style style_text   = theme.GetStyle("ui.text");
+  Style style_bg     = theme.GetStyle("ui.background");
+  Style style_border = theme.GetStyle("ui.background.separator");
+  style_border = style_text.Apply(style_bg).Apply(style_border);
+  // ---------------------------------------------------------------------------
 
   // The position to draw the children.
   Position curr = pos;
@@ -376,7 +382,7 @@ void Split::Draw(FrameBuffer& buff, Position pos, Area area) {
       if (!is_last) width--;
       child->Draw(buff, curr, Area(width, area.height));
       if (!is_last) {
-        DrawVerticalLine(buff, Position(curr.x+width, curr.y), area.height, style, Editor::GetIcons());
+        DrawVerticalLine(buff, Position(curr.x+width, curr.y), area.height, style_border, Editor::GetIcons());
       }
       curr.x += width+1; // +1 for split line.
 
@@ -385,7 +391,7 @@ void Split::Draw(FrameBuffer& buff, Position pos, Area area) {
       if (!is_last) height--; // We'll use one row for drawing the split.
       child->Draw(buff, curr, Area(area.width, height));
       if (!is_last) {
-        DrawHorizontalLine(buff, Position(curr.x, curr.y + height), area.width, style, Editor::GetIcons());
+        DrawHorizontalLine(buff, Position(curr.x, curr.y + height), area.width, style_border, Editor::GetIcons());
       }
       curr.y += height+1; // +1 for split line.
     }
