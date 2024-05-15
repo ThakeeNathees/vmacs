@@ -238,6 +238,9 @@ public:
   void Warning(const std::string& error);
   void Error(const std::string& error);
 
+  // Push an overlay to draw on the screen after all the draw calls are done.
+  void PushOverlay(Position pos, FrameBuffer&& buff);
+
   void AddTab(std::unique_ptr<Tab> tab);
   bool JumpToDocument(const Path& path, Coord coord); // Returns true on success.
 
@@ -258,6 +261,15 @@ private:
   int active_tab_index = -1;
   std::vector<std::unique_ptr<Tab>> tabs;
 
+  // Overlays will be draw on top of all the windows after the tabs are drawn
+  // recursively and before drawing the popup. So the overlay frame buffer doesn't
+  // limitted to the area of the window itself. Usefull for autocompletion
+  // which key help, notification message etc which shows on top of everything.
+  //
+  // After each iteration of draw this will be cleaned up. So the owner window
+  // of this overlay should call this at each draw call.
+  std::queue<std::pair<Position, FrameBuffer>> overlays;
+
   std::unique_ptr<Window> popup;
 
   // FIXME(grep): This is temproary.
@@ -275,6 +287,7 @@ private:
 
   void DrawHomeScreen(FrameBuffer& buff, Position pos, Area area);
   void DrawPromptBar(FrameBuffer& buff); // Will draw at the bottom line.
+  void DrawOverlays(FrameBuffer& buff);
   void DrawTabsBar(FrameBuffer& buff, Position pos, Area area);
 
 public: // Actions.

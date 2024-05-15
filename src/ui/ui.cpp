@@ -644,6 +644,7 @@ void Ui::Draw(FrameBuffer& buff) {
   }
 
   DrawPromptBar(buff);
+  DrawOverlays(buff);
 
   // FIXME: The size is "hardcoded".
   if (popup) {
@@ -655,6 +656,28 @@ void Ui::Draw(FrameBuffer& buff) {
     const int x = (W - w) / 2;
     const int y = (H - h) / 2;
     popup->Draw(buff, Position(x, y), Area(w, h));
+  }
+}
+
+
+void Ui::DrawOverlays(FrameBuffer& buff) {
+  while (!overlays.empty()) {
+    Position pos = overlays.front().first;
+    FrameBuffer& overlay = overlays.front().second;
+
+    // Adjust the width and height of the overlay according to the framebuffer.
+    int width  = MIN(overlay.width, buff.width - pos.x);
+    int height = MAX(overlay.height, buff.height - pos.y);
+
+    // I'm sure there is a better way to do this like memcpy, but not now.
+    for (int y = 0; y < height; y++) {
+      for (int x = 0; x < width; x++) {
+        Cell& cell = BUFF_CELL(overlay, x, y);
+        BUFF_CELL(buff, (pos.x + x), (pos.y+y)) = cell;
+      }
+    }
+
+    overlays.pop();
   }
 }
 
