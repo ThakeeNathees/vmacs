@@ -68,11 +68,6 @@ public:
   const Area& GetArea() const;
   bool IsPointIncluded(const Position& point) const;
 
-  // Note that "caching" the owner here is error prune, we should query
-  // the parent from the ui maybe?
-  Split* GetSplit() const;
-  void SetSplit(Split* split);
-
   // This will return a copy of the current window to display in a split.
   // If the window is not "copiable" it'll return nullptr and the caller should
   // handle it.
@@ -87,9 +82,6 @@ private:
   // Set this to true if this window has to be closed by the owner of this
   // window.
   bool should_close = false;
-
-  // The split it belongs to.
-  Split* split = nullptr;
 
 private:
   // The handler should return true if the event is consumed by the window.
@@ -153,11 +145,6 @@ public:
   // nullptr window.
   Window* GetWindow();
   const Window* GetWindow() const;
-
-  // Return the root split, which is a split without a parent split. If the
-  // split itself is the root simply return itself. Note that this method will
-  // never return nullptr.
-  Split* GetRoot();
 
   Split* GetParent() const;
   Tab* GetTab() const;
@@ -224,8 +211,8 @@ public:
   void Draw(FrameBuffer& buff, Position pos, Area area);
 
   Split* GetRoot() const;
-  Split* GetActive() const;
-  void SetActive(Split* split);
+  Split* GetActiveSplit() const;
+  void SetActiveSplit(Split* split);
 
   // "Actions" bind not bindable but called from Ui's actions, This method should
   // act like actions and return true if the event is handled / action is performed.
@@ -241,42 +228,6 @@ private:
   // (for file tree and buffers maybe).
   Split* active = nullptr;
 };
-
-
-// -----------------------------------------------------------------------------
-// Tabs.
-// -----------------------------------------------------------------------------
-
-
-// Simply a container for tabs.
-// class Tabs {
-// public:
-
-//   // Add and remove tab.
-//   void AddTab(std::unique_ptr<Tab> tab);
-//   void RemoveTab(const Tab* tab);
-
-//   int Count() const;
-//   Tab* Child(int index) const;
-
-//   Tab* GetActive() const;
-//   void SetActive(int index);
-
-//   Window* GetWindowAt(Position pos) const;
-
-//   bool HandleEvent(const Event& event);
-//   void Update();
-//   void Draw(FrameBuffer& buff, Position pos, Area area);
-
-// private:
-
-// private:
-//   void DrawTabsBar(FrameBuffer& buff, Position pos, Area area);
-
-// public:
-//   static bool Action_TabNext(Tabs* self);
-//   static bool Action_TabPrev(Tabs* self);
-// };
 
 
 // -----------------------------------------------------------------------------
@@ -325,19 +276,15 @@ private:
 private:
 
   Tab* GetActiveTab() const;
-  void RemoveTab(const Tab* tab);
 
-  // Returns the window at the given position, used when a mouse event occured
-  // at the given position and to pass the event to the window at that position.
+  DocumentWindow* GetDocumentWindow(const Path& path) const;
   Window* GetWindowAt(Position pos) const;
+  Split* GetWindowSplit(const Window* window) const;
 
-  // This is re-usable called from Actions, returns true if the action is executed.
+  void RemoveTab(const Tab* tab);
   bool CloseWindow(Window* window);
 
-  // Returns the document window for the document at the given path, if no document
-  // already opened for the given path, it'll return nullptr.
-  DocumentWindow* GetDocumentWindow(const Path& path) const;
-
+  // FIXME(now): Remove this.
   // Returns if any filetree window available, search from left and right tabs.
   FileTreeWindow* GetFileTreeWindow() const;
 
