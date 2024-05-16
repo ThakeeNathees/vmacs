@@ -115,6 +115,20 @@ bool StartsWith(std::string_view str, std::string_view prefix) {
 }
 
 
+std::string ToUpper(const std::string& str) {
+  std::string ret = str;
+  for (char& c : ret) c = toupper(c);
+  return ret;
+}
+
+
+std::string ToLower(const std::string& str) {
+  std::string ret;
+  for (char& c : ret) c = tolower(c);
+  return ret;
+}
+
+
 bool IsCharName(int c) {
   if (BETWEEN('a', c, 'z')) return true;
   if (BETWEEN('A', c, 'Z')) return true;

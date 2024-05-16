@@ -261,6 +261,14 @@ void LspClient::SendServerContent(const Json& content) {
   // to join in the destructor and this method is called by some other threads.
   if (ipc == nullptr) return;
 
+  // FIXME: This bellow .dump() will crash if the any param of string contains
+  // literal cariage return '\r' in it (they handle newline but not \r). Still
+  // we shouldn't have \r\n sequence in the source since json-rpc will fail to
+  // parse the data. This shoul be solved with crlf files also.
+  // ex:
+  // { "text" : "line1\r\nline2\r\n"  }  <-- chrash.
+  // { "text" : "line1\\r\nline2\\r\n" } <-- fine (they escape \n).
+  //
   std::string dump = content.dump();
   std::string data = "";
   std::string content_len = std::to_string(dump.length());

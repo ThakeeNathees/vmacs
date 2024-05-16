@@ -135,7 +135,7 @@ IUi* Editor::GetUi() {
 // TODO: Check the code quality of this method.
 int Editor::MainLoop() {
 
-  if (theme == nullptr && !SetTheme("ferra")) {
+  if (theme == nullptr && !SetTheme(config.theme)) {
     // TODO: Set a default theme which is "hardcoded" in the editor.
   }
 

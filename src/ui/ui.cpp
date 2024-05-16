@@ -649,7 +649,11 @@ void Ui::Draw(FrameBuffer& buff) {
     DrawHomeScreen(buff, pos, area);
   }
 
-  DrawPromptBar(buff);
+  // FIXME: autocompletion will override the info bar. Before chaing the order
+  // we need to somhow set the area of the view to buff.height-1 to the autocompletion
+  // draw method so it won't draw anything on the info bar and we have a hidden
+  // selection.
+  DrawInfoBar(buff);
   DrawOverlays(buff);
 
   // FIXME: The size is "hardcoded".
@@ -801,13 +805,14 @@ void Ui::DrawHomeScreen(FrameBuffer& buff, Position pos, Area area) {
 
   // FIXME: Store this and the version somewhere global.
   std::string copyright = "Copyright (c) 2024 Thakee Nathees";
-  curr.row = pos.row + area.height - 1;
+  curr.row = pos.row + area.height - 2;
   curr.col = pos.col + (area.width - copyright.size()) / 2;
   DrawTextLine(buff, copyright.c_str(), curr, copyright.size(), style_copyright, icons, false);
 }
 
 
-void Ui::DrawPromptBar(FrameBuffer& buff) {
+// FIXME: The logic of this method is complete garbage.
+void Ui::DrawInfoBar(FrameBuffer& buff) {
 
   const Theme& theme = Editor::GetTheme();
   const Icons& icons = Editor::GetIcons();
@@ -815,23 +820,47 @@ void Ui::DrawPromptBar(FrameBuffer& buff) {
   // FIXME: --------------------------------------------------------------------
   Style style_text = theme.GetStyle("ui.text");
   Style style_bg   = theme.GetStyle("ui.background");
-  Style style      = style_bg.Apply(style_text);
+  Style style      = theme.GetStyle("ui.statusline");
+  // Style style_menu        = theme.GetStyle("ui.menu");
+  // Style style_bar  = style_bg.Apply(style_text).Apply(style_menu);
+  // Style style      = style_bg.Apply(style_text).Apply(style_statusline);
+  // style.fg = style_bar.bg;
   // ---------------------------------------------------------------------------
 
+  // Current drawing position.
+  Position curr(0, buff.height-1);
+
+  DrawRectangleFill(buff, curr, Area(buff.width, 1), style);
+
+  Window* win = GetActiveWindow(true);
+
+  // FIXME:
+  std::string mode = "NORMAL";
+  if (win != nullptr) {
+    mode = win->GetMode();
+  }
+  mode = mode.empty() ? std::string("NORMAL") :  ToUpper(mode);
+  mode = " " + mode + " ";
+
   DrawTextLine(
-      buff, info_bar_text.c_str(),
-      Position(0, buff.height-1),
-      buff.width-1, // -1 for spinning wheel.
-      style, icons,
-      true);
+    buff, mode.c_str(),
+    curr,
+    mode.size(),
+    style, icons,
+    true);
+  curr.x += mode.size();
 
-  const int wheel_count = sizeof icons.brail_spinning_wheel / sizeof * icons.brail_spinning_wheel;
-  static int wheel_icon_index = 0;
-  int wheel_icon = icons.brail_spinning_wheel[wheel_icon_index++];
-  if (wheel_icon_index >= wheel_count) wheel_icon_index = 0;
+  // Draw the spenning wheel for draw indicator.
+  Position spinpos = Position(buff.width-2, buff.height - 1);
+  {
+    const int wheel_count = sizeof icons.brail_spinning_wheel / sizeof * icons.brail_spinning_wheel;
+    static int wheel_icon_index = 0;
+    int wheel_icon = icons.brail_spinning_wheel[wheel_icon_index++];
+    if (wheel_icon_index >= wheel_count) wheel_icon_index = 0;
 
-  // Draw a spinning wheel which will spin every time we re-draw.
-  SET_CELL(buff, buff.width-1, buff.height-1, wheel_icon, style);
+    // // Draw a spinning wheel which will spin every time we re-draw.
+    SET_CELL(buff, spinpos.x, spinpos.y, wheel_icon, style);
+  }
 }
 
 
@@ -977,11 +1006,11 @@ Tab* Ui::GetSplitTab(const Split* split) const {
 }
 
 
-Window* Ui::GetActiveWindow() const {
+Window* Ui::GetActiveWindow(bool exclude_popup) const {
   // active_tab -> active_split -> window.
 
   // If a popup is available, it's the active window we disregard everything else.
-  if (popup != nullptr) return popup.get();
+  if (!exclude_popup && popup != nullptr) return popup.get();
 
   const Tab* tab = GetActiveTab();
   if (tab == nullptr) return nullptr; // Empty tabs container.

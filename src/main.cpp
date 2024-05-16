@@ -33,6 +33,8 @@
 //  Theme (ui) is a huge todo.
 //  -------------------------
 //
+//  CRLF files crash the editor handle properly.
+//
 //  Editor::Error(), etc.
 //  Window pos/area.
 //
@@ -152,11 +154,7 @@
 //
 //   Main loop should be handled by the front end (so raylib can draw forever and termbox2 don't have to). and FE will set the FPS.
 //   editor send events and ask draw in a structured manner.
-//   M-c rename to A-c (M doesn't make sence, even in Eamcs)
 //   proper draw system. (request client for buffer and fill only if it needs to re-draw).
-//   line numbers.
-//   global configs (tabwidth, ).
-//   debug print that accumilate logs and dumps at the end.
 //   pair and auto indent
 //   editor modes implement properly.
 //   default bindnigs and tmeme settings.

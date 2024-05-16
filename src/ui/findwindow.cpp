@@ -180,6 +180,7 @@ void FindWindow::DrawItems(FrameBuffer& buff, int x, int y, int w, int h, const 
         buff, item.c_str(), Position(x, y+i), w,
         (view_start_index + i == selected_index) ? style.Apply(style_selected) : style,
         icons,
+        true,
         true);
   }
 }

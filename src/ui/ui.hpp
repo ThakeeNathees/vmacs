@@ -248,7 +248,9 @@ public:
   Split* GetWindowSplit(const Window* window) const;
   Tab* GetSplitTab(const Split* split) const;
 
-  Window* GetActiveWindow() const;
+  // If the parameter exclude_popup set to true it'll return the active window
+  // which is not also not the popup.
+  Window* GetActiveWindow(bool exclude_popup = false) const;
   void SetWindowActive(Window* window);
 
   static KeyTree keytree;
@@ -286,8 +288,8 @@ private:
   bool CloseWindow(Window* window);
 
   void DrawHomeScreen(FrameBuffer& buff, Position pos, Area area);
-  void DrawPromptBar(FrameBuffer& buff); // Will draw at the bottom line.
-  void DrawOverlays(FrameBuffer& buff);
+  void DrawInfoBar(FrameBuffer& buff); // Will draw at the bottom of the buff.
+  void DrawOverlays(FrameBuffer& buff); // Draw from the overlay queue.
   void DrawTabsBar(FrameBuffer& buff, Position pos, Area area);
 
 public: // Actions.

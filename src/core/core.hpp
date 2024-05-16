@@ -497,7 +497,7 @@ struct Config {
   int tabsize       = 4;
   int scrolloff     = 5; // Margin between the cursor and the view edge (vertical).
   int fps           = 30;
-  std::string theme = "dark_plus";
+  std::string theme = "ferra";
   bool show_linenum = true; // TODO: Support relative number.
 
   // TODO: Create a map of filename to id and filename to lsp client.
@@ -853,6 +853,8 @@ bool IsCharName(int c); // Returns the given codepoint [a-zA-Z0-9_].
 bool IsCharWhitespace(int c); // Returns the given codepoint [\t\n' '].
 bool EndsWith(std::string_view str, std::string_view suffix);
 bool StartsWith(std::string_view str, std::string_view suffix);
+std::string ToUpper(const std::string& str);
+std::string ToLower(const std::string& str);
 std::vector<std::string> StringSplit(const std::string& str, char delim);
 
 // UTF8 helper functions (Borrowed from termbox, see thridparty/termbox/LICENSE).
