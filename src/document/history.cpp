@@ -21,7 +21,7 @@ void Action::PushChange(Change&& change) {
 
   // Merge two additions.
   if (last.added && change.added) {
-    if (last.index + last.text.size() == change.index) {
+    if (last.index + last.text.Length() == change.index) {
       last.text += change.text;
       return;
     }
@@ -29,7 +29,7 @@ void Action::PushChange(Change&& change) {
 
   // Merge two removals.
   if (!last.added && !change.added) {
-    if (change.index + change.text.size() == last.index) {
+    if (change.index + change.text.Length() == last.index) {
       last.index = change.index;
       last.text = change.text + last.text;
       return;
@@ -38,12 +38,12 @@ void Action::PushChange(Change&& change) {
 
   // Insert and backspace.
   if (last.added && !change.added) {
-    if (last.text.size() >= change.text.size() &&
-        last.index + last.text.size() == change.index + change.text.size()) {
-      ASSERT(EndsWith(last.text, change.text), OOPS);
-      int count = last.text.size() - change.text.size();
+    if (last.text.Length() >= change.text.Length() &&
+        last.index + last.text.Length() == change.index + change.text.Length()) {
+      ASSERT(last.text.EndsWith(change.text), OOPS);
+      int count = last.text.Length() - change.text.Length();
       if (count == 0) changes.pop_back(); // Mostlikely when cycling through autocompletions.
-      else last.text = last.text.substr(0, count);
+      else last.text = last.text.Substring(0, count);
       return;
     }
   }
@@ -73,7 +73,7 @@ void History::EndAction() {
 }
 
 
-MultiCursor History::CommitInsertText(const MultiCursor& cursors_, const std::string& text) {
+MultiCursor History::CommitInsertText(const MultiCursor& cursors_, const String& text) {
 
   // Make a copy of the given cursors modify and return.
   MultiCursor cursors = cursors_;
@@ -101,7 +101,7 @@ MultiCursor History::CommitInsertText(const MultiCursor& cursors_, const std::st
       // Update the lsp change.
       lsp_change.start = buffer->IndexToCoord(selection.start);
       lsp_change.end   = buffer->IndexToCoord(selection.end);
-      lsp_change.text  = text;
+      lsp_change.text  = text.Data();
 
       // It's possible for the selection to have the same start and end, and be
       // an empty selection.
@@ -126,7 +126,7 @@ MultiCursor History::CommitInsertText(const MultiCursor& cursors_, const std::st
       // Update the lsp change.
       lsp_change.start = cursor.GetCoord();
       lsp_change.end   = cursor.GetCoord();
-      lsp_change.text  = text;
+      lsp_change.text  = text.Data();
     }
 
     // Current index after the selection is removed (if any).
@@ -144,9 +144,9 @@ MultiCursor History::CommitInsertText(const MultiCursor& cursors_, const std::st
 
     // Update the buffer.
     buffer->InsertText(cursor_index, text);
-    delta_next_cursor += text.size();
+    delta_next_cursor += text.Length();
 
-    int next_index = cursor_index + text.size();
+    int next_index = cursor_index + text.Length();
     cursor.SetIndex(next_index);
     cursor.UpdateIntendedColumn();
 
@@ -310,16 +310,16 @@ const MultiCursor& History::Undo() {
     DocumentChange lsp_change;
 
     if (change.added) {
-      ASSERT(change.text == buffer->GetSubString(change.index, change.text.size()), OOPS);
+      ASSERT(change.text == buffer->GetSubString(change.index, change.text.Length()), OOPS);
       lsp_change.start = buffer->IndexToCoord(change.index);
-      lsp_change.end   = buffer->IndexToCoord(change.index + change.text.size());
+      lsp_change.end   = buffer->IndexToCoord(change.index + change.text.Length());
       lsp_change.text  = "";
       lsp_changes.push_back(lsp_change);
-      buffer->RemoveText(change.index, change.text.size());
+      buffer->RemoveText(change.index, change.text.Length());
     } else {
       lsp_change.start = buffer->IndexToCoord(change.index);
       lsp_change.end   = lsp_change.start;
-      lsp_change.text  = change.text;
+      lsp_change.text  = change.text.Data();
       lsp_changes.push_back(lsp_change);
       buffer->InsertText(change.index, change.text);
     }
@@ -343,16 +343,16 @@ const MultiCursor& History::Redo() {
     if (change.added) {
       lsp_change.start = buffer->IndexToCoord(change.index);
       lsp_change.end   = lsp_change.start;
-      lsp_change.text  = change.text;
+      lsp_change.text  = change.text.Data();
       lsp_changes.push_back(lsp_change);
       buffer->InsertText(change.index, change.text);
     } else {
-      ASSERT(change.text == buffer->GetSubString(change.index, change.text.size()), OOPS);
+      ASSERT(change.text == buffer->GetSubString(change.index, change.text.Length()), OOPS);
       lsp_change.start = buffer->IndexToCoord(change.index);
-      lsp_change.end   = buffer->IndexToCoord(change.index + change.text.size());
+      lsp_change.end   = buffer->IndexToCoord(change.index + change.text.Length());
       lsp_change.text  = "";
       lsp_changes.push_back(lsp_change);
-      buffer->RemoveText(change.index, change.text.size());
+      buffer->RemoveText(change.index, change.text.Length());
     }
   }
   version++;

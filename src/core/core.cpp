@@ -15,29 +15,66 @@
 #include <sstream>
 
 
-event_t EncodeKeyEvent(Event::Key key) {
-  uint32_t ret = 0x0;
-  if (key.unicode != 0) {
-    ret |= ((key.unicode & 0xff) << 16);
-  } else {
-    ret |= key.code;
-    ret |= key.ctrl  ? 0x400  : 0;
-    ret |= key.alt   ? 0x800  : 0;
-    ret |= key.shift ? 0x1000 : 0;
-  }
-  return ret;
+// -----------------------------------------------------------------------------
+// String.
+// -----------------------------------------------------------------------------
+
+
+String::String(const std::string& data) : data(data) {
+  length = Utf8Strlen(this->data.c_str());
 }
 
 
-Event::Key DecodeKeyEvent(event_t key) {
-  Event::Key ret;
-  ret.code    = (Event::Keycode) (key & 0x3ff);
-  ret.unicode = (key >> 16) & 0xff;
-  ret.ctrl    = key & 0x400;
-  ret.alt     = key & 0x800;
-  ret.shift   = key & 0x1000;
-  return ret;
+String::String(const char* data) : String(std::string(data)) {
 }
+
+
+const std::string& String::Data() const {
+  return data;
+}
+
+
+size_t String::Length() const {
+  return length;
+}
+
+
+bool String::StartsWith(const String& other) const {
+    return data.size() >= other.data.size() && data.compare(0, other.data.size(), other.data) == 0;
+}
+
+
+String String::Substring(const size_t pos, size_t count) const {
+  return data.substr(pos, count);
+}
+
+
+bool String::EndsWith(const String& other) const {
+  return (data.size() >= other.data.size()) &&
+    data.compare(data.size() - other.data.size(), other.data.size(), other.data) == 0;
+}
+
+
+String String::operator+(const String& other) const {
+  return String(data + other.data);
+}
+
+
+bool String::operator==(const String& other) const {
+  return (length == other.length) && (data == other.data);
+}
+
+
+String& String::operator+=(const String& other) {
+  data += other.data;
+  length = Utf8Strlen(data.c_str());
+  return *this;
+}
+
+
+// -----------------------------------------------------------------------------
+// Utility functions.
+// -----------------------------------------------------------------------------
 
 
 static std::map<uint8_t, uint32_t> xterm_to_rgb = {
@@ -52,6 +89,19 @@ static std::map<uint32_t, uint8_t> rgb_to_xterm = {
   COLOR_MAP(X)
 #undef X
 };
+
+
+int GetElapsedTime() {
+  using hr_clock = std::chrono::high_resolution_clock;
+  using hr_time_point = hr_clock::time_point;
+  using hr_duration = hr_clock::duration;
+  using milliseconds = std::chrono::milliseconds;
+
+  static hr_time_point program_start = hr_clock::now();
+  hr_duration duration = hr_clock::now() - program_start;
+  return std::chrono::duration_cast<milliseconds>(duration).count();
+}
+
 
 
 static int _GetClosestColorPart(uint8_t byte) {
@@ -88,17 +138,6 @@ uint32_t XtermToRgb(uint8_t xterm) {
   return xterm_to_rgb[xterm];
 }
 
-
-int GetElapsedTime() {
-  using hr_clock = std::chrono::high_resolution_clock;
-  using hr_time_point = hr_clock::time_point;
-  using hr_duration = hr_clock::duration;
-  using milliseconds = std::chrono::milliseconds;
-
-  static hr_time_point program_start = hr_clock::now();
-  hr_duration duration = hr_clock::now() - program_start;
-  return std::chrono::duration_cast<milliseconds>(duration).count();
-}
 
 // -----------------------------------------------------------------------------
 // String functions.
@@ -454,6 +493,32 @@ std::string Utf8UnicodeToString(uint32_t c) {
 // ----------------------------------------------------------------------------
 // Key combination parsing.
 // ----------------------------------------------------------------------------
+
+
+event_t EncodeKeyEvent(Event::Key key) {
+  uint32_t ret = 0x0;
+  if (key.unicode != 0) {
+    ret |= ((key.unicode & 0xff) << 16);
+  } else {
+    ret |= key.code;
+    ret |= key.ctrl  ? 0x400  : 0;
+    ret |= key.alt   ? 0x800  : 0;
+    ret |= key.shift ? 0x1000 : 0;
+  }
+  return ret;
+}
+
+
+Event::Key DecodeKeyEvent(event_t key) {
+  Event::Key ret;
+  ret.code    = (Event::Keycode) (key & 0x3ff);
+  ret.unicode = (key >> 16) & 0xff;
+  ret.ctrl    = key & 0x400;
+  ret.alt     = key & 0x800;
+  ret.shift   = key & 0x1000;
+  return ret;
+}
+
 
 #define STARTS_WITH(string, prefix) \
   (strncmp(string, prefix, strlen(prefix)) == 0)

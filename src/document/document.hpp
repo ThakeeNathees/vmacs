@@ -82,7 +82,7 @@ public:
 
   int GetSize() const;
   int At(int index) const; // Returns the codepoint at the index.
-  std::string_view GetSubString(int index, int count) const;
+  String GetSubString(int index, int count) const;
   const std::string& GetData() const;
 
   int GetLineCount() const;
@@ -101,7 +101,7 @@ public:
   bool IsValidCoord(Coord coord, int* index) const;
 
   // Methods that modify the buffer.
-  void InsertText(int index, const std::string& text);
+  void InsertText(int index, const String& text);
   void RemoveText(int index, int count);
 
   // Buffer listener methods.
@@ -229,9 +229,9 @@ private:
 //          keep track of where are we at the history of the change.
 
 struct Change {
-  int index;        // The index where the change happened.
-  bool added;       // If true a text was added otherwise removed.
-  std::string text; // The added/removed text.
+  int index;   // The index where the change happened.
+  bool added;  // If true a text was added otherwise removed.
+  String text; // The added/removed text.
 };
 
 
@@ -273,7 +273,7 @@ public:
 
   // If the cursor has selection it'll remove the selection and then add the
   // text for each cursor.
-  MultiCursor CommitInsertText(const MultiCursor& cursors, const std::string& text);
+  MultiCursor CommitInsertText(const MultiCursor& cursors, const String& text);
 
   // Here if the direction is
   //   -1: perform backspace at the cursor.

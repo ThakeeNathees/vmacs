@@ -28,7 +28,7 @@ using Json = nlohmann::json;
 struct DocumentChange {
   Coord start;
   Coord end;
-  std::string text;
+  std::string text; // Raw utf8 encoded text.
 };
 
 

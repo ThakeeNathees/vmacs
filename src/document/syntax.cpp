@@ -17,7 +17,7 @@
 //   predicates like the #eq?, #match?, and #any-of? predicates explained above.
 //
 // Here is our "high-level-language" implementation.
-static bool TreeSitterCheckPredicate(const char* source, const TSQuery* query, TSQueryMatch match);
+static bool TreeSitterCheckPredicate(const Buffer* buff, const TSQuery* query, TSQueryMatch match);
 
 
 Language::Language (Language&& other) {
@@ -84,7 +84,7 @@ void Syntax::CacheHighlightSlices(const TSQuery* query, const Buffer* buffer) {
     TSQueryMatch match;
     while (ts_query_cursor_next_match(cursor, &match)) {
 
-      if (!TreeSitterCheckPredicate(buffer->GetData().c_str(), query, match)) continue;
+      if (!TreeSitterCheckPredicate(buffer, query, match)) continue;
       if (match.capture_count == 0) continue; // We'll create a slice for the first capture.
 
       uint32_t len;
@@ -118,7 +118,7 @@ void Syntax::CacheHighlightSlices(const TSQuery* query, const Buffer* buffer) {
 
 
 // The logic is stolen from: https://github.com/tree-sitter/tree-sitter/blob/a0cf0a7104f4a64eac04bd916297524db83d09c0/lib/binding_web/binding.js#L844
-static bool TreeSitterCheckPredicate(const char* source, const TSQuery* query, TSQueryMatch match) {
+static bool TreeSitterCheckPredicate(const Buffer* buff, const TSQuery* query, TSQueryMatch match) {
 
   // Incase of error we'll return true ignoring the predicate.
   #define return_error return true
@@ -172,11 +172,11 @@ static bool TreeSitterCheckPredicate(const char* source, const TSQuery* query, T
 
         uint32_t start1 = ts_node_start_byte(*node1);
         uint32_t end1 = ts_node_end_byte(*node1);
-        std::string text1(source + start1, end1 - start1);
+        String text1 = buff->GetSubString(start1, end1-start1);
 
         uint32_t start2 = ts_node_start_byte(*node2);
         uint32_t end2 = ts_node_end_byte(*node2);
-        std::string text2(source + start2, end2 - start2);
+        String text2 = buff->GetSubString(start2, end2-start2);
 
         return (text1 == text2) == is_positive;
 
@@ -189,7 +189,7 @@ static bool TreeSitterCheckPredicate(const char* source, const TSQuery* query, T
           if (strcmp(get_capture(capture.index), capture_name) == 0) {
             uint32_t start = ts_node_start_byte(capture.node);
             uint32_t end = ts_node_end_byte(capture.node);
-            std::string text(source + start, end - start);
+            String text = buff->GetSubString(start, end - start);
             return (text == str) == is_positive;
           }
         }
@@ -215,8 +215,8 @@ static bool TreeSitterCheckPredicate(const char* source, const TSQuery* query, T
         if (strcmp(get_capture(capture.index), capture_name) == 0) {
           uint32_t start = ts_node_start_byte(capture.node);
           uint32_t end = ts_node_end_byte(capture.node);
-          std::string text(source + start, end - start);
-          return std::regex_match(text, re) == is_positive;
+          String text = buff->GetSubString(start, end - start);
+          return std::regex_match(text.Data(), re) == is_positive;
         }
       }
 

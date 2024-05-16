@@ -486,6 +486,11 @@ struct Event {
 };
 
 
+// -----------------------------------------------------------------------------
+// Config (FIXME: move this somewhere).
+// -----------------------------------------------------------------------------
+
+
 // TODO: This sould be a json object / lua table where the user can "register"
 // wheever they want and and use in some plugins.
 //
@@ -510,6 +515,35 @@ struct Config {
   //
   LanguageId GetLangIdFromFileName(const std::string& filename) const;
   LspClientId GetLspClientIdFromFileName(const std::string& filename) const;
+};
+
+
+// -----------------------------------------------------------------------------
+// String.
+// -----------------------------------------------------------------------------
+
+
+// A string class wrapper for string to deal with utf8 stuff.
+class String {
+public:
+  String() = default;
+  String(const char* data);
+  String(const std::string& data);
+
+  const std::string& Data() const;
+  size_t Length() const;
+
+  bool StartsWith(const String& other) const;
+  bool EndsWith(const String& other) const;
+  String Substring(const size_t pos, size_t count) const;
+
+  String operator+(const String& other) const;
+  bool operator==(const String& other) const;
+  String& operator+=(const String& other);
+
+private:
+  std::string data;  // Utf8 encoded text.
+  size_t length = 0; // Length of the decoded data.
 };
 
 

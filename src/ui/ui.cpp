@@ -702,7 +702,7 @@ void Ui::DrawTabsBar(FrameBuffer& buff, Position pos, Area area) {
     // FIXME: This should be reviewed.
     std::string tab_name = tab->GetName();
     if (tab_name.empty()) {
-      tab_name = "tab " + std::to_string(i+1);
+      tab_name = "[No Name]";
     }
 
     // TODO: If current file modified we put an indicator (+).

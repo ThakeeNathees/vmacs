@@ -52,13 +52,11 @@ int Buffer::At(int index) const {
 }
 
 
-std::string_view Buffer::GetSubString(int index, int count) const {
+String Buffer::GetSubString(int index, int count) const {
   if (count == 0) return "";
   ASSERT_INDEX(index, data.size());
   ASSERT_INDEX(index + count, data.size() + 1);
-
-  std::string_view view = data;
-  return view.substr(index, count);
+  return data.substr(index, count);
 }
 
 
@@ -188,9 +186,9 @@ bool Buffer::IsValidCoord(Coord coord, int* index) const {
 }
 
 
-void Buffer::InsertText(int index, const std::string& text) {
-  ASSERT_INDEX(index, (int)data.size() + 1);
-  data.insert(index, text);
+void Buffer::InsertText(int index, const String& text) {
+  ASSERT_INDEX(index, (int) data.size() + 1);
+  data.insert(index, text.Data());
   OnBufferChanged();
 }
 
