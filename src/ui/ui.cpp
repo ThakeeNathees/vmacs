@@ -717,7 +717,9 @@ void Ui::DrawTabsBar(FrameBuffer& buff, Position pos, Area area) {
     if (i == active_tab_index || (i+1) == active_tab_index) {
       SET_CELL(buff, curr.col, curr.row, ' ', theme.tabbar_active);
     } else {
-      DrawVerticalLine(buff, curr, 1, theme.tabbar, icons);
+      Style style_split_bar = theme.tabbar; // This will blend with the editor.
+      style_split_bar.fg = theme.tabbar_active.bg;
+      DrawVerticalLine(buff, curr, 1, style_split_bar, icons);
     }
 
     curr.col++;  // +1 for vertical split.

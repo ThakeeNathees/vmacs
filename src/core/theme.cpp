@@ -157,7 +157,7 @@ void Theme::UpdateUiEntries() {
   error            = GetStyle("error");
   warning          = GetStyle("warning");
   lines            = style.Apply(GetStyle("ui.background.separator"));
-  whitespace       = style.Apply(GetStyle("ui.virtual.whitespace"));
+  whitespace       = GetStyle("ui.virtual.whitespace");
   menu             = GetStyle("ui.menu");
   menu_selected    = GetStyle("ui.menu.selected");
   tabbar           = menu.Apply(whitespace);

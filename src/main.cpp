@@ -12,6 +12,8 @@
 //
 //  TEST IN WINDOWS AND LINUX
 //
+// Now:
+//
 //
 // Release:
 //   Well documented source code.
@@ -19,23 +21,22 @@
 //   read file properly (crlf, encoding, etc.)
 //   finder, autocompletion highlight fzf match.
 //   cleanup source fiels.
-//   proper highlight
 //   simple workflow (open edit save etc).
 //   configuration.
 //   proper binding and modes.
 //   ctrl+q properly handle.
 //
 //
-// Now:
 // Gap Buffer:
-//   tree-sitter read callback
 //   abstract the interface
+//   tree-sitter read callback
 //   user integers as characters
 //   implement gap buffer.
 //
 //
 // Pending:
 //  - FrameBuffer as class (constructor, set cell etc).
+//  - Tab names.
 //  - CRLF files crash the editor handle properly.
 //  - Editor::Error(), etc.
 //  - Window pos/area.
@@ -61,15 +62,9 @@
 //    - auto completion scrolling.
 //  - Draw diagnostics the same line.
 //  - Scroll if more tabs.
-
+//  - Theme dynamic changeing (listener);
+//  - Utils class (maybe)
 //
-//   structure:
-//     theme: getting values and proper, dynamic changeing (listener);
-//     Utils class (maybe)
-//
-//  Note:
-//    Drawing autocompletion is done at the document draw level, so split will
-//      override the list if we draw another on top of.
 //
 // Big things:
 //   gap buffer.
@@ -97,8 +92,8 @@
 //   the signature help contains multiple signatures only send the active signature to the caller not an array.
 //
 // BUG:
-//   drawing popup needs to be reviewed since if it goes out of the window, we just trim it but it needs to be pushed inside. (better draw primitives required)
-//   signature help will hide pressing space after comma.
+//   - drawing popup needs to be reviewed since if it goes out of the window, we just trim it but it needs to be pushed inside. (better draw primitives required)
+//   - signature help will hide pressing space after comma.
 //   [bug in termbox] color 0x000000 (black) cannot be used as it will be replaced
 //     with default color (use emacs theme compare with helix)
 //     ref: https://github.com/nsf/termbox/issues/114
@@ -111,12 +106,10 @@
 //
 // Unfinished, working things:
 //   Icons api, provide nerd/unicode/ascii icons based on config.
-//   autocompletion + (show documnt, symbol helper for parameter, icon, etc.)
 //   autocompletion selection of items. icon config.
 //   Theme loading from file and swith theme, theme listening for change etc.
 //   proper keybinding and loading that from config.
 //   auto completion -> scroll if we cycle and add a scroll bar depends on better drawing code. (not current temp).
-//   IPC instead of "sh" as the file, use correct file with va_args (variadic parameters);
 //   finder (picker):
 //     (file, rgrep, diagnos, buffer, symbols(treesitter))
 //     preview.
@@ -137,7 +130,6 @@
 //   Need to check if fzf/rg exists in the system and report (implement fallback tools).
 //
 //   Main loop should be handled by the front end (so raylib can draw forever and termbox2 don't have to). and FE will set the FPS.
-//   editor send events and ask draw in a structured manner.
 //   auto pair and auto indent
 //   editor modes implement properly.
 //   default bindnigs and tmeme settings.
@@ -148,6 +140,7 @@
 //   Can't bind to 12j, d10|, ... with numbers.
 //
 // Code quality:
+//   Change Coord to BuffPos buffpos
 //   Position and Coord names are alike (change Position -> Coord, Coord-> BuffPos)
 //   Write a clang-formater and apply through all the source.
 //   write tests (if I have time)
