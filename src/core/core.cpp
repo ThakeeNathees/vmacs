@@ -208,31 +208,66 @@ std::vector<std::string> StringSplit(const std::string& str, char delim) {
 // -----------------------------------------------------------------------------
 
 
-// FIXME: Remove this ugly logic.
+Config::Config() {
+  // TODO: load these from a defaults module (like micro).
+  // Load the default values.
+  tabsize      = 4;
+  scrolloff    = 5;
+  fps          = 30;
+  theme        = "ferra";
+  show_linenum = true;
+}
+
+
+void Config::Load(const Json& json) {
+
+  // TODO: All the errors are ignored scilently, these are comes from the user
+  // and we need to show the errors in the ui.
+  if (!json.is_object()) return;
+
+  tabsize      = JSON_GET_INT_OR(json, "tabsize", tabsize);
+  scrolloff    = JSON_GET_INT_OR(json, "scrolloff", scrolloff);
+  fps          = JSON_GET_INT_OR(json, "fps", fps);
+  theme        = JSON_GET_STRING_OR(json, "theme", theme);
+  show_linenum = JSON_GET_BOOL_OR(json, "show_linenum", show_linenum);
+
+  // Load filename lang map.
+  if (JSON_CHECK(json, "map_file_lang", is_object)) {
+    for (auto& [key, val] : json["map_file_lang"].items()) {
+      if (!val.is_string()) continue;
+      try {
+        std::regex re(key);
+        auto pair = std::make_pair(re, val.template get<std::string>());
+        map_file_lang.push_back(std::move(pair));
+      } catch (std::regex_error& err) {
+        throw err; // FIXME: Threwing here for development and make it crash.
+        // TODO: Show error to the user.
+      }
+    }
+  }
+
+  // Load lang lsp map.
+  if (JSON_CHECK(json, "map_lang_lsp", is_object)) {
+    for (auto& [key, val] : json["map_lang_lsp"].items()) {
+      if (!val.is_string()) continue;
+      map_lang_lsp[key] = val.template get<std::string>();
+    }
+  }
+
+}
+
+
 LanguageId Config::GetLangIdFromFileName(const std::string& filename) const {
-  if (EndsWith(filename, ".py")) return "python";
-
-  if (EndsWith(filename, ".cpp")) return "cpp";
-  if (EndsWith(filename, ".hpp")) return "cpp";
-  if (EndsWith(filename, ".inl")) return "cpp";
-
-  if (EndsWith(filename, ".c")) return "c";
-  if (EndsWith(filename, ".h")) return "c";
-
+  for (auto& pair : map_file_lang) {
+    if (std::regex_match(filename, pair.first)) return pair.second;
+  }
   return "";
 }
 
 
-// FIXME: Remove this ugly logic.
-LspClientId Config::GetLspClientIdFromFileName(const std::string& filename) const {
-  if (EndsWith(filename, ".py")) return "pylsp";
-
-  if (EndsWith(filename, ".cpp")) return "clangd";
-  if (EndsWith(filename, ".hpp")) return "clangd";
-  if (EndsWith(filename, ".inl")) return "clangd";
-  if (EndsWith(filename, ".c"))   return "clangd";
-  if (EndsWith(filename, ".h"))   return "clangd";
-
+LspClientId Config::GetLspClientIdFromLang(const LanguageId& langid) const {
+  auto it = map_lang_lsp.find(langid);
+  if (it != map_lang_lsp.end()) return it->second;
   return "";
 }
 

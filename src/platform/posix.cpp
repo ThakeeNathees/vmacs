@@ -206,9 +206,14 @@ bool ShellExec(exec_options_t opt, pid_t* pid, std::atomic<bool>& loop_stop) {
 
 l_loop_end:
 
+  // FIXME: Note that SIGTERM should be the proper way to end the process however
+  // the lsp will takes like 2 seconds at the end to terminate in the bellow waitpid
+  // call and SIGKILL will takes at most 10 microseconds.  This kill method should
+  // be a parameter and we should use sigkill for lsp and sigterm for other processes.
+  //
   // SIGKILL: kills the process immediately without letting the child process to cleanup.
   // SIGTERM: Stop the process peacefully letting the child cleanup.
-  kill(*pid, SIGTERM);
+  kill(*pid, SIGKILL);
 
   // Wait for the child process to finish it's thing and cleanup resources.
   int status;

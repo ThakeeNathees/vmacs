@@ -149,6 +149,27 @@ using Json = nlohmann::json;
 // Application specific macros.
 // -----------------------------------------------------------------------------
 
+#define JSON_CHECK(json, key, is_type) \
+  ((json).contains(key)) && (json)[key].is_type()
+
+
+#define JSON_GET_STRING_OR(json, key, or)            \
+  (((json).contains(key) && (json)[key].is_string()) \
+    ? (json)[key].template get<std::string>()        \
+    : or)
+
+
+#define JSON_GET_BOOL_OR(json, key, or)               \
+  (((json).contains(key) && (json)[key].is_boolean()) \
+    ? (json)[key].template get<bool>()                \
+    : or)
+
+
+#define JSON_GET_INT_OR(json, key, or)                       \
+  (((json).contains(key) && (json)[key].is_number_integer()) \
+    ? (json)[key].template get<int>()                        \
+    : or)
+
 
 #define BUFF_CELL(buff, x, y)\
   (buff).cells[ (buff).width * ((y)) + (x)  ]
@@ -497,24 +518,27 @@ struct Event {
 // The editors global configuration.
 struct Config {
 
-  // How many spaces should be used to render a tab character. Note that this
-  // value should be at least 1.
-  int tabsize       = 4;
-  int scrolloff     = 5; // Margin between the cursor and the view edge (vertical).
-  int fps           = 30;
-  std::string theme = "ferra";
-  bool show_linenum = true; // TODO: Support relative number.
+public:
+  int tabsize;
+  int scrolloff;
+  int fps;
+  std::string theme;
+  bool show_linenum;
 
-  // TODO: Create a map of filename to id and filename to lsp client.
-  //
-  // filename_to_lang : {
-  //   "*.cpp"          : "cpp",
-  //   "CMakeLists.txt" : "cmake",
-  //   "*.txt"          : "txt",
-  // }
-  //
+  // Vector of pair of regex and language id.
+  std::vector<std::pair<std::regex, std::string>> map_file_lang;
+
+  // key = lang id, value = lsp id.
+  std::map<std::string, std::string> map_lang_lsp;
+
+public:
+  Config();
+
+  // Load the configuration from the json object which was read from a file.
+  void Load(const Json& json);
+
   LanguageId GetLangIdFromFileName(const std::string& filename) const;
-  LspClientId GetLspClientIdFromFileName(const std::string& filename) const;
+  LspClientId GetLspClientIdFromLang(const LanguageId& langid) const;
 };
 
 

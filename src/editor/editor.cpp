@@ -102,6 +102,11 @@ bool Editor::SetTheme(const std::string theme_name) {
 }
 
 
+void Editor::LoadConfig(const Json& json) {
+  config.Load(json);
+}
+
+
 void Editor::RegisterTheme(const std::string& theme_name, std::shared_ptr<Theme> theme) {
   themes[theme_name] = std::move(theme);
 }
@@ -273,7 +278,7 @@ std::shared_ptr<Document> Editor::OpenDocument(const Path& path) {
   }
 
   // Set LSP client.
-  LspClientId client_id = config.GetLspClientIdFromFileName(path.FileName());
+  LspClientId client_id = config.GetLspClientIdFromLang(language_id);
   if (!client_id.empty()) {
     std::shared_ptr<LspClient> client = GetLspClient(client_id);
     if (client) {

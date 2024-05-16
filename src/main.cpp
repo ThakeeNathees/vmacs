@@ -16,6 +16,7 @@
 //
 //
 // Release:
+//   Diagnostics.
 //   Well documented source code.
 //   Windows support
 //   read file properly (crlf, encoding, etc.) + handle binary files.
@@ -35,6 +36,7 @@
 //
 //
 // Pending:
+//  - ts_edit_tree implement (same as syncing with lsp server).
 //  - FrameBuffer as class (constructor, set cell etc).
 //  - CRLF files crash the editor handle properly.
 //  - Editor::Error(), etc.
@@ -62,7 +64,7 @@
 //  - Draw diagnostics the same line.
 //  - Scroll if more tabs.
 //  - Theme dynamic changeing (listener);
-//  - Utils class (maybe)
+//  - diagnostics in gutter.
 //
 //
 // Big things:
@@ -114,7 +116,6 @@
 //     preview.
 //     actoin selection.
 //   Tab/split:
-//     Tab name.
 //     Tab scrolling if we have too many tabs.
 //     Closing tabs (closing duplicats etc).
 //     split size are fixed.
@@ -139,6 +140,7 @@
 //   Can't bind to 12j, d10|, ... with numbers.
 //
 // Code quality:
+//   Utils class (maybe)
 //   Change Coord to BuffPos buffpos
 //   Position and Coord names are alike (change Position -> Coord, Coord-> BuffPos)
 //   Write a clang-formater and apply through all the source.
@@ -528,6 +530,10 @@ int main(int argc, char** argv) {
 
 
   std::shared_ptr<Editor> editor = Editor::Singleton();
+
+
+  // Load configuration.
+  editor->LoadConfig(Platform::LoadConfig());
 
   // Register themes.
   std::map<std::string, Json> theme_data = Platform::LoadThemes();

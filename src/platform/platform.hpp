@@ -80,6 +80,9 @@ public:
   // Os independent but still we need this from the host system.
   // --------------------------------------------------------------------------
 
+  // Load the configuration file which is json and returns the json object.
+  static Json LoadConfig();
+
   // Load all the themes in memory or from some config directory and return them
   // as json object, that will be used to construct the Theme instance.
   static std::map<std::string, Json> LoadThemes();

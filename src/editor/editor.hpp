@@ -50,6 +50,7 @@ public:
   void SetUi(std::unique_ptr<IUi> window);
   IUi* GetUi();
 
+  void LoadConfig(const Json& json);
   void RegisterTheme(const std::string& theme_name, std::shared_ptr<Theme> theme);
   void RegisterLanguage(LanguageId id, std::shared_ptr<Language> lang);
   void RegisterLspClient(const LspConfig& config);

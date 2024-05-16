@@ -18,6 +18,39 @@
 #undef X
 
 
+// FIXME: load this from the filesystem.
+Json Platform::LoadConfig() {
+  return Json::parse(R"!!({
+
+    "tabsize"       : 4,
+    "scrolloff"     : 5,
+    "fps"           : 30,
+    "theme"         : "ferra",
+    "show_linenum"  : true,
+
+    // FIXME: Implement Glob() so we can use "*.cpp" instead of ".*\\.cpp".
+    "map_file_lang" : {
+      ".*\\.cpp" : "cpp",
+      ".*\\.hpp" : "cpp",
+      ".*\\.inl" : "cpp",
+      ".*\\.c"   : "c",
+      ".*\\.h"   : "h",
+      ".*\\.py"  : "python"
+    },
+
+    "map_lang_lsp" : {
+      "cpp"    : "clangd",
+      "c"      : "clangd",
+      "python" : "pylsp"
+    }
+
+  })!!",
+  nullptr, // callback.
+  true,    // allow exceptions.
+  true);   // ignore comments.
+}
+
+
 std::map<std::string, Json> Platform::LoadThemes() {
 
   // The return value.

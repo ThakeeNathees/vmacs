@@ -10,29 +10,11 @@
 
 #include <future>
 
-#define CEHCK_JSON(json, key, is_type) \
-  ((json).contains(key)) && (json)[key].is_type()
-
-#define GET_STRING_OR(json, key, or)                 \
-  (((json).contains(key) && (json)[key].is_string()) \
-    ? (json)[key].template get<std::string>()        \
-    : or)
-
-#define GET_BOOL_OR(json, key, or)                    \
-  (((json).contains(key) && (json)[key].is_boolean()) \
-    ? (json)[key].template get<bool>()                \
-    : or)
-
-#define GET_INT_OR(json, key, or)                            \
-  (((json).contains(key) && (json)[key].is_number_integer()) \
-    ? (json)[key].template get<int>()                        \
-    : or)
-
 // The json (documentation) is either string or MarkupContent, either way we
 // just return the plan text and we're not rendering the markdown content.
 #define GET_DOC_STR_OR_MARKUP(json)                                \
   ((json).is_string() ? (json).template get<std::string>() : (     \
-    (json).is_object() ? ( GET_STRING_OR(json, "value", "")) : ""))
+    (json).is_object() ? ( JSON_GET_STRING_OR(json, "value", "")) : ""))
 
 
 // Recursively search if a json value exists. Consider the folloging example:
@@ -278,7 +260,7 @@ void LspClient::SendServerContent(const Json& content) {
   data += dump;
 
   bool is_initialize_request = (
-      CEHCK_JSON(content, "id", is_number_integer) &&
+      JSON_CHECK(content, "id", is_number_integer) &&
       (content["id"].template get<int>() == INITIALIZE_REQUSET_ID));
 
   if (is_initialize_request) {
@@ -349,7 +331,7 @@ void LspClient::HandleNotify(const std::string& method, const Json& params) {
       Diagnostic diagnostic;
 
       // Not optional.
-      diagnostic.message   = GET_STRING_OR(diag, "message", "");
+      diagnostic.message   = JSON_GET_STRING_OR(diag, "message", "");
 
       // TODO: Assuming "range" will always exists, fix this. Figure out a better
       // way to convert back and forth json to c++ types.
@@ -358,16 +340,16 @@ void LspClient::HandleNotify(const std::string& method, const Json& params) {
       diagnostic.end.line        = diag["range"]["end"]["line"].template get<int>();
       diagnostic.end.character   = diag["range"]["end"]["character"].template get<int>();
 
-      diagnostic.severity  = GET_INT_OR(diag, "severity", 3);
-      diagnostic.code      = GET_STRING_OR(diag, "code", "");
-      diagnostic.source    = GET_STRING_OR(diag, "source", "");
+      diagnostic.severity  = JSON_GET_INT_OR(diag, "severity", 3);
+      diagnostic.code      = JSON_GET_STRING_OR(diag, "code", "");
+      diagnostic.source    = JSON_GET_STRING_OR(diag, "source", "");
 
 
       diagnostics.push_back(std::move(diagnostic));
     }
 
-    std::string uri = GET_STRING_OR(params, "uri", "");
-    uint32_t version = GET_INT_OR(params, "version", 0);
+    std::string uri = JSON_GET_STRING_OR(params, "uri", "");
+    uint32_t version = JSON_GET_INT_OR(params, "version", 0);
     cb_diagnostics(Path::FromUri(uri), version, std::move(diagnostics));
     return;
   }
@@ -415,7 +397,7 @@ void LspClient::HandleResponse(RequestId id, const Json& result) {
            completion_list.push_back(std::move(ci));
          }
        } else if (result.is_object()) {
-         is_incomplete = GET_BOOL_OR(result, "isIncomplete", false);
+         is_incomplete = JSON_GET_BOOL_OR(result, "isIncomplete", false);
 
          if (!result.contains("items")) return; // Error ??
          if (!result["items"].is_array()) return;
@@ -439,22 +421,22 @@ void LspClient::HandleResponse(RequestId id, const Json& result) {
        if (!result.contains("signatures")) return;
        if (!result["signatures"].is_array()) return;
        SignatureItems items;
-       items.active_parameter = GET_INT_OR(result, "activeParameter", -1);
-       items.active_signature = GET_INT_OR(result, "activeSignature", -1);
+       items.active_parameter = JSON_GET_INT_OR(result, "activeParameter", -1);
+       items.active_signature = JSON_GET_INT_OR(result, "activeSignature", -1);
        for (auto& sig : result["signatures"]) {
          if (!sig.is_object()) continue;
          SignatureInformation signature;
-         signature.label = GET_STRING_OR(sig, "label", "");
+         signature.label = JSON_GET_STRING_OR(sig, "label", "");
 
          if (sig.contains("documentation")) {
            signature.documentation = GET_DOC_STR_OR_MARKUP(sig["documentation"]);
          }
 
          // According to the docs.
-         int active_parameter = GET_INT_OR(sig, "activeParameter", -1);
+         int active_parameter = JSON_GET_INT_OR(sig, "activeParameter", -1);
          if (active_parameter >= 0) items.active_parameter = active_parameter;
 
-         if (CEHCK_JSON(sig, "parameters", is_array)) {
+         if (JSON_CHECK(sig, "parameters", is_array)) {
            for (auto& param : sig["parameters"]) {
              ParameterInformation pi;
 
@@ -463,7 +445,7 @@ void LspClient::HandleResponse(RequestId id, const Json& result) {
              // as well.
              // param["label"] : string | [int, int]
              //
-             if (CEHCK_JSON(param, "label", is_string)) {
+             if (JSON_CHECK(param, "label", is_string)) {
                std::string label = param["label"].template get<std::string>();
                size_t pos = signature.label.find(label);
                if (pos != std::string::npos) {
@@ -472,7 +454,7 @@ void LspClient::HandleResponse(RequestId id, const Json& result) {
                }
              }
 
-             pi.documentation = GET_STRING_OR(param, "documentation", "");
+             pi.documentation = JSON_GET_STRING_OR(param, "documentation", "");
              signature.parameters.push_back(pi);
            }
          }
@@ -510,12 +492,12 @@ bool LspClient::JsonToCompletionItem(CompletionItem* item, const Json& json) {
 
   if (!json.contains("label")) return false;
   item->label = json["label"].template get<std::string>();
-  item->insert_text = GET_STRING_OR(json, "insertText", "");
+  item->insert_text = JSON_GET_STRING_OR(json, "insertText", "");
 
-  item->kind = (CompletionItemKind) GET_INT_OR(json, "kind", 1);
-  item->documentation = GET_STRING_OR(json, "documentation", "");
-  item->depricated = GET_BOOL_OR(json, "depricated", false);
-  item->documentation = GET_STRING_OR(json, "sortText", "");
+  item->kind = (CompletionItemKind) JSON_GET_INT_OR(json, "kind", 1);
+  item->documentation = JSON_GET_STRING_OR(json, "documentation", "");
+  item->depricated = JSON_GET_BOOL_OR(json, "depricated", false);
+  item->documentation = JSON_GET_STRING_OR(json, "sortText", "");
 
   auto _ParseTextEdit = [](const Json& json) -> TextEdit {
     TextEdit text_edit;
@@ -532,7 +514,7 @@ bool LspClient::JsonToCompletionItem(CompletionItem* item, const Json& json) {
 
     text_edit.start = start;
     text_edit.end   = end;
-    text_edit.text  = GET_STRING_OR(json, "newText", "");
+    text_edit.text  = JSON_GET_STRING_OR(json, "newText", "");
 
     return text_edit;
   };
