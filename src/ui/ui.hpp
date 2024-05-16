@@ -370,6 +370,7 @@ private:
 
   void ResetCursorBlink();
   void EnsureCursorOnView();
+  void EnsureCursorAtMiddle();
 
   void DrawBuffer(FrameBuffer& buff, Position pos, Area area);
   int DrawLineNums(FrameBuffer& buff, Position pos, Area area);

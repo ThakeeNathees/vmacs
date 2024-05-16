@@ -134,6 +134,25 @@ void DocumentWindow::EnsureCursorOnView() {
 }
 
 
+void DocumentWindow::EnsureCursorAtMiddle() {
+
+  // Note that the col of Coord is not the view column, and cursor.GetColumn()
+  // will return the column it wants go to and not the column it actually is.
+  const Cursor& cursor = document->cursors.GetPrimaryCursor();
+  int lines_count = document->buffer->GetLineCount();
+  int row = cursor.GetCoord().line;
+  int col = document->buffer->IndexToColumn(cursor.GetIndex());
+
+  if (col <= view_start.col) {
+    view_start.col = col;
+  } else if (view_start.col + buffer_area.width <= col) {
+    view_start.col = col - MAX(0, buffer_area.width - 1);
+  }
+
+  view_start.row = MAX(0, row - (buffer_area.height / 2));
+}
+
+
 std::unique_ptr<Window> DocumentWindow::Copy() const {
   std::unique_ptr<DocumentWindow> ret = std::make_unique<DocumentWindow>(*this);
   ret->cursors_backup = this->document->cursors;
@@ -156,8 +175,7 @@ void DocumentWindow::JumpTo(const Coord& coord) {
     cursors_backup = document->cursors;
   }
 
-  // TODO: Make sure the cursor is at the middle of the view.
-  EnsureCursorOnView();
+  EnsureCursorAtMiddle();
 }
 
 
@@ -189,6 +207,9 @@ int DocumentWindow::DrawLineNums(FrameBuffer& buff, Position pos, Area area) {
   const int margin_right = 1; // Leaving 1 space right for the buffer.
   const int width = MAX(3, std::to_string(end_line).size()) + margin_right;
 
+  // We don't draw selected line number highlighted if it's not active.
+  const bool is_active = IsActive();
+
   // y is the current relative y coordinate from pos we're drawing.
   for (int y = 0; y < area.height; y++) {
 
@@ -197,7 +218,7 @@ int DocumentWindow::DrawLineNums(FrameBuffer& buff, Position pos, Area area) {
     if (line_index >= line_count) break;
 
     Style style = theme.linenr;
-    if (document->GetCursors().GetPrimaryCursor().GetCoord().line == line_index) {
+    if (is_active && document->GetCursors().GetPrimaryCursor().GetCoord().line == line_index) {
       style = theme.linenr_selected;
     }
 
@@ -504,7 +525,7 @@ void DocumentWindow::DrawAutoCompletions(Position pos) {
   int signature_index = CLAMP(0, signature_helps->active_signature, signature_size);
   const SignatureInformation& si = signature_helps->signatures[signature_index];
 
-  int label_size = si.label.size();
+  int label_size = si.label.size() + 2; // +2 for margin both sides.
   FrameBuffer buff_label = Editor::NewFrameBuffer(Area(label_size, 1));
 
   // This do block exists so we can jump out of the block to the end immediately
@@ -527,7 +548,7 @@ void DocumentWindow::DrawAutoCompletions(Position pos) {
 
     DrawTextLine(
       buff_label,
-      si.label.c_str(),
+      (" " + si.label).c_str(), // Adding a space for margin right.
       Position(0, 0),
       label_size,
       theme.menu,
@@ -547,7 +568,7 @@ void DocumentWindow::DrawAutoCompletions(Position pos) {
     DrawTextLine(
       buff_label,
       param_label.c_str(),
-      Position(pi.label.start, 0),
+      Position(pi.label.start + 1, 0), // +1 since we added " " for margin above.
       label_size,
       theme.menu.Apply(theme.signature_active),
       icons,

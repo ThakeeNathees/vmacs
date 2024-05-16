@@ -13,6 +13,7 @@
 //  TEST IN WINDOWS AND LINUX
 //
 // Now:
+//   Reading file
 //
 //
 // Release:
@@ -23,7 +24,6 @@
 //   finder, autocompletion highlight fzf match.
 //   cleanup source files.
 //   simple workflow (open edit save etc).
-//   configuration.
 //   proper binding and modes.
 //   ctrl+q properly handle.
 //
@@ -41,7 +41,7 @@
 //  - CRLF files crash the editor handle properly.
 //  - Editor::Error(), etc.
 //  - Window pos/area.
-//  - Loading config from file + (lsp config from config file).
+//  - Loading config from file.
 //  - Remove tomlcpp library. We don't need it (maybe?)
 //  - calculate area manually instead of draw so they can setup the view at start.
 //  - Check if the LSP client exists and show an error message otherwise.
@@ -70,7 +70,6 @@
 // Big things:
 //   gap buffer.
 //   mouse support.
-//   load configs.
 //   status line
 //   command mode (like) + autocompletion (if them auto update).
 //   number line + diagnos gutter.
