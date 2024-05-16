@@ -196,6 +196,11 @@ int DocumentWindow::DrawLineNums(FrameBuffer& buff, Position pos, Area area) {
     int line_index = view_start.row + y;
     if (line_index >= line_count) break;
 
+    Style style = theme.linenr;
+    if (document->GetCursors().GetPrimaryCursor().GetCoord().line == line_index) {
+      style = theme.linenr_selected;
+    }
+
     // Add spacing before the number to make all the numbers align right.
     std::string linenr = std::to_string(line_index+1);
     if (linenr.size() < (width - margin_right)) {
@@ -207,7 +212,7 @@ int DocumentWindow::DrawLineNums(FrameBuffer& buff, Position pos, Area area) {
         linenr.c_str(),
         Position(pos.x, pos.y+y),
         (width-margin_right),
-        theme.linenr,
+        style,
         icons,
         true);
   }

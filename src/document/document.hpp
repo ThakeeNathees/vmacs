@@ -184,6 +184,7 @@ public:
   // Primary cursor is the only cursor we'll be focused on the view and new
   // cursors will be added from which.
   Cursor& GetPrimaryCursor();
+  const Cursor& GetPrimaryCursor() const;
 
   void AddCursor(const Cursor& cursor);
   void AddCursorDown();

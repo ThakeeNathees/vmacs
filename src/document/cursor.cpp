@@ -116,6 +116,13 @@ Cursor& MultiCursor::GetPrimaryCursor() {
 }
 
 
+const Cursor& MultiCursor::GetPrimaryCursor() const {
+  ASSERT(cursors.size() >= 1, OOPS);
+  if (reversed) return cursors[0];
+  return cursors[cursors.size() - 1];
+}
+
+
 void MultiCursor::AddCursor(const Cursor& cursor) {
   for (const Cursor& curs : cursors) {
     if (curs.GetIndex() == cursor.GetIndex()) {
