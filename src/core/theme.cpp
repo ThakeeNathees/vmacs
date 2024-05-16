@@ -187,6 +187,44 @@ Style Theme::GetStyle(const std::string& capture_) const {
 }
 
 
+Style Theme::GetCompletionItemStyle(int kind_index) const {
+  Style ret = text;
+  // FIXME: We cannot use the lsp module here since we shouldn't depend on it
+  // here find a way to have the same list here as well (sync).
+  if (kind_index < 0 || kind_index >= COMPLETION_ITEM_KIND_COUNT) return ret;
+
+  // I'm trying to match the color values with vscode (dark+) since we're using it's icons.
+  switch (kind_index + 1) { // Convert the index to kind.
+    case 1:  /*   Text */        break;
+    case 2:  /*   Method */      ret = GetStyle("function.method"); break;
+    case 3:  /* 󰊕  Function */    ret = GetStyle("function.builtin"); break;
+    case 4:  /*   Constructor */ ret = GetStyle("keyword.control"); break;
+    case 5:  /*   Field */       ret = GetStyle("variable.other.member"); break;
+    case 6:  /*   Variable */    ret = GetStyle("variable"); break;
+    case 7:  /*   Class */       ret = GetStyle("constant.character.escape"); break;
+    case 8:  /*   Interface */   ret = GetStyle("variable"); break;
+    case 9:  /*   Module */      break;
+    case 10: /*   Property */    ret = GetStyle("property"); break;
+    case 11: /*   Unit */        break;
+    case 12: /*   Value */       break;
+    case 13: /*   Enum */        ret = GetStyle("keyword.storage"); break;
+    case 14: /*   Keyword */     ret = GetStyle("keyword"); break;
+    case 15: /*   Snippet */     break;
+    case 16: /*   Color */       break;
+    case 17: /*   File */        break;
+    case 18: /*   Reference */   break;
+    case 19: /*   Folder */      break;
+    case 20: /*   EnumMember */  ret = GetStyle("type.enum.variant"); break;
+    case 21: /*   Constant */    ret = GetStyle("constant"); break;
+    case 22: /*   Struct */      ret = GetStyle("type"); break;
+    case 23: /*   Event */       break;
+    case 24: /*   Operator */    ret = GetStyle("operator"); break;
+    case 25: /*   TypeParameter */ break;
+  }
+  return text.Apply(ret);
+}
+
+
 bool Theme::StringToColor(const char* str, Color* rgb) {
   ASSERT(str != nullptr && rgb != nullptr, OOPS);
   if (*str != '#') return false;

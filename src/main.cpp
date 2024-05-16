@@ -11,16 +11,12 @@
 // TODO:
 //
 //  TEST IN WINDOWS AND LINUX
-//  -------------------------
-//  Theme (ui) is a huge todo.
-//  -------------------------
 //
 //
 // Release:
 //   Well documented source code.
 //   Windows support
 //   read file properly (crlf, encoding, etc.)
-//   autocompletion icon color (properly handle icons nerd and non nerd).
 //   finder, autocompletion highlight fzf match.
 //   cleanup source fiels.
 //   proper highlight
@@ -40,8 +36,6 @@
 //
 // Pending:
 //  - FrameBuffer as class (constructor, set cell etc).
-//  - Ensure cursor on view is not properly work since the line number takes
-//  - some area, properly implement it.
 //  - CRLF files crash the editor handle properly.
 //  - Editor::Error(), etc.
 //  - Window pos/area.

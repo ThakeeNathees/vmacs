@@ -677,6 +677,10 @@ private:
 // Theme.
 // -----------------------------------------------------------------------------
 
+// This is actually defined in the lsp module but we hold this number to get an
+// icon for a completion kind, and we should't depend on the lsp "module" here.
+#define COMPLETION_ITEM_KIND_COUNT 25
+
 
 class Icons {
 public:
@@ -715,9 +719,7 @@ public:
   int pin          = 0xf0403; // 󰐃
   int filetree     = 0xf0645; // 󰙅
 
-  // TODO: The count 25 is hardcoded which is got from the LSP specification
-  // as of May of 2024.
-  int completion_kind[25] = {
+  int completion_kind[COMPLETION_ITEM_KIND_COUNT] = {
     0xea93,  //  Text          
     0xea8c,  //  Method        
     0xf0295, //  Function      󰊕
@@ -796,6 +798,11 @@ public:
   // style parameter will be updated, otherwise, return false. If the capture
   // doesn't exists the return style will be empty.
   Style GetStyle(const std::string& capture) const;
+
+  // Returns the style for a completion item icon to draw in the autocomplete
+  // overlay. The parameter is kind_index (0 based), not (1 based) kind defined
+  // in the lsp client header.
+  Style GetCompletionItemStyle(int kind_index) const;
 
   // Converts a hex string of color values and returns as the equelevent numeric value.
   // as 0x00rrggbb value.

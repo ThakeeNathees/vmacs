@@ -420,10 +420,10 @@ void DocumentWindow::DrawAutoCompletions(Position pos) {
 
   // Compute the maximum width for the labels this does not incudes the padding and
   // icons which we'll add later bellow.
-  int max_len = 0;
+  int width = 0;
   for (int i = 0; i < count_dispaynig_items; i++) {
     int item_len = Utf8Strlen((*completion_items)[i].label.c_str());
-    max_len = MAX(max_len, item_len);
+    width = MAX(width, item_len);
   }
 
   // Prepare the coord for drawing the completions.
@@ -444,32 +444,51 @@ void DocumentWindow::DrawAutoCompletions(Position pos) {
   drawpos = Position(pos.x + menu_start.x, pos.y + menu_start.y);
   drawpos.y += (drawing_bellow_cursor) ? 1 : (-count_dispaynig_items);
 
-  // Adding 4 because  1 for icons, 2 for padding at both edge, 1 for spacing
-  // between icon and the label.
-  max_len += 4;
+  // TODO: We're assuming that the size of the icon is only 1 character wide
+  // which might not be correct if we use multi character ascii icons like:
+  // [fn], [+], =>, etc...
+  //
+  // Adding 4 becase <space> <icon> <space> "label" <space> 3 spaces and icon.
+  width += 4;
 
-  FrameBuffer buff_compl = Editor::NewFrameBuffer(Area(max_len, count_dispaynig_items));
+  FrameBuffer buff_compl = Editor::NewFrameBuffer(Area(width, count_dispaynig_items));
   Position curr(0, 0); // Draw position relative to the buffer overlay.
 
   for (int i = 0; i < count_dispaynig_items; i++) {
     auto& item = (*completion_items)[i];
-    int icon_index = CLAMP(0, (int)item.kind-1, completion_kind_count);
+    int kind = CLAMP(0, (int)item.kind-1, completion_kind_count);
 
     Style style = (i == document->completion_selected) ? theme.menu_selected : theme.menu;
 
     // TODO: Draw a scroll bar.
 
-    std::string completion_icon = Utf8UnicodeToString(icons.completion_kind[icon_index]);
-    std::string completion_item_line = " " + completion_icon + " " + item.label + " ";
+    std::string completion_icon =  " " + Utf8UnicodeToString(icons.completion_kind[kind]) + " ";
+    int completion_icon_size = Utf8Strlen(completion_icon.c_str()); // FIXME: Implement unicode based string wrapper and use everywhere.
+    Style style_kind = style.Apply(theme.GetCompletionItemStyle(kind));
+    DrawTextLine(
+        buff_compl,
+        completion_icon.c_str(),
+        curr,
+        completion_icon_size,
+        style_kind,
+        icons,
+        true);
+
+    curr.x += completion_icon_size;
+    int max_label_width = width - completion_icon_size;
+
+    std::string completion_item_line = item.label + " "; // Add space right as margin.
     DrawTextLine(
         buff_compl,
         completion_item_line.c_str(),
         curr,
-        max_len,
+        max_label_width,
         style,
         icons,
         true);
-    curr.row++;
+
+    curr.x = 0; // Reset back to start.
+    curr.y++;
   }
 
   ui->PushOverlay(drawpos, std::move(buff_compl));
