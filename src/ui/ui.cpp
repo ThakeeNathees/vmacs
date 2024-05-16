@@ -347,6 +347,9 @@ Window* Split::GetWindowAt(const Position& pos) {
 
 
 void Split::Draw(FrameBuffer& buff, Position pos, Area area) {
+  const Theme& theme = Editor::GetTheme();
+  const Icons& icons = Editor::GetIcons();
+
   if (children.size() == 0) { // Leaf node.
     ASSERT(type == Split::Type::LEAF, OOPS);
     if (window != nullptr) window->Draw(buff, pos, area);
@@ -354,15 +357,6 @@ void Split::Draw(FrameBuffer& buff, Position pos, Area area) {
   }
 
   ASSERT(type != Split::Type::LEAF, OOPS);
-
-  // ---------------------------------------------------------------------------
-  // FIXME: Properly fetch the style from the editor or somewhere else.
-  const Theme& theme = Editor::GetTheme();
-  Style style_text   = theme.GetStyle("ui.text");
-  Style style_bg     = theme.GetStyle("ui.background");
-  Style style_border = theme.GetStyle("ui.background.separator");
-  style_border = style_text.Apply(style_bg).Apply(style_border);
-  // ---------------------------------------------------------------------------
 
   // The position to draw the children.
   Position curr = pos;
@@ -382,7 +376,7 @@ void Split::Draw(FrameBuffer& buff, Position pos, Area area) {
       if (!is_last) width--;
       child->Draw(buff, curr, Area(width, area.height));
       if (!is_last) {
-        DrawVerticalLine(buff, Position(curr.x+width, curr.y), area.height, style_border, Editor::GetIcons());
+        DrawVerticalLine(buff, Position(curr.x+width, curr.y), area.height, theme.lines, icons);
       }
       curr.x += width+1; // +1 for split line.
 
@@ -391,7 +385,7 @@ void Split::Draw(FrameBuffer& buff, Position pos, Area area) {
       if (!is_last) height--; // We'll use one row for drawing the split.
       child->Draw(buff, curr, Area(area.width, height));
       if (!is_last) {
-        DrawHorizontalLine(buff, Position(curr.x, curr.y + height), area.width, style_border, Editor::GetIcons());
+        DrawHorizontalLine(buff, Position(curr.x, curr.y + height), area.width, theme.lines, icons);
       }
       curr.y += height+1; // +1 for split line.
     }
@@ -692,33 +686,15 @@ void Ui::DrawOverlays(FrameBuffer& buff) {
 }
 
 
-// TODO: Add multiple tabs and scroll and ensure active tab is in view.
+// TODO: Add tabs scroll and ensure active tab is in view.
 void Ui::DrawTabsBar(FrameBuffer& buff, Position pos, Area area) {
   ASSERT(tabs.size() > 0, OOPS);
 
-  const Theme& theme     = Editor::GetTheme();
+  const Theme& theme = Editor::GetTheme();
   const Icons& icons = Editor::GetIcons();
 
-  // FIXME: Move this.
-  // --------------------------------------------------------------------------
-  Style style_text       = theme.GetStyle("ui.text");
-  Style style_bg         = theme.GetStyle("ui.background");
-  Style style_whitespace = theme.GetStyle("ui.virtual.whitespace");
-  Style style_cursor     = theme.GetStyle("ui.cursor.primary");
-  Style style_selection  = theme.GetStyle("ui.selection.primary");
-  Style style_error      = theme.GetStyle("error");
-  Style style_warning    = theme.GetStyle("warning");
-  Style style_menu       = theme.GetStyle("ui.menu");
-  Style style_menu_sel   = theme.GetStyle("ui.menu.selected");
-
-  Style style_not_active = style_menu.Apply(style_whitespace);
-  Style style_active     = style_menu_sel.Apply(style_bg);
-  Style style_split      = style_not_active;
-  style_split.fg         = style_active.bg;
-  // --------------------------------------------------------------------------
-
   Position curr = pos;
-  DrawRectangleFill(buff, curr, Area(area.width, 1), style_not_active);
+  DrawRectangleFill(buff, curr, Area(area.width, 1), theme.tabbar);
 
   for (int i = 0; i < tabs.size(); i++) {
     auto& tab = tabs[i];
@@ -733,15 +709,15 @@ void Ui::DrawTabsBar(FrameBuffer& buff, Position pos, Area area) {
     // This will be the displaied text of the tab bar including the padding.
     std::string tab_bar_display = std::string(" ") + tab_name + " ";
 
-    Style& style = (i == active_tab_index) ? style_active : style_not_active;
-
+    // Draw the tab name.
+    const Style& style = (i == active_tab_index) ? theme.tabbar_active : theme.tabbar;
     DrawTextLine(buff, tab_bar_display.c_str(), curr, tab_bar_display.size(), style, icons, true);
     curr.col += tab_bar_display.size();
 
     if (i == active_tab_index || (i+1) == active_tab_index) {
-      SET_CELL(buff, curr.col, curr.row, ' ', style_active);
+      SET_CELL(buff, curr.col, curr.row, ' ', theme.tabbar_active);
     } else {
-      DrawVerticalLine(buff, curr, 1, style_split, icons);
+      DrawVerticalLine(buff, curr, 1, theme.tabbar, icons);
     }
 
     curr.col++;  // +1 for vertical split.
@@ -753,21 +729,6 @@ void Ui::DrawHomeScreen(FrameBuffer& buff, Position pos, Area area) {
 
   const Icons& icons = Editor::GetIcons();
   const Theme& theme = Editor::GetTheme();
-
-  // FIXME: Move this to somewhere else.
-  // --------------------------------------------------------------------------
-  // TODO: Use ui.cursor for secondary cursor same as selection.
-  Style style_text       = theme.GetStyle("ui.text");
-  Style style_bg         = theme.GetStyle("ui.background");
-  Style style_whitespace = theme.GetStyle("ui.virtual.whitespace");
-  Style style_cursor     = theme.GetStyle("ui.cursor.primary");
-  Style style_selection  = theme.GetStyle("ui.selection.primary");
-  Style style_error      = theme.GetStyle("error");
-  Style style_warning    = theme.GetStyle("warning");
-
-  Style style = style_bg.Apply(style_text);
-  Style style_copyright = style_bg.Apply(style_whitespace);
-  // --------------------------------------------------------------------------
 
   // FIXME: This is temproary.
   // --------------------------------------------------------------------------
@@ -797,9 +758,9 @@ void Ui::DrawHomeScreen(FrameBuffer& buff, Position pos, Area area) {
   for (auto& pair : items) {
     size_t len_text = Utf8Strlen(pair.first.c_str());
     size_t len_bind = Utf8Strlen(pair.second.c_str());
-    DrawTextLine(buff, pair.first.c_str(), curr, len_text, style, icons, false);
+    DrawTextLine(buff, pair.first.c_str(), curr, len_text, theme.style, icons, false);
     Position pos_binding = Position(curr.x+max_len_text+spacing, curr.y);
-    DrawTextLine(buff, pair.second.c_str(), pos_binding, len_bind, style, icons, false);
+    DrawTextLine(buff, pair.second.c_str(), pos_binding, len_bind, theme.style, icons, false);
     curr.row += 2;
   }
 
@@ -807,7 +768,7 @@ void Ui::DrawHomeScreen(FrameBuffer& buff, Position pos, Area area) {
   std::string copyright = "Copyright (c) 2024 Thakee Nathees";
   curr.row = pos.row + area.height - 2;
   curr.col = pos.col + (area.width - copyright.size()) / 2;
-  DrawTextLine(buff, copyright.c_str(), curr, copyright.size(), style_copyright, icons, false);
+  DrawTextLine(buff, copyright.c_str(), curr, copyright.size(), theme.whitespace, icons, false);
 }
 
 
@@ -817,25 +778,15 @@ void Ui::DrawInfoBar(FrameBuffer& buff) {
   const Theme& theme = Editor::GetTheme();
   const Icons& icons = Editor::GetIcons();
 
-  // FIXME: --------------------------------------------------------------------
-  Style style_text = theme.GetStyle("ui.text");
-  Style style_bg   = theme.GetStyle("ui.background");
-  Style style      = theme.GetStyle("ui.statusline");
-  // Style style_menu        = theme.GetStyle("ui.menu");
-  // Style style_bar  = style_bg.Apply(style_text).Apply(style_menu);
-  // Style style      = style_bg.Apply(style_text).Apply(style_statusline);
-  // style.fg = style_bar.bg;
-  // ---------------------------------------------------------------------------
-
   // Current drawing position.
   Position curr(0, buff.height-1);
 
-  DrawRectangleFill(buff, curr, Area(buff.width, 1), style);
-
-  Window* win = GetActiveWindow(true);
+  DrawRectangleFill(buff, curr, Area(buff.width, 1), theme.statusline);
 
   // FIXME:
   std::string mode = "NORMAL";
+
+  Window* win = GetActiveWindow(true);
   if (win != nullptr) {
     mode = win->GetMode();
   }
@@ -846,7 +797,7 @@ void Ui::DrawInfoBar(FrameBuffer& buff) {
     buff, mode.c_str(),
     curr,
     mode.size(),
-    style, icons,
+    theme.statusline, icons,
     true);
   curr.x += mode.size();
 
@@ -858,8 +809,8 @@ void Ui::DrawInfoBar(FrameBuffer& buff) {
     int wheel_icon = icons.brail_spinning_wheel[wheel_icon_index++];
     if (wheel_icon_index >= wheel_count) wheel_icon_index = 0;
 
-    // // Draw a spinning wheel which will spin every time we re-draw.
-    SET_CELL(buff, spinpos.x, spinpos.y, wheel_icon, style);
+    // Draw a spinning wheel which will spin every time we re-draw.
+    SET_CELL(buff, spinpos.x, spinpos.y, wheel_icon, theme.statusline);
   }
 }
 

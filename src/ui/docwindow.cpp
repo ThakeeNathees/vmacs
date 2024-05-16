@@ -182,15 +182,6 @@ int DocumentWindow::DrawLineNums(FrameBuffer& buff, Position pos, Area area) {
   const Icons& icons = Editor::GetIcons();
   const Config& config = Editor::GetConfig();
 
-  // FIXME: Move this to themes.
-  // --------------------------------------------------------------------------
-  // TODO: Use ui.cursor for secondary cursor same as selection.
-  Style style_text       = theme.GetStyle("ui.text");
-  Style style_bg         = theme.GetStyle("ui.background");
-  Style style_linenr     = theme.GetStyle("ui.linenr");
-  Style style            = style_bg.Apply(style_text).Apply(style_linenr);
-  // --------------------------------------------------------------------------
-
   int line_count = document->buffer->GetLineCount(); // Total lines in the buffer.
 
   // Calculate the width of the line gutter.
@@ -211,7 +202,14 @@ int DocumentWindow::DrawLineNums(FrameBuffer& buff, Position pos, Area area) {
       linenr = std::string(width - margin_right - linenr.size(), ' ') + linenr;
     }
 
-    DrawTextLine(buff, linenr.c_str(), Position(pos.x, pos.y+y), (width-margin_right), style, icons, true);
+    DrawTextLine(
+        buff,
+        linenr.c_str(),
+        Position(pos.x, pos.y+y),
+        (width-margin_right),
+        theme.linenr,
+        icons,
+        true);
   }
 
   return width;
@@ -226,18 +224,6 @@ void DocumentWindow::DrawBuffer(FrameBuffer& buff, Position pos, Area area) {
   const Theme& theme = Editor::GetTheme();
   const Icons& icons = Editor::GetIcons();
   const Config& config = Editor::GetConfig();
-
-  // FIXME: Move this to themes.
-  // --------------------------------------------------------------------------
-  // TODO: Use ui.cursor for secondary cursor same as selection.
-  Style style_text       = theme.GetStyle("ui.text");
-  Style style_whitespace = theme.GetStyle("ui.virtual.whitespace");
-  Style style_cursor     = theme.GetStyle("ui.cursor.primary");
-  Style style_selection  = theme.GetStyle("ui.selection.primary");
-  Style style_bg         = theme.GetStyle("ui.background");
-  Style style_error      = theme.GetStyle("error");
-  Style style_warning    = theme.GetStyle("warning");
-  // --------------------------------------------------------------------------
 
   int whitespace_tag = icons.whitespace_tab;
 
@@ -275,8 +261,8 @@ void DocumentWindow::DrawBuffer(FrameBuffer& buff, Position pos, Area area) {
       // If the line starts at the middle of a tab character or after the end of
       // line draw the rest of the tab (newline will be handled as well).
       while (col_delta--) {
-        Style style = style_bg.Apply(style_text);
-        if (in_selection) style.ApplyInplace(style_selection);
+        Style style = theme.style;
+        if (in_selection) style.ApplyInplace(theme.selection);
         // If cursor in the character  we don't want to draw the cursor for
         // the rest of the white spaces.
         SET_CELL(buff, pos.col+x, pos.row+y, ' ', style);
@@ -291,7 +277,7 @@ void DocumentWindow::DrawBuffer(FrameBuffer& buff, Position pos, Area area) {
 
       // Current cell configuration.
       int c       = document->buffer->At(index);
-      Style style = style_bg.Apply(style_text);
+      Style style = theme.style;
 
       // Get teh syntax highlighting of the character. Note that the background
       // color is fetched from theme (not from syntax highlighter).
@@ -303,7 +289,7 @@ void DocumentWindow::DrawBuffer(FrameBuffer& buff, Position pos, Area area) {
       // Check if we're in tab character.
       bool istab = (c == '\t');
       if (istab) {
-        style.ApplyInplace(style_whitespace);
+        style.ApplyInplace(theme.whitespace);
         c = whitespace_tag;
       } else if (isspace(c) || c == '\0') {
         c = ' ';
@@ -324,19 +310,20 @@ void DocumentWindow::DrawBuffer(FrameBuffer& buff, Position pos, Area area) {
       bool in_cursor;
       bool in_selection;
       CheckCellStatusForDrawing(index, &in_cursor, &in_selection);
-      if (in_cursor && cursor_blink_show) style.ApplyInplace(style_cursor);
-      else if (in_selection) style.ApplyInplace(style_selection);
-
+      if (in_cursor && cursor_blink_show) style.ApplyInplace(theme.cursor);
+      else if (in_selection) style.ApplyInplace(theme.selection);
 
       // Draw the character finally.
       SET_CELL(buff, pos.col+x, pos.row+y, c, style);
       x++;
 
+
       // If it's a tab character we'll draw more white spaces.
       if (istab) {
         int space_count = config.tabsize - document->buffer->IndexToColumn(index) % config.tabsize;
         space_count -= 1; // Since the tab character is drawn already above.
-        Style empty = style_bg.Apply(in_selection ? style_selection : style_text);
+        Style empty = theme.style;
+        if (in_selection) empty.ApplyInplace(theme.selection);
         for (int _ = 0; _ < space_count; _++) {
           SET_CELL(buff, pos.col+x, pos.row+y, ' ', empty);
           x++;
@@ -348,7 +335,7 @@ void DocumentWindow::DrawBuffer(FrameBuffer& buff, Position pos, Area area) {
       // --------------------------------------------------------------------------
       // Draw diagnostic text.
       if (diagnos && index == document->cursors.GetPrimaryCursor().GetIndex()) {
-        Style style_diag = style_bg.Apply(diagnos->severity == 1 ? style_error : style_warning);
+        Style style_diag = theme.background.Apply(diagnos->severity == 1 ? theme.error : theme.warning);
 
         // Draw the message.
         int width = MIN(diagnos->message.size(), buff.width);
@@ -377,13 +364,6 @@ void DocumentWindow::DrawAutoCompletions(Position pos) {
   const Icons& icons = Editor::GetIcons();
   const Theme& theme = Editor::GetTheme();
   Ui* ui = GETUI();
-
-  // FIXME: Cleanup this mess.-------------------------------------------------
-  Style style_menu          = theme.GetStyle("ui.menu");
-  Style style_menu_selected = theme.GetStyle("ui.menu.selected");
-  Style style_active_param  = theme.GetStyle("type"); // FIXME: Not the correct one.
-  style_menu_selected = style_menu.Apply(style_menu_selected); // ui.menu.selected doesn't have bg.
-  //---------------------------------------------------------------------------
 
   const int completion_kind_count = sizeof icons.completion_kind / sizeof * icons.completion_kind;
 
@@ -470,7 +450,7 @@ void DocumentWindow::DrawAutoCompletions(Position pos) {
     auto& item = (*completion_items)[i];
     int icon_index = CLAMP(0, (int)item.kind-1, completion_kind_count);
 
-    Style style = (i == document->completion_selected) ? style_menu_selected : style_menu;
+    Style style = (i == document->completion_selected) ? theme.menu_selected : theme.menu;
 
     // TODO: Draw a scroll bar.
 
@@ -526,7 +506,7 @@ void DocumentWindow::DrawAutoCompletions(Position pos) {
       si.label.c_str(),
       Position(0, 0),
       label_size,
-      style_menu,
+      theme.menu,
       icons,
       true);
 
@@ -545,7 +525,7 @@ void DocumentWindow::DrawAutoCompletions(Position pos) {
       param_label.c_str(),
       Position(pi.label.start, 0),
       label_size,
-      style_menu.Apply(style_active_param),
+      theme.menu.Apply(theme.signature_active),
       icons,
       true);
 

@@ -10,11 +10,16 @@
 
 // TODO:
 //
-//    TEST IN WINDOWS AND LINUX
+//  TEST IN WINDOWS AND LINUX
+//  -------------------------
+//  Theme (ui) is a huge todo.
+//  -------------------------
+//
 //
 // Release:
 //   Well documented source code.
-//   Window support
+//   Windows support
+//   read file properly (crlf, encoding, etc.)
 //   autocompletion icon color (properly handle icons nerd and non nerd).
 //   finder, autocompletion highlight fzf match.
 //   cleanup source fiels.
@@ -26,18 +31,6 @@
 //
 //
 // Now:
-//  Ensure cursor on view is not properly work since the line number takes
-//  some area, properly implement it.
-//
-//  -------------------------
-//  Theme (ui) is a huge todo.
-//  -------------------------
-//
-//  CRLF files crash the editor handle properly.
-//
-//  Editor::Error(), etc.
-//  Window pos/area.
-//
 // Gap Buffer:
 //   tree-sitter read callback
 //   abstract the interface
@@ -46,6 +39,12 @@
 //
 //
 // Pending:
+//  - FrameBuffer as class (constructor, set cell etc).
+//  - Ensure cursor on view is not properly work since the line number takes
+//  - some area, properly implement it.
+//  - CRLF files crash the editor handle properly.
+//  - Editor::Error(), etc.
+//  - Window pos/area.
 //  - Loading config from file + (lsp config from config file).
 //  - Remove tomlcpp library. We don't need it (maybe?)
 //  - calculate area manually instead of draw so they can setup the view at start.
@@ -80,24 +79,16 @@
 //
 // Big things:
 //   gap buffer.
-//   file tree.
 //   mouse support.
 //   load configs.
 //   status line
-//   prompt line + autocompletion (if them auto update).
+//   command mode (like) + autocompletion (if them auto update).
 //   number line + diagnos gutter.
 //   scrollbar
 //   macro.
 //   open/close files.
 //   copy paste clipboard.
 //   terminal (maybe)
-//
-// FileTree:
-//   cannot goto file tree from docwindow.
-//   scroll if cursor is bellow
-//   implement an iterator.
-//   icons
-//   newfile/rename/move/copy/delete.
 //
 // LSP:
 //   pylsp completion insert text position has issue, it should replace only the text after '.'.
@@ -125,7 +116,6 @@
 //
 //
 // Unfinished, working things:
-//   Filetree: everything is unfinished.
 //   Icons api, provide nerd/unicode/ascii icons based on config.
 //   autocompletion + (show documnt, symbol helper for parameter, icon, etc.)
 //   autocompletion selection of items. icon config.
@@ -154,8 +144,7 @@
 //
 //   Main loop should be handled by the front end (so raylib can draw forever and termbox2 don't have to). and FE will set the FPS.
 //   editor send events and ask draw in a structured manner.
-//   proper draw system. (request client for buffer and fill only if it needs to re-draw).
-//   pair and auto indent
+//   auto pair and auto indent
 //   editor modes implement properly.
 //   default bindnigs and tmeme settings.
 //   treesitter and syntax highlighting.
@@ -546,22 +535,6 @@ int main(int argc, char** argv) {
   Ui::keytree.RegisterBinding(name, "<S-tab>", "cycle_selection_reversed");
   Ui::keytree.RegisterBinding(name, "<enter>", "accept_selection");
   Ui::keytree.RegisterBinding(name, "<esc>", "close");
-
-  // name = FileTreeWindow::ClassName();
-
-  // Ui::keytree.RegisterAction(name, "cursor_up", (FuncAction) FileTreeWindow::Action_CursorUp);
-  // Ui::keytree.RegisterAction(name, "cursor_down", (FuncAction) FileTreeWindow::Action_CursorDown);
-  // Ui::keytree.RegisterAction(name, "select", (FuncAction) FileTreeWindow::Action_SelectPath);
-  // Ui::keytree.RegisterAction(name, "goto_parent", (FuncAction) FileTreeWindow::Action_GotoParent);
-
-  // Ui::keytree.RegisterBinding(name, "<up>",    "cursor_up");
-  // Ui::keytree.RegisterBinding(name, "<down>",  "cursor_down");
-  // Ui::keytree.RegisterBinding(name, "k",       "cursor_up");
-  // Ui::keytree.RegisterBinding(name, "j",       "cursor_down");
-  // Ui::keytree.RegisterBinding(name, "<enter>", "select");
-  // Ui::keytree.RegisterBinding(name, "o",       "select");
-  // Ui::keytree.RegisterBinding(name, "p",       "goto_parent");
-
 
   // For testing.
   Ui::keytree.RegisterBinding("DocumentWindow", "insert", "<C-e>a",     "cursor_up");

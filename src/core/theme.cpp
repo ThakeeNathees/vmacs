@@ -42,8 +42,14 @@ void Style::ApplyInplace(const Style& other) {
 }
 
 
-// TODO: Comup with a proper set of ui entries this one only rely on helix.
 Theme::Theme(const Json& json) {
+  ExtractJson(json);
+  UpdateUiEntries();
+}
+
+
+// FIXME: Comup with a proper set of ui entries this one only rely on helix.
+void Theme::ExtractJson(const Json& json) {
   std::map<std::string, Color> palette;
 
   if (json.contains("palette")) {
@@ -131,7 +137,7 @@ Theme::Theme(const Json& json) {
             // else if (mod == "dim")         modifier |= ;
             else if (mod == "reversed")    modifier |= VMACS_CELL_REVERSE;
             else {
-              // error("Invalid modifier value (%s) for theme %s.", mod, key);
+              // TODO: error("Invalid modifier value (%s) for theme %s.", mod, key);
             }
           }
         }
@@ -141,6 +147,27 @@ Theme::Theme(const Json& json) {
     }
   }
 
+}
+
+
+void Theme::UpdateUiEntries() {
+  text             = GetStyle("ui.text");
+  background       = GetStyle("ui.background");
+  style            = background.Apply(text);
+  error            = GetStyle("error");
+  warning          = GetStyle("warning");
+  lines            = style.Apply(GetStyle("ui.background.separator"));
+  whitespace       = style.Apply(GetStyle("ui.virtual.whitespace"));
+  menu             = GetStyle("ui.menu");
+  menu_selected    = GetStyle("ui.menu.selected");
+  tabbar           = menu.Apply(whitespace);
+  tabbar_active    = menu_selected.Apply(background);
+  statusline       = GetStyle("ui.statusline");
+  linenr           = style.Apply(GetStyle("ui.linenr")); // FIXME: check what happens without Apply().
+  linenr_selected  = style.Apply(GetStyle("ui.linenr.selected"));
+  cursor           = GetStyle("ui.cursor.primary");
+  selection        = GetStyle("ui.selection.primary");
+  signature_active = GetStyle("type"); // FIXME: Should be something else.
 }
 
 

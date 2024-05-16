@@ -80,17 +80,6 @@ void FindWindow::_Draw(FrameBuffer& buff, Position pos, Area area) {
   const Theme& theme = Editor::GetTheme();
   const Icons& icons = Editor::GetIcons();
 
-  // FIXME: Move this mess. ----------------------------------------------------
-  Style style_text   = theme.GetStyle("ui.text");
-  Style style_cursor = theme.GetStyle("ui.cursor.primary");
-  Style style_bg     = theme.GetStyle("ui.background");
-  Style style_border = theme.GetStyle("ui.background.separator");
-  style_border = style_text.Apply(style_bg).Apply(style_border);
-  // --------------------------------------------------------------------------
-
-  // The default fg,bg,attrib for drawing bellow.
-  const Style style = style_bg.Apply(style_text);
-
   const int x = pos.x;
   const int y = pos.y;
   const int w = area.width;
@@ -104,17 +93,18 @@ void FindWindow::_Draw(FrameBuffer& buff, Position pos, Area area) {
   // the end.
 
   // Draw the border.
-  DrawRectangleLine(buff, pos, area, style_border, icons, true);
+  DrawRectangleLine(buff, pos, area, theme.lines, icons, true);
 
   // Draw the input area.
   const std::string& input_text = finder->GetSearchText();
   for (int i = 0; i < input_text.size(); i++) {
-    SET_CELL(buff, x+2+i, y+1, input_text[i],
-       (i == cursor_index) ? style.Apply(style_cursor) : style);
+    Style style = theme.style;
+    if (i == cursor_index) style.ApplyInplace(theme.cursor);
+    SET_CELL(buff, x+2+i, y+1, input_text[i], style);
   }
   if (cursor_index == input_text.size()) {
-    auto s = style.Apply(style_cursor);
-    SET_CELL(buff, x+2 + cursor_index, y+1, ' ', s);
+    auto style = theme.style.Apply(theme.cursor);
+    SET_CELL(buff, x+2 + cursor_index, y+1, ' ', style);
   }
 
   int total_count = finder->GetItemsCountTotal();
@@ -130,13 +120,18 @@ void FindWindow::_Draw(FrameBuffer& buff, Position pos, Area area) {
     }
     int x_ = x + w - 2 - filter_ratio.size(); // -2: right_bar, spacing.
     int y_ = y + 1;
-    DrawTextLine(buff, filter_ratio.c_str(),
-                 Position(x_, y_), filter_ratio.size(),
-                 style, icons, false);
+    DrawTextLine(
+      buff,
+      filter_ratio.c_str(),
+      Position(x_, y_),
+      filter_ratio.size(),
+      theme.style,
+      icons,
+      false);
   }
 
   // Draw the split line.
-  DrawHorizontalLine(buff, Position(x+2, y+2), w-4, style_border, icons);
+  DrawHorizontalLine(buff, Position(x+2, y+2), w-4, theme.lines, icons);
 
   // Draw the filtered items.
 
@@ -162,28 +157,15 @@ void FindWindow::DrawItems(FrameBuffer& buff, int x, int y, int w, int h, const 
   const Theme& theme = Editor::GetTheme();
   const Icons& icons = Editor::GetIcons();
 
-  // FIXME: Move this mess. ----------------------------------------------------
-  Style style_text          = theme.GetStyle("ui.text");
-  Style style_bg            = theme.GetStyle("ui.background");
-  Style style_menu          = theme.GetStyle("ui.menu");
-  Style style_selection     = theme.GetStyle("ui.selection.primary");
-  Style style_menu_selected = theme.GetStyle("ui.menu.selected");
-
-  Style style               = style_bg.Apply(style_text);
-  Style style_selected      = style.Apply(style_selection);
-  // --------------------------------------------------------------------------
-
   for (int i = 0; i < h; i++) {
     if  (view_start_index + i >= items->size()) return; // Out of bound.
     const std::string& item = (*items)[view_start_index + i];
-    DrawTextLine(
-        buff, item.c_str(), Position(x, y+i), w,
-        (view_start_index + i == selected_index) ? style.Apply(style_selected) : style,
-        icons,
-        true,
-        true);
+    Style style = theme.style;
+    if (view_start_index + i == selected_index) style.ApplyInplace(theme.selection);
+    DrawTextLine(buff, item.c_str(), Position(x, y+i), w, style, icons, true, true);
   }
 }
+
 
 // -----------------------------------------------------------------------------
 // Actions.

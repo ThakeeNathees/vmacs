@@ -251,9 +251,7 @@ void Syntax::CacheBufferStyle(const Theme* theme, const Buffer* buffer) {
   }
 
   size_t buffer_size = buffer->GetSize();
-  highlights.assign(
-    buffer_size,
-    theme->GetStyle("ui.text")); // FIXME:
+  highlights.assign(buffer_size, theme->text);
 
   for (auto it = slices.begin(); it != slices.end(); ++it) {
     Style style = theme->GetStyle(it->capture);

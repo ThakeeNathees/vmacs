@@ -155,24 +155,24 @@ using Json = nlohmann::json;
 
 
 // FIXME: make this as a function and make sure x, y are in the bounds.
-#define SET_CELL(buff, x, y, c, style)             \
-  do {                                             \
-    Cell& cell  = BUFF_CELL((buff), (x), (y));     \
-    cell.ch     = (c);                             \
-    cell.fg     = (style).fg.value_or(0x000000);   \
-    cell.bg     = (style).bg.value_or(0xffffff);   \
-    cell.attrib = (style).attrib;                  \
+#define SET_CELL(buff, x, y, c, style)                    \
+  do {                                                    \
+    Cell& cell  = BUFF_CELL((buff), (x), (y));            \
+    cell.ch     = (c);                                    \
+    if ((style).fg != std::nullopt) cell.fg = (style).fg.value_or(0x000000); \
+    if ((style).bg != std::nullopt) cell.bg = (style).bg.value_or(0xffffff); \
+    cell.attrib = (style).attrib;                         \
   } while (false)
 
 
 // FIXME: Make this a function and overload the above with this.
-#define SET_CELL_I(buff, i, c, style)              \
-  do {                                             \
-    Cell& cell  = (buff).cells[i];                 \
-    cell.ch     = (c);                             \
-    cell.fg     = (style).fg.value_or(0x000000);   \
-    cell.bg     = (style).bg.value_or(0xffffff);   \
-    cell.attrib = (style).attrib;                  \
+#define SET_CELL_I(buff, i, c, style)                     \
+  do {                                                    \
+    Cell& cell  = (buff).cells[i];                        \
+    cell.ch     = (c);                                    \
+    if ((style).fg != std::nullopt) cell.fg = (style).fg.value_or(0x000000); \
+    if ((style).bg != std::nullopt) cell.bg = (style).bg.value_or(0xffffff); \
+    cell.attrib = (style).attrib;                         \
   } while (false)
 
 
@@ -761,6 +761,28 @@ public:
 
 class Theme {
 
+// These ui entries are public members. Since the Theme is access as a const
+// reference theough out the code it would be easy to use public members instead
+// of getters.
+public:
+  Style style; // Simply 'background.Apply(text);'
+  Style text;
+  Style background;
+  Style error;
+  Style warning;
+  Style lines; // To draw split lines and border.
+  Style whitespace;
+  Style menu;
+  Style menu_selected;
+  Style tabbar;
+  Style tabbar_active;
+  Style statusline;
+  Style linenr;
+  Style linenr_selected;
+  Style cursor;
+  Style selection;
+  Style signature_active; // To draw the signature help active parameter.
+
 public:
 
   // Load the theme from a json object, unlike "Helix" editor (which is where
@@ -784,6 +806,9 @@ private:
   // and the style for that cpature.
   std::map<std::string, Style> entries;
 
+private:
+  void ExtractJson(const Json& json);
+  void UpdateUiEntries();
 };
 
 

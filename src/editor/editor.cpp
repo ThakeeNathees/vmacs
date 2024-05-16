@@ -223,8 +223,8 @@ FrameBuffer Editor::NewFrameBuffer(Area area) {
   buff.height = area.height;
 
   // Clear the background.
-  Style style_bg = Editor::GetTheme().GetStyle("ui.background"); // FIXME:
-  DrawRectangleFill(buff, {0,0}, {buff.width, buff.height}, style_bg);
+  const Theme& theme = Editor::GetTheme();
+  DrawRectangleFill(buff, {0, 0}, {buff.width, buff.height}, theme.background);
   return buff;
 }
 
@@ -240,8 +240,8 @@ void Editor::PrepareFrameBuffer() {
   buff.height = area.height;
 
   // Clear the background.
-  Style style_bg = Editor::GetTheme().GetStyle("ui.background"); // FIXME:
-  DrawRectangleFill(buff, {0,0}, {buff.width, buff.height}, style_bg);
+  const Theme& theme = Editor::GetTheme();
+  DrawRectangleFill(buff, {0, 0}, {buff.width, buff.height}, theme.background);
 }
 
 
