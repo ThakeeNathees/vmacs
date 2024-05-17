@@ -77,12 +77,12 @@ private:
 class Buffer {
 
 public:
-  Buffer() = default;
+  Buffer();
   Buffer(std::vector<uint8_t>&& data);
 
   size_t GetSize() const;
-  const uint8_t* GetData() const;
-  uint32_t At(int index) const; // Returns the codepoint at the index.
+  const uint8_t* GetData() const; // Returns nullptr if it's empty.
+  uint32_t At(size_t index) const; // Returns the codepoint at the index.
   String GetSubString(int index, int count) const;
 
   int GetLineCount() const;

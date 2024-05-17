@@ -62,6 +62,7 @@ void Syntax::Parse(const Language* language, const Buffer* buffer, const Theme* 
   // faster and efficient.
   if (tree) ts_tree_delete(tree);
   const char* cstr = reinterpret_cast<const char*>(buffer->GetData());
+  if (cstr == nullptr) cstr = ""; // If the buffer is empty will return nullptr.
   tree = ts_parser_parse_string(parser, NULL, cstr, buffer->GetSize());
 
   // Cache highlight slices.

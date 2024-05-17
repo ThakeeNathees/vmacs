@@ -184,7 +184,7 @@ public:
   void SendNotification(const std::string& method, const Json& params);
 
   // Abstracted request/notification methods.
-  void DidOpen(const Path& path, const char* text, const std::string& langauge, uint32_t version);
+  void DidOpen(const Path& path, const std::string&& text, const std::string& langauge, uint32_t version);
   void DidChange(const Path& path, uint32_t version, const std::vector<DocumentChange>& changes);
   void Completion(const Path& path, Coord position);
   void SignatureHelp(const Path& path, Coord position);

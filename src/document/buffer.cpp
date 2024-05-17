@@ -10,6 +10,10 @@
 #include "document.hpp"
 
 
+Buffer::Buffer() : Buffer(std::vector<uint8_t>()) {
+}
+
+
 Buffer::Buffer(std::vector<uint8_t>&& data) : buffer(data) {
   OnBufferChanged();
 }
@@ -52,8 +56,13 @@ const uint8_t* Buffer::GetData() const {
 }
 
 
-uint32_t Buffer::At(int index) const {
-  ASSERT_INDEX(index, buffer.size() + 1); // +1 since we'll include '\0'.
+uint32_t Buffer::At(size_t index) const {
+
+  // Since the lines mimic a null terminated string and the last line's end index
+  // is the size of the buffer, we should return a '\0'.
+  if (index == buffer.size()) return 0;
+  ASSERT_INDEX(index, buffer.size());
+
   // Can't directly cast char to unit32_t since chars are signed and has negative
   // values which will overflow the byte range if we directly cast.
   return (uint8_t) buffer[index];
@@ -63,7 +72,7 @@ uint32_t Buffer::At(int index) const {
 String Buffer::GetSubString(int index, int count) const {
   if (count == 0) return "";
   ASSERT_INDEX(index, buffer.size());
-  ASSERT_INDEX(index + count, buffer.size() + 1);
+  ASSERT_INDEX(index + (count-1), buffer.size());
   const char* cstr = reinterpret_cast<const char*>(buffer.data());
   return String(std::string(cstr + index, count));
 }
@@ -81,9 +90,15 @@ Slice Buffer::GetLine(int index) const {
 
 
 Coord Buffer::IndexToCoord(size_t index) const {
-  ASSERT_INDEX(index, buffer.size() + 1);
 
   const std::vector<Slice>& slices = lines.Get();
+  ASSERT(slices.size() >= 1, OOPS);
+
+  // The index could also be equal the buffer size since the last line ends after
+  // the buffer (we mimic null terminated string) and the cursor position will
+  // be equal to buffer.size(). That case also handled by the ComputeLines().
+  ASSERT_INDEX(index, buffer.size() + 1);
+  ASSERT(index != buffer.size() || index == slices[slices.size()-1].end, OOPS);
 
   // Binary search in the lines array to find the index.
   int start  = 0;
@@ -191,7 +206,7 @@ bool Buffer::IsValidCoord(Coord coord, size_t* index) const {
 
 
 void Buffer::InsertText(size_t index, const String& text) {
-  ASSERT_INDEX(index, (int) buffer.size() + 1);
+  ASSERT_INDEX(index, buffer.size() + 1);
   auto begin = text.Data().begin();
   auto end   = text.Data().end();
   buffer.insert(buffer.begin() + index, begin, end);
@@ -202,7 +217,7 @@ void Buffer::InsertText(size_t index, const String& text) {
 void Buffer::RemoveText(size_t index, int count) {
   if (count == 0) return;
   ASSERT_INDEX(index, buffer.size());
-  ASSERT_INDEX(index + count, (int)buffer.size() + 1);
+  ASSERT_INDEX(index + (count-1), buffer.size());
   buffer.erase(buffer.begin() + index, buffer.begin() + index + count);
   OnBufferChanged();
 }
