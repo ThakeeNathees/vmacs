@@ -66,7 +66,7 @@ typedef const Theme* (*GetThemeFn)();
 class Lines {
 
 public:
-  void ComputeLines(const char* text);
+  void ComputeLines(const char* text, size_t size);
   const std::vector<Slice>& Get() const;
 
 private:
@@ -80,10 +80,10 @@ public:
   Buffer() = default;
   Buffer(const std::string& data);
 
-  int GetSize() const;
-  int At(int index) const; // Returns the codepoint at the index.
+  size_t GetSize() const;
+  const char* GetData() const;
+  uint32_t At(int index) const; // Returns the codepoint at the index.
   String GetSubString(int index, int count) const;
-  const std::string& GetData() const;
 
   int GetLineCount() const;
   Slice GetLine(int index) const;
@@ -91,7 +91,7 @@ public:
   // Coord, column, index conversions. ColumnToIndex will take an optional col_delta
   // which will be set to the number of column it's behind, we the provided column
   // is at the middle of a tab.
-  Coord IndexToCoord(int index) const;
+  Coord IndexToCoord(size_t index) const;
   int CoordToIndex(Coord coord) const;
   int IndexToColumn(int index) const;
   int ColumnToIndex(int column, int line_num, int* col_delta=NULL) const;
@@ -291,7 +291,7 @@ public:
   void UnRegisterListener(HistoryListener* listener);
 
 private:
-  // Say we commited 4 actions like this:
+  // Say we commited 3 actions like this:
   //
   //    a1 -> a2 -> a3 -> NULL
   //                      ^-- ptr
@@ -582,8 +582,8 @@ private:
   LineEnding lineending = LineEnding::LF;
   String indent         = "\t";
 
-  // DocumentWindow need cursor and buffer to draw the document, this might not be the
-  // "oop" way I don't know.
+  // DocumentWindow need cursor and buffer to draw the document, this might not
+  // be the "oop" way I don't know.
   friend class DocumentWindow;
 
 private:

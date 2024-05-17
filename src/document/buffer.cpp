@@ -20,14 +20,14 @@ const std::vector<Slice>& Lines::Get() const {
 }
 
 
-void Lines::ComputeLines(const char* text) {
+void Lines::ComputeLines(const char* text, size_t size) {
   slices.clear();
 
   Slice slice;
   slice.start = 0;
 
   int i = 0;
-  while (text[i] != '\0') {
+  while (i < size) {
     if (text[i] == '\n') {
       slice.end = i;
       slices.push_back(slice);
@@ -35,20 +35,28 @@ void Lines::ComputeLines(const char* text) {
     }
     i++;
   }
+  ASSERT(i == size, OOPS);
 
   slice.end = i;
   slices.push_back(slice);
 }
 
 
-int Buffer::GetSize() const {
-  return (int)data.size();
+size_t Buffer::GetSize() const {
+  return data.size();
 }
 
 
-int Buffer::At(int index) const {
+const char* Buffer::GetData() const {
+  return data.c_str();
+}
+
+
+uint32_t Buffer::At(int index) const {
   ASSERT_INDEX(index, data.size() + 1); // +1 since we'll include '\0'.
-  return (int)data[index];
+  // Can't directly cast char to unit32_t since chars are signed and has negative
+  // values which will overflow the byte range if we directly cast.
+  return (uint8_t) data[index];
 }
 
 
@@ -60,13 +68,8 @@ String Buffer::GetSubString(int index, int count) const {
 }
 
 
-const std::string& Buffer::GetData() const {
-  return data;
-}
-
-
 int Buffer::GetLineCount() const {
-  return (int)lines.Get().size();
+  return (int) lines.Get().size();
 }
 
 
@@ -76,8 +79,8 @@ Slice Buffer::GetLine(int index) const {
 }
 
 
-Coord Buffer::IndexToCoord(int index) const {
-  ASSERT_INDEX(index, (int)data.size() + 1);
+Coord Buffer::IndexToCoord(size_t index) const {
+  ASSERT_INDEX(index, data.size() + 1);
 
   const std::vector<Slice>& slices = lines.Get();
 
@@ -203,7 +206,7 @@ void Buffer::RemoveText(int index, int count) {
 
 
 void Buffer::OnBufferChanged() {
-  lines.ComputeLines(data.c_str());
+  lines.ComputeLines(data.c_str(), data.size());
   for (BufferListener* listener : listeners) {
     listener->OnBufferChanged();
   }

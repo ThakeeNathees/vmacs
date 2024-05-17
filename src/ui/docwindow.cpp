@@ -251,7 +251,7 @@ void DocumentWindow::DrawBuffer(FrameBuffer& buff, Position pos, Area area) {
   const Icons& icons = Editor::GetIcons();
   const Config& config = Editor::GetConfig();
 
-  int whitespace_tag = icons.whitespace_tab;
+  int whitespace_tab = icons.whitespace_tab;
 
   int line_count = document->buffer->GetLineCount(); // Total lines in the buffer.
   const std::vector<Style>& highlights = document->syntax.GetHighlights();
@@ -302,7 +302,7 @@ void DocumentWindow::DrawBuffer(FrameBuffer& buff, Position pos, Area area) {
     while (x < area.width && index <= line.end) {
 
       // Current cell configuration.
-      int c       = document->buffer->At(index);
+      uint32_t c  = document->buffer->At(index);
       Style style = theme.style;
 
       // Get teh syntax highlighting of the character. Note that the background
@@ -316,7 +316,7 @@ void DocumentWindow::DrawBuffer(FrameBuffer& buff, Position pos, Area area) {
       bool istab = (c == '\t');
       if (istab) {
         style.ApplyInplace(theme.whitespace);
-        c = whitespace_tag;
+        c = whitespace_tab;
       } else if (isspace(c) || c == '\0') {
         c = ' ';
       }

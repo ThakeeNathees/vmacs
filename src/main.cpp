@@ -233,7 +233,7 @@ void lsp_test() {
 
   std::string text;
   ASSERT(Platform::ReadFile(&text, path), "My ugly code");
-  client.DidOpen(path, text, "c", 0);
+  client.DidOpen(path, text.c_str(), "c", 0);
 
   // goto definition.
   // std::cin >> x;

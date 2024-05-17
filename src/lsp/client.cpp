@@ -138,7 +138,7 @@ void LspClient::SendNotification(const std::string& method, const Json& params) 
 }
 
 
-void LspClient::DidOpen(const Path& path, const std::string& text, const std::string& language, uint32_t version) {
+void LspClient::DidOpen(const Path& path, const char* text, const std::string& language, uint32_t version) {
   SendNotification(
     "textDocument/didOpen", {
       {

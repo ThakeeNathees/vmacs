@@ -101,16 +101,13 @@ bool Platform::ReadFile(std::string* ret, const Path& path) {
 }
 
 
-bool Platform::ListDirectory(std::vector<Path>* items, const Path& path) {
-  ASSERT(items != nullptr, OOPS);
+void Platform::ListDirectory(std::vector<Path>& items, const Path& path) {
   ASSERT(path.IsDirectory(), "ListDirectory called on a path which is not a directory.");
 
-  // FIXME(grep): Handle if this throws.
   for (const auto & entry : fs::directory_iterator(path.String())) {
     Path item = Path(entry.path().string());
-    items->push_back(std::move(item));
+    items.push_back(std::move(item));
   }
-  return true;
 }
 
 

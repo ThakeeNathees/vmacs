@@ -100,12 +100,15 @@ public:
   // Reads an entire file and return the content. if the path is invalid or an error,
   // this will return false.
   static bool ReadFile(std::string* ret, const Path& path);
-  static bool ListDirectory(std::vector<Path>* items, const Path& path);
+
+  // !! WARNING !! This method will throw if the path is a not directory or
+  // any other io error occured. The caller should handle it.
+  static void ListDirectory(std::vector<Path>& items, const Path& path);
 
   // Check if the given command exists by appending the given command to all the
   // paths of the PATH environment variables and check if the path exists. Note
-  // that if the command starts with './' or '../', it'll just check if the relative
-  // paths exits.
+  // that if the command starts with './' or '../', it'll just check if the
+  // relative paths exits.
   static bool IsCommandExists(const std::string& command);
 };
 
