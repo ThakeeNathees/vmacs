@@ -17,6 +17,10 @@ Path::Path(std::string path) {
 }
 
 
+Path::Path(const char* path) : Path(std::string(path)) {
+}
+
+
 std::string Path::String() const {
   return path.string();
 }
@@ -29,6 +33,11 @@ std::string Path::Uri() const {
 
 std::string Path::FileName() const {
   return path.filename();
+}
+
+
+std::string Path::RelativeFrom(const Path& from) const {
+  return path.lexically_relative(from.path).string();
 }
 
 

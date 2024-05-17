@@ -173,14 +173,11 @@ void FilesFinder::TriggerFuzzyFilter() {
 
 
 bool FilesFinder::SelectItem(const std::string& item) {
-  Path path(item);
 
-  // TODO: Error to editor.
-  if (!path.Exists()) return false;
-
-  Coord coord(-1, -1); // Invalid coord will jump to the current cursor of that document.
-  Editor* e = Editor::Singleton().get();
   Ui* ui = GETUI();
+  Path path(item); // We're not checking if the path is valid here since it'll be handled by the ui.
+  Coord coord(-1, -1); // Invalid coord will jump to the current cursor of that document.
+
   return ui->JumpToDocument(path, coord);
 }
 

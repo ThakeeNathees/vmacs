@@ -229,14 +229,12 @@ class Ui : public IUi, public ActionExecutor {
 public:
   Ui();
 
+  void Info(const String& msg) override;
+  void Error(const String& msg) override;
+
   bool HandleEvent(const Event& event) override;
   void Update() override;
   void Draw(FrameBuffer& buff) override;
-
-  void Info(const std::string& error);
-  void Success(const std::string& error);
-  void Warning(const std::string& error);
-  void Error(const std::string& error);
 
   // Push an overlay to draw on the screen after all the draw calls are done.
   void PushOverlay(Position pos, FrameBuffer&& buff);
@@ -274,8 +272,11 @@ private:
 
   std::unique_ptr<Window> popup;
 
-  // FIXME(grep): This is temproary.
-  std::string info_bar_text;
+  // We show an info like (file saved, some error, etc) at the status bar if the
+  // bellow info_text is not empty. It could be either info / error which is stored
+  // in the bellow bool.
+  String info_text;
+  bool is_info_text_error = false;
 
 private:
 

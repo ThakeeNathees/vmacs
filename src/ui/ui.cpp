@@ -546,6 +546,18 @@ Ui::Ui() : cursor(&Ui::keytree) {
 }
 
 
+void Ui::Info(const String& msg) {
+  info_text = msg;
+  is_info_text_error = false;
+}
+
+
+void Ui::Error(const String& msg) {
+  info_text = msg;
+  is_info_text_error = true;
+}
+
+
 bool Ui::HandleEvent(const Event& event) {
 
   // TODO: Make Splits as event listeners and pass the mouse event to splits
@@ -568,6 +580,11 @@ bool Ui::HandleEvent(const Event& event) {
     // Not passing the event to any window since no one has the point. And sending
     // will fail an assertion.
     return false;
+  }
+
+  // If any key event is passed, the info/error should disappear.
+  if (event.type ==  Event::Type::KEY) {
+    info_text = "";
   }
 
   // Try to consume the event for the active window (which could also be the popup)
@@ -803,6 +820,24 @@ void Ui::DrawInfoBar(FrameBuffer& buff) {
     true);
   curr.x += mode.size();
 
+  // FIXME:
+  if (!info_text.Empty()) {
+    curr.x++; // Margin.
+
+    // FIXME:
+    std::string msg = "\"" + info_text.Data() + "\"";
+    int len = MIN(buff.width - curr.x - 3, 2+info_text.Length());
+
+    DrawTextLine(
+        buff,
+        msg.c_str(),
+        curr,
+        len,
+        is_info_text_error ? theme.error : theme.statusline,
+        icons, false, false);
+    curr.x += len;
+  }
+
   // Draw the spenning wheel for draw indicator.
   Position spinpos = Position(buff.width-2, buff.height - 1);
   {
@@ -814,26 +849,6 @@ void Ui::DrawInfoBar(FrameBuffer& buff) {
     // Draw a spinning wheel which will spin every time we re-draw.
     SET_CELL(buff, spinpos.x, spinpos.y, wheel_icon, theme.statusline);
   }
-}
-
-
-void Ui::Info(const std::string& msg) {
-  info_bar_text = msg;
-}
-
-
-void Ui::Success(const std::string& msg) {
-  info_bar_text = msg;
-}
-
-
-void Ui::Warning(const std::string& msg) {
-  info_bar_text = msg;
-}
-
-
-void Ui::Error(const std::string& msg) {
-  info_bar_text = msg;
 }
 
 
@@ -850,8 +865,10 @@ void Ui::PushOverlay(Position pos, FrameBuffer&& buff) {
 
 bool Ui::JumpToDocument(const Path& path, Coord coord) {
 
-  // TODO: Error to editor.
-  if (!path.Exists()) return false;
+  if (!path.Exists()) {
+    Editor::Error("File not exists: " + path.RelativeFrom("."));
+    return false;
+  }
 
   // Check if a window opened for the given path, in that case just make it
   // active.
@@ -983,7 +1000,7 @@ void Ui::SetWindowActive(Window* window) {
   Tab* tab = GetSplitTab(split);
   ASSERT(tab != nullptr, OOPS);
 
-  Window* last_active = GetActiveWindow();
+  Window* last_active = GetActiveWindow(true); // We're not sending any focus events to popups.
   if (last_active) last_active->SetActive(false); // This will trigger the focus events.
 
   for (int i = 0; i < tabs.size(); i++) {

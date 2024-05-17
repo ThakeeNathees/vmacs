@@ -32,31 +32,17 @@ std::shared_ptr<Editor> Editor::Singleton() {
 }
 
 
-void Editor::Info(const std::string& msg) {
-  // IUi* ui = Singleton()->ui.get();
-  // ASSERT(ui != nullptr, "Editor::singleton.ui was nullptr, did you forget to initialize one?");
-  // ui->Info(msg);
+void Editor::Info(const String& msg) {
+  IUi* ui = Singleton()->ui.get();
+  ASSERT(ui != nullptr, "Editor::singleton.ui was nullptr, did you forget to initialize one?");
+  ui->Info(msg);
 }
 
 
-void Editor::Success(const std::string& msg) {
-  // IUi* ui = Singleton()->ui.get();
-  // ASSERT(ui != nullptr, "Editor::singleton.ui was nullptr, did you forget to initialize one?");
-  // ui->Success(msg);
-}
-
-
-void Editor::Warning(const std::string& msg) {
-  // IUi* ui = Singleton()->ui.get();
-  // ASSERT(ui != nullptr, "Editor::singleton.ui was nullptr, did you forget to initialize one?");
-  // ui->Warning(msg);
-}
-
-
-void Editor::Error(const std::string& error) {
-  // IUi* ui = Singleton()->ui.get();
-  // ASSERT(ui != nullptr, "Editor::singleton.ui was nullptr, did you forget to initialize one?");
-  // ui->Error(error);
+void Editor::Error(const String& msg) {
+  IUi* ui = Singleton()->ui.get();
+  ASSERT(ui != nullptr, "Editor::singleton.ui was nullptr, did you forget to initialize one?");
+  ui->Error(msg);
 }
 
 
@@ -93,8 +79,7 @@ Editor::~Editor() {
 bool Editor::SetTheme(const std::string theme_name) {
   auto it = themes.find(theme_name);
   if (it == themes.end()) {
-    std::string errmsg = std::string("Theme not found (name='") + theme_name + "')";
-    Editor::Error(errmsg);
+    Error(std::string("Theme not found (name='") + theme_name + "')");
     return false;
   }
   theme = it->second.get();
@@ -103,7 +88,8 @@ bool Editor::SetTheme(const std::string theme_name) {
 
 
 void Editor::LoadConfig(const Json& json) {
-  config.Load(json);
+  String errors = config.Load(json);
+  if (!errors.Empty()) Error(errors);
 }
 
 
@@ -151,7 +137,7 @@ int Editor::MainLoop() {
 
   // FIXME: This should be handled properly via Platform interface (we should report this to platform).
   if (!frontend->Initialize()) {
-    fprintf(stdout, "Editor initialize failed.\n");
+    fprintf(stderr, "Editor initialize failed.\n");
     return 1;
   }
 

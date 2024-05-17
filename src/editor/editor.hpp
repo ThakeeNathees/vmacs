@@ -23,10 +23,8 @@ public:
   static std::shared_ptr<Editor> Singleton();
 
   // Show the message at the info bar of the current window.
-  static void Info(const std::string& msg);
-  static void Success(const std::string& msg);
-  static void Warning(const std::string& msg);
-  static void Error(const std::string& msg);
+  static void Info(const String& msg);
+  static void Error(const String& msg);
 
   // Signale the editor to draw to the frame buffer since something is changed.
   static void ReDraw();

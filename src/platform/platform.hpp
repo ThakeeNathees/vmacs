@@ -35,11 +35,13 @@ class Path {
 public:
   Path() = default;
   Path(std::string path);
+  Path(const char* path);
 
   std::string String() const;
   std::string Uri() const;
 
   std::string FileName() const;
+  std::string RelativeFrom(const Path& from) const;
 
   bool Empty() const;
   bool Exists() const;
@@ -80,6 +82,9 @@ public:
   // Os independent but still we need this from the host system.
   // --------------------------------------------------------------------------
 
+  // !! WARNING !! This will throw an error if loading the file is failed, or
+  // failed to parse the json. The caller should catch and handle.
+  //
   // Load the configuration file which is json and returns the json object.
   static Json LoadConfig();
 

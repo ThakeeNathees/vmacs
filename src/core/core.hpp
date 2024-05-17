@@ -508,41 +508,6 @@ struct Event {
 
 
 // -----------------------------------------------------------------------------
-// Config (FIXME: move this somewhere).
-// -----------------------------------------------------------------------------
-
-
-// TODO: This sould be a json object / lua table where the user can "register"
-// wheever they want and and use in some plugins.
-//
-// The editors global configuration.
-struct Config {
-
-public:
-  int tabsize;
-  int scrolloff;
-  int fps;
-  std::string theme;
-  bool show_linenum;
-
-  // Vector of pair of regex and language id.
-  std::vector<std::pair<std::regex, std::string>> map_file_lang;
-
-  // key = lang id, value = lsp id.
-  std::map<std::string, std::string> map_lang_lsp;
-
-public:
-  Config();
-
-  // Load the configuration from the json object which was read from a file.
-  void Load(const Json& json);
-
-  LanguageId GetLangIdFromFileName(const std::string& filename) const;
-  LspClientId GetLspClientIdFromLang(const LanguageId& langid) const;
-};
-
-
-// -----------------------------------------------------------------------------
 // String.
 // -----------------------------------------------------------------------------
 
@@ -557,6 +522,7 @@ public:
   const std::string& Data() const;
   size_t Length() const;
 
+  bool Empty() const;
   bool StartsWith(const String& other) const;
   bool EndsWith(const String& other) const;
   String Substring(const size_t pos, size_t count) const;
@@ -877,6 +843,43 @@ private:
 };
 
 
+// -----------------------------------------------------------------------------
+// Config (FIXME: move this somewhere).
+// -----------------------------------------------------------------------------
+
+
+// TODO: This sould be a json object / lua table where the user can "register"
+// wheever they want and and use in some plugins.
+//
+// The editors global configuration.
+struct Config {
+
+public:
+  int tabsize;
+  int scrolloff;
+  int fps;
+  std::string theme;
+  bool show_linenum;
+
+  // Vector of pair of regex and language id.
+  std::vector<std::pair<std::regex, std::string>> map_file_lang;
+
+  // key = lang id, value = lsp id.
+  std::map<std::string, std::string> map_lang_lsp;
+
+public:
+  Config();
+
+  // Load the configuration from the json object which was read from a file.
+  // This will return an a string (possibly multiline) consists of all the error
+  // messages while parsing. Will be empty if there was no errors.
+  String Load(const Json& json);
+
+  LanguageId GetLangIdFromFileName(const std::string& filename) const;
+  LspClientId GetLspClientIdFromLang(const LanguageId& langid) const;
+};
+
+
 // ----------------------------------------------------------------------------
 // Abstract Frontend and Ui interface.
 // ----------------------------------------------------------------------------
@@ -910,6 +913,9 @@ public:
 class IUi {
 public:
   virtual ~IUi() = default;
+
+  virtual void Info(const String& msg) = 0;
+  virtual void Error(const String& msg) = 0;
 
   virtual bool HandleEvent(const Event& event) = 0;
   virtual void Update() = 0;

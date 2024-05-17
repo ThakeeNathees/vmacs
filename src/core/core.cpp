@@ -39,6 +39,11 @@ size_t String::Length() const {
 }
 
 
+bool String::Empty() const {
+  return data.empty();
+}
+
+
 bool String::StartsWith(const String& other) const {
     return data.size() >= other.data.size() && data.compare(0, other.data.size(), other.data) == 0;
 }
@@ -219,11 +224,20 @@ Config::Config() {
 }
 
 
-void Config::Load(const Json& json) {
+String Config::Load(const Json& json) {
 
   // TODO: All the errors are ignored scilently, these are comes from the user
   // and we need to show the errors in the ui.
-  if (!json.is_object()) return;
+  if (!json.is_object()) {
+    return "Expected a json object.";
+  }
+
+  // To accumilate all the errors.
+  String errors;
+  auto AddError = [&](const std::string& err) {
+    if (errors.Empty()) errors = err;
+    else errors += "\n" + err;
+  };
 
   tabsize      = JSON_GET_INT_OR(json, "tabsize", tabsize);
   scrolloff    = JSON_GET_INT_OR(json, "scrolloff", scrolloff);
@@ -240,8 +254,7 @@ void Config::Load(const Json& json) {
         auto pair = std::make_pair(re, val.template get<std::string>());
         map_file_lang.push_back(std::move(pair));
       } catch (std::regex_error& err) {
-        throw err; // FIXME: Threwing here for development and make it crash.
-        // TODO: Show error to the user.
+        AddError(err.what());
       }
     }
   }
@@ -254,6 +267,7 @@ void Config::Load(const Json& json) {
     }
   }
 
+  return std::move(errors);
 }
 
 

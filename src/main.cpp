@@ -530,9 +530,17 @@ int main(int argc, char** argv) {
 
   std::shared_ptr<Editor> editor = Editor::Singleton();
 
+  // We need the ui before loading the config to show the error.
+  std::unique_ptr<Ui> ui = std::make_unique<Ui>();
+  editor->SetUi(std::move(ui));
+
 
   // Load configuration.
-  editor->LoadConfig(Platform::LoadConfig());
+  try {
+    editor->LoadConfig(Platform::LoadConfig());
+  } catch (std::exception& ex) {
+    editor->Error(std::string("Error loading config: ") + ex.what());
+  }
 
   // Register themes.
   std::map<std::string, Json> theme_data = Platform::LoadThemes();
@@ -579,7 +587,6 @@ int main(int argc, char** argv) {
   std::unique_ptr<IFrontEnd> frontend = std::make_unique<Termbox2>();
   editor->SetFrontEnd(std::move(frontend));
 
-  std::unique_ptr<Ui> ui = std::make_unique<Ui>();
 
 #if 0 // Split test.
 
@@ -624,7 +631,6 @@ int main(int argc, char** argv) {
   // std::unique_ptr<FileTreeWindow> filetree = std::make_unique<FileTreeWindow>(tree);
   // ui->AddTab(Tab::FromWindow(std::move(filetree)), -1);
 
-  editor->SetUi(std::move(ui));
   editor->MainLoop();
   return 0;
 }
