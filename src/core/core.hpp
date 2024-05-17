@@ -708,6 +708,11 @@ private:
 
 class Icons {
 public:
+
+  // To print a non-pritable character.
+  int unknown = 0xfffd; // �
+  int null    = 0x2400; // ␀
+
   // Sharp corners.
   int tr = 0x250c; // ┌
   int tl = 0x2510; // ┐
@@ -724,10 +729,12 @@ public:
   int hl = 0x2500; // ─
   int vl = 0x2502; // │
 
-  int scrollbar = 0x2590; // ▐
-
+  int scrollbar      = 0x2590; // ▐
   int trim_indicator = 0x2026; // …
+
+  // White space characters (from nerd front).
   int whitespace_tab = 0x2192; // →
+  int whitespace_nl  = 0xebea; // 
 
   // Ui Related icons (nerd font).
   int angle_up     = 0xf106;  // 
@@ -939,6 +946,10 @@ std::size_t constexpr operator "" _hash(const char* s, size_t) {
 
 // Returns the Elapsed time since the program starts in milliseconds.
 int GetElapsedTime();
+
+// Returns a printable character for the given character either unicode or nerd
+// font icon based on the icons. TODO: Consider unicode points as well.
+uint32_t ConvertToPrintable(const Icons& icons, uint8_t c);
 
 // Color vaule conversion functions.
 uint8_t RgbToXterm(uint32_t rgb);

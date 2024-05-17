@@ -171,12 +171,11 @@ int Editor::MainLoop() {
 
     // Draw call.
     if (redraw) {
-      PrepareFrameBuffer();
+      redraw = false;
 
+      PrepareFrameBuffer();
       ui->Draw(buff);
       frontend->Display(buff);
-
-      redraw = false;
     }
 
     // Wait till we reach the frame rate limit.

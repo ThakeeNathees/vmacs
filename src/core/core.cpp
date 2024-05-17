@@ -108,6 +108,28 @@ int GetElapsedTime() {
 }
 
 
+// The treate the byte as a windows-1256 encoded character. Also we treat space
+// as a printable character.
+//
+// ref: https://en.wikipedia.org/wiki/Windows-1256
+//
+uint32_t ConvertToPrintable(const Icons& icons, uint8_t c) {
+
+  switch (c) {
+    case 0: return icons.null;
+    case '\t': return icons.whitespace_tab;
+    case '\n': return icons.whitespace_nl;
+    case 0x7f:
+    case 0x9d:
+    case 0xa0:
+    case 0xad:
+        return icons.unknown;
+  }
+
+  if (c <= 0x1f) return icons.unknown;
+  return c;
+}
+
 
 static int _GetClosestColorPart(uint8_t byte) {
   static const int incs[] = {0x00, 0x5f, 0x87, 0xaf, 0xd7, 0xff};

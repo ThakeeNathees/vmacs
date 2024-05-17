@@ -254,6 +254,8 @@ void DocumentWindow::DrawBuffer(FrameBuffer& buff, Position pos, Area area) {
   int whitespace_tab = icons.whitespace_tab;
 
   int line_count = document->buffer->GetLineCount(); // Total lines in the buffer.
+  size_t buffsize = document->buffer->GetSize();
+
   const std::vector<Style>& highlights = document->syntax.GetHighlights();
 
   // y is the current relative y coordinate from pos we're drawing.
@@ -314,11 +316,20 @@ void DocumentWindow::DrawBuffer(FrameBuffer& buff, Position pos, Area area) {
 
       // Check if we're in tab character.
       bool istab = (c == '\t');
+
       if (istab) {
         style.ApplyInplace(theme.whitespace);
         c = whitespace_tab;
-      } else if (isspace(c) || c == '\0') {
-        c = ' ';
+
+      } else if (c == '\n' || (index == buffsize)) { // FIXME: Handle file encoding properly.
+        c = ' '; // icons.whitespace_nl; // TODO: Draw new line if in config.
+
+      } else if (c <= 0xff) { // Convert byte to printable.
+        uint32_t cp = ConvertToPrintable(icons, c);
+        if (cp != c) {
+          c = cp;
+          style.ApplyInplace(theme.whitespace);
+        }
       }
 
 
