@@ -231,9 +231,9 @@ void lsp_test() {
   Path path = Path("/Users/thakeenathees/Desktop/thakee/repos/vmacs/build/main.c");
   std::string x;
 
-  std::vector<char> text;
+  std::vector<uint8_t> text;
   Platform::ReadFile(text, path);
-  client.DidOpen(path, text.data(), "c", 0);
+  client.DidOpen(path, (const char*) text.data(), "c", 0);
 
   // goto definition.
   // std::cin >> x;

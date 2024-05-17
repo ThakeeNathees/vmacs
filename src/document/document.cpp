@@ -162,7 +162,8 @@ std::unique_lock<std::mutex> Document::GetSignatureHelp(SignatureItems** items) 
 void Document::SetLspClient(std::shared_ptr<LspClient> client) {
   if (language == nullptr) return; // TODO: Notify an error to the editor.
   lsp_client = client;
-  lsp_client->DidOpen(path, buffer->GetData(), language->id, history.GetVersion());
+  const char* cstr = reinterpret_cast<const char*>(buffer->GetData());
+  lsp_client->DidOpen(path, cstr, language->id, history.GetVersion());
 }
 
 

@@ -66,7 +66,7 @@ typedef const Theme* (*GetThemeFn)();
 class Lines {
 
 public:
-  void ComputeLines(const char* text, size_t size);
+  void ComputeLines(const uint8_t* text, size_t size);
   const std::vector<Slice>& Get() const;
 
 private:
@@ -78,10 +78,10 @@ class Buffer {
 
 public:
   Buffer() = default;
-  Buffer(std::vector<char>&& data);
+  Buffer(std::vector<uint8_t>&& data);
 
   size_t GetSize() const;
-  const char* GetData() const;
+  const uint8_t* GetData() const;
   uint32_t At(int index) const; // Returns the codepoint at the index.
   String GetSubString(int index, int count) const;
 
@@ -109,7 +109,7 @@ public:
   void UnRegisterListener(BufferListener* listener);
 
 private:
-  std::vector<char> buffer;
+  std::vector<uint8_t> buffer;
   Lines lines;
   std::vector<BufferListener*> listeners;
 

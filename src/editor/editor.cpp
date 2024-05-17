@@ -244,7 +244,7 @@ std::shared_ptr<Document> Editor::OpenDocument(const Path& path) {
   auto it = documents.find(path);
   if (it != documents.end()) return it->second;
 
-  std::vector<char> bytes;
+  std::vector<uint8_t> bytes;
   try {
     Platform::ReadFile(bytes, path);
   } catch (std::exception& ex) {

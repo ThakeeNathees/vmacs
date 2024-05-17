@@ -10,7 +10,7 @@
 #include "document.hpp"
 
 
-Buffer::Buffer(std::vector<char>&& data) : buffer(data) {
+Buffer::Buffer(std::vector<uint8_t>&& data) : buffer(data) {
   OnBufferChanged();
 }
 
@@ -20,7 +20,7 @@ const std::vector<Slice>& Lines::Get() const {
 }
 
 
-void Lines::ComputeLines(const char* text, size_t size) {
+void Lines::ComputeLines(const uint8_t* text, size_t size) {
   slices.clear();
 
   Slice slice;
@@ -47,7 +47,7 @@ size_t Buffer::GetSize() const {
 }
 
 
-const char* Buffer::GetData() const {
+const uint8_t* Buffer::GetData() const {
   return buffer.data();
 }
 
@@ -64,7 +64,8 @@ String Buffer::GetSubString(int index, int count) const {
   if (count == 0) return "";
   ASSERT_INDEX(index, buffer.size());
   ASSERT_INDEX(index + count, buffer.size() + 1);
-  return String(std::string(buffer.data() + index, count));
+  const char* cstr = reinterpret_cast<const char*>(buffer.data());
+  return String(std::string(cstr + index, count));
 }
 
 

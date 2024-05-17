@@ -89,7 +89,7 @@ fs::path Path::Normalize(const fs::path& path) {
 }
 
 
-void Platform::ReadFile(std::vector<char>& ret, const Path& path) {
+void Platform::ReadFile(std::vector<uint8_t>& ret, const Path& path) {
 
   if (!path.Exists()) {
     std::string relpath = path.RelativeFrom(".");
@@ -113,7 +113,8 @@ void Platform::ReadFile(std::vector<char>& ret, const Path& path) {
 
   // Read the file into the buffer.
   ret.resize(file_size);
-  file.read(ret.data(), ret.size()); // This may throw.
+  char* ptr = reinterpret_cast<char*>(ret.data());
+  file.read(ptr, ret.size());
   file.close();
 }
 

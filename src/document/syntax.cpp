@@ -61,7 +61,8 @@ void Syntax::Parse(const Language* language, const Buffer* buffer, const Theme* 
   // TODO: Use ts_tree_edit and pass old tree here to make the parsing much
   // faster and efficient.
   if (tree) ts_tree_delete(tree);
-  tree = ts_parser_parse_string(parser, NULL, buffer->GetData(), buffer->GetSize());
+  const char* cstr = reinterpret_cast<const char*>(buffer->GetData());
+  tree = ts_parser_parse_string(parser, NULL, cstr, buffer->GetSize());
 
   // Cache highlight slices.
   CacheHighlightSlices(language->query_highlight, buffer);

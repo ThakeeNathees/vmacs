@@ -96,7 +96,7 @@ public:
   static std::vector<LanguageLoadResult> LoadLanguages();
 
   // !! WARNING !! This will throw on failure.
-  static void ReadFile(std::vector<char>& ret, const Path& path);
+  static void ReadFile(std::vector<uint8_t>& ret, const Path& path);
 
   // !! WARNING !! This method will throw if the path is a not directory or
   // any other io error occured. The caller should handle it.
