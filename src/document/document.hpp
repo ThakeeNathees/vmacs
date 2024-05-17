@@ -416,6 +416,19 @@ private:
 class Document : public HistoryListener, public BufferListener {
 
 public:
+
+  enum class Encoding {
+    UTF8,
+    BINARY,
+  };
+
+  enum class LineEnding {
+    LF,
+    CRLF,
+  };
+
+
+public:
   Document(); // Create with an empty buffer.
   Document(const Path& path, std::shared_ptr<Buffer> buffer);
   ~Document();
@@ -564,11 +577,10 @@ private:
   SignatureItems signatures_helps;
 
   // Document settings.
-  bool readonly = false;
-  // TODO:
-  // Encoding: utf8, utf16, etc.
-  // Line Ending.
-  // Indent style (\t, or ' ').
+  bool readonly         = false;
+  Encoding encoding     = Encoding::UTF8;
+  LineEnding lineending = LineEnding::LF;
+  String indent         = "\t";
 
   // DocumentWindow need cursor and buffer to draw the document, this might not be the
   // "oop" way I don't know.
