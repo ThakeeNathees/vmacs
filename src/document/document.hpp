@@ -78,7 +78,7 @@ class Buffer {
 
 public:
   Buffer() = default;
-  Buffer(const std::string& data);
+  Buffer(std::vector<char>&& data);
 
   size_t GetSize() const;
   const char* GetData() const;
@@ -92,24 +92,24 @@ public:
   // which will be set to the number of column it's behind, we the provided column
   // is at the middle of a tab.
   Coord IndexToCoord(size_t index) const;
-  int CoordToIndex(Coord coord) const;
-  int IndexToColumn(int index) const;
+  size_t CoordToIndex(Coord coord) const;
+  int IndexToColumn(size_t index) const;
   int ColumnToIndex(int column, int line_num, int* col_delta=NULL) const;
 
   // If the index is not nullptr, it'll write the index if the coord is valid.
-  bool IsValidIndex(int index) const;
-  bool IsValidCoord(Coord coord, int* index) const;
+  bool IsValidIndex(size_t index) const;
+  bool IsValidCoord(Coord coord, size_t* index) const;
 
   // Methods that modify the buffer.
-  void InsertText(int index, const String& text);
-  void RemoveText(int index, int count);
+  void InsertText(size_t index, const String& text);
+  void RemoveText(size_t index, int count);
 
   // Buffer listener methods.
   void RegisterListener(BufferListener* listener);
   void UnRegisterListener(BufferListener* listener);
 
 private:
-  std::string data;
+  std::vector<char> buffer;
   Lines lines;
   std::vector<BufferListener*> listeners;
 

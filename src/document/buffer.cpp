@@ -10,7 +10,7 @@
 #include "document.hpp"
 
 
-Buffer::Buffer(const std::string& data) : data(data) {
+Buffer::Buffer(std::vector<char>&& data) : buffer(data) {
   OnBufferChanged();
 }
 
@@ -43,28 +43,28 @@ void Lines::ComputeLines(const char* text, size_t size) {
 
 
 size_t Buffer::GetSize() const {
-  return data.size();
+  return buffer.size();
 }
 
 
 const char* Buffer::GetData() const {
-  return data.c_str();
+  return buffer.data();
 }
 
 
 uint32_t Buffer::At(int index) const {
-  ASSERT_INDEX(index, data.size() + 1); // +1 since we'll include '\0'.
+  ASSERT_INDEX(index, buffer.size() + 1); // +1 since we'll include '\0'.
   // Can't directly cast char to unit32_t since chars are signed and has negative
   // values which will overflow the byte range if we directly cast.
-  return (uint8_t) data[index];
+  return (uint8_t) buffer[index];
 }
 
 
 String Buffer::GetSubString(int index, int count) const {
   if (count == 0) return "";
-  ASSERT_INDEX(index, data.size());
-  ASSERT_INDEX(index + count, data.size() + 1);
-  return data.substr(index, count);
+  ASSERT_INDEX(index, buffer.size());
+  ASSERT_INDEX(index + count, buffer.size() + 1);
+  return String(std::string(buffer.data() + index, count));
 }
 
 
@@ -80,7 +80,7 @@ Slice Buffer::GetLine(int index) const {
 
 
 Coord Buffer::IndexToCoord(size_t index) const {
-  ASSERT_INDEX(index, data.size() + 1);
+  ASSERT_INDEX(index, buffer.size() + 1);
 
   const std::vector<Slice>& slices = lines.Get();
 
@@ -110,7 +110,7 @@ Coord Buffer::IndexToCoord(size_t index) const {
 }
 
 
-int Buffer::IndexToColumn(int index) const {
+int Buffer::IndexToColumn(size_t index) const {
 
   const int tabsize = GetConfig().tabsize;
 
@@ -133,7 +133,7 @@ int Buffer::IndexToColumn(int index) const {
 }
 
 
-int Buffer::CoordToIndex(Coord coord) const {
+size_t Buffer::CoordToIndex(Coord coord) const {
   return lines.Get()[coord.line].start + coord.character;
 }
 
@@ -172,12 +172,12 @@ int Buffer::ColumnToIndex(int column, int line_num, int* col_delta) const {
 }
 
 
-bool Buffer::IsValidIndex(int index) const {
+bool Buffer::IsValidIndex(size_t index) const {
   return BETWEEN(0, index, GetSize()-1);
 }
 
 
-bool Buffer::IsValidCoord(Coord coord, int* index) const {
+bool Buffer::IsValidCoord(Coord coord, size_t* index) const {
   if (coord.line < 0) return false;
   if (coord.character < 0) return false;
   if (coord.line >= lines.Get().size()) return false;
@@ -189,24 +189,26 @@ bool Buffer::IsValidCoord(Coord coord, int* index) const {
 }
 
 
-void Buffer::InsertText(int index, const String& text) {
-  ASSERT_INDEX(index, (int) data.size() + 1);
-  data.insert(index, text.Data());
+void Buffer::InsertText(size_t index, const String& text) {
+  ASSERT_INDEX(index, (int) buffer.size() + 1);
+  auto begin = text.Data().begin();
+  auto end   = text.Data().end();
+  buffer.insert(buffer.begin() + index, begin, end);
   OnBufferChanged();
 }
 
 
-void Buffer::RemoveText(int index, int count) {
+void Buffer::RemoveText(size_t index, int count) {
   if (count == 0) return;
-  ASSERT_INDEX(index, (int)data.size());
-  ASSERT_INDEX(index + count, (int)data.size() + 1);
-  data.erase(index, count);
+  ASSERT_INDEX(index, buffer.size());
+  ASSERT_INDEX(index + count, (int)buffer.size() + 1);
+  buffer.erase(buffer.begin() + index, buffer.begin() + index + count);
   OnBufferChanged();
 }
 
 
 void Buffer::OnBufferChanged() {
-  lines.ComputeLines(data.c_str(), data.size());
+  lines.ComputeLines(buffer.data(), buffer.size());
   for (BufferListener* listener : listeners) {
     listener->OnBufferChanged();
   }

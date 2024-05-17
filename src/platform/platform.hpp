@@ -95,11 +95,8 @@ public:
   // Load all the languages in memory or from some config directory.
   static std::vector<LanguageLoadResult> LoadLanguages();
 
-  // TODO: Implement error type for reading since it could be permission error
-  // or invalid path or already in used etc.
-  // Reads an entire file and return the content. if the path is invalid or an error,
-  // this will return false.
-  static bool ReadFile(std::string* ret, const Path& path);
+  // !! WARNING !! This will throw on failure.
+  static void ReadFile(std::vector<char>& ret, const Path& path);
 
   // !! WARNING !! This method will throw if the path is a not directory or
   // any other io error occured. The caller should handle it.

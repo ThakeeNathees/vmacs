@@ -673,7 +673,7 @@ bool Document::SelectCompletionItem() {
     const CompletionItem& item = completion_items[completion_selected];
 
     Cursor& cursor = cursors.GetPrimaryCursor();
-    int start_index = -1; // Will be updated by the bello logic.
+    size_t start_index = -1; // Will be updated by the bello logic.
     if (!buffer->IsValidCoord(item.text_edit.start, &start_index)) {
       if (buffer->IsValidIndex(completion_start_index)) start_index = completion_start_index;
       else start_index = GetWordBeforeIndex(cursor.GetIndex());

@@ -165,7 +165,7 @@ void DocumentWindow::JumpTo(const Coord& coord) {
   Buffer* buff = document->buffer.get();
   ASSERT(buff != nullptr, OOPS);
 
-  int index = 0;
+  size_t index = 0;
   if (buff->IsValidCoord(coord, &index)) {
     document->cursors.ClearMultiCursors();
     document->cursors.ClearSelections();

@@ -244,13 +244,15 @@ std::shared_ptr<Document> Editor::OpenDocument(const Path& path) {
   auto it = documents.find(path);
   if (it != documents.end()) return it->second;
 
-  std::string text;
-  if (!Platform::ReadFile(&text, path)) {
-    Editor::Error("Error opening file at: " + path.String());
+  std::vector<char> bytes;
+  try {
+    Platform::ReadFile(bytes, path);
+  } catch (std::exception& ex) {
+    Error(ex.what());
     return nullptr;
   }
 
-  std::shared_ptr<Buffer> buff = std::make_shared<Buffer>(text);
+  std::shared_ptr<Buffer> buff = std::make_shared<Buffer>(std::move(bytes));
   std::shared_ptr<Document> document = std::make_shared<Document>(path, buff);
   document->SetThemeGetter([](){ return &Editor::GetTheme(); });
 

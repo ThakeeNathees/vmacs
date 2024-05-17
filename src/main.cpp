@@ -231,9 +231,9 @@ void lsp_test() {
   Path path = Path("/Users/thakeenathees/Desktop/thakee/repos/vmacs/build/main.c");
   std::string x;
 
-  std::string text;
-  ASSERT(Platform::ReadFile(&text, path), "My ugly code");
-  client.DidOpen(path, text.c_str(), "c", 0);
+  std::vector<char> text;
+  Platform::ReadFile(text, path);
+  client.DidOpen(path, text.data(), "c", 0);
 
   // goto definition.
   // std::cin >> x;

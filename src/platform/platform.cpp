@@ -89,15 +89,32 @@ fs::path Path::Normalize(const fs::path& path) {
 }
 
 
-bool Platform::ReadFile(std::string* ret, const Path& path) {
-  ASSERT(ret != nullptr, OOPS);
-  std::ifstream file(path.String());
-  if (!file.is_open()) return false;
-  std::stringstream buffer;
-  buffer << file.rdbuf();
+void Platform::ReadFile(std::vector<char>& ret, const Path& path) {
+
+  if (!path.Exists()) {
+    std::string relpath = path.RelativeFrom(".");
+    throw std::runtime_error("Path \"" + relpath + "\" not exists.");
+  }
+
+  std::ifstream file(path.String(), std::ios::binary | std::ios::ate);
+  file.exceptions(std::ifstream::failbit); // This will throw if opening failed.
+
+  if (!file.is_open()) {
+    // This exception won't be reached since the above will throw if failed to
+    // open anyways we're also throwing just in case.
+    std::string relpath = path.RelativeFrom(".");
+    throw std::runtime_error("Error opening file at: \"" + relpath + "\".");
+  }
+
+  // TODO: Handle large sized files (load in a different thread maybe).
+  file.seekg(0, std::ios::end);
+  size_t file_size = file.tellg();
+  file.seekg(0, std::ios::beg);
+
+  // Read the file into the buffer.
+  ret.resize(file_size);
+  file.read(ret.data(), ret.size()); // This may throw.
   file.close();
-  *ret = buffer.str();
-  return true;
 }
 
 
