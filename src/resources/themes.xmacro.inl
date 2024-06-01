@@ -111,7 +111,7 @@
   X("dark_high_contrast", theme_dark_high_contrast)\
   X("pop-dark", theme_pop_dark)\
   X("monokai_pro_spectrum", theme_monokai_pro_spectrum)\
-  X("emacs", theme_emacs)\
+  /*X("emacs", theme_emacs)*/\
   X("dracula", theme_dracula)\
   X("kaolin-light", theme_kaolin_light)\
   X("modus_operandi", theme_modus_operandi)\
@@ -578,9 +578,9 @@ static const char* theme_monokai_pro_spectrum =
   #include "./themes/monokai_pro_spectrum.json.inl"
 ;
 
-static const char* theme_emacs =
-  #include "./themes/emacs.json.inl"
-;
+//static const char* theme_emacs =
+//  #include "./themes/emacs.json.inl"
+//;
 
 static const char* theme_dracula =
   #include "./themes/dracula.json.inl"

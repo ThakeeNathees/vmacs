@@ -9,31 +9,31 @@
 #include "frontend.hpp"
 
 
-bool Termbox2::Initialize() {
-	int code = tb_init();
-	if (code < 0) {
-		fprintf(stderr, "termbox init failed, code: %d\n", code);
+bool Termbox::Initialize() {
+  int code = tb_init();
+  if (code < 0) {
+    fprintf(stderr, "termbox init failed, code: %d\n", code);
     return false;
-	}
+  }
 
   // DEFINE TB_OPT_ATTR_W=32, to termbox for true color.
-	tb_set_input_mode(TB_INPUT_ESC | TB_INPUT_MOUSE);
+  tb_set_input_mode(TB_INPUT_ESC | TB_INPUT_MOUSE);
   tb_set_output_mode(TB_OUTPUT_TRUECOLOR);
   return true;
 }
 
 
-bool Termbox2::Cleanup() {
+bool Termbox::Cleanup() {
   return tb_shutdown() == TB_OK;
 }
 
 
-Area Termbox2::GetDrawArea() {
+Area Termbox::GetDrawArea() {
   return Area(tb_width(), tb_height());
 }
 
 
-void Termbox2::Display(FrameBuffer& buff) {
+void Termbox::Display(FrameBuffer& buff) {
 
   int width = buff.width;
   int height = buff.height;
@@ -64,7 +64,7 @@ void Termbox2::Display(FrameBuffer& buff) {
 }
 
 
-std::vector<Event> Termbox2::GetEvents() {
+std::vector<Event> Termbox::GetEvents() {
 
   std::vector<Event> events;
 
@@ -123,8 +123,8 @@ std::vector<Event> Termbox2::GetEvents() {
         case TB_KEY_CTRL_F           : e.key.code = Event::KEY_F; break;
         case TB_KEY_CTRL_G           : e.key.code = Event::KEY_G; break;
 
-        // case TB_KEY_BACKSPACE     :
-        case TB_KEY_CTRL_H           : e.key.code = Event::KEY_H; break;
+        // case TB_KEY_CTRL_H        :
+        case TB_KEY_BACKSPACE        : e.key.code = Event::KEY_BACKSPACE; break;
 
         // case TB_KEY_TAB           :
         case TB_KEY_CTRL_I           : e.key.ctrl = false; e.key.code = Event::KEY_TAB; break;

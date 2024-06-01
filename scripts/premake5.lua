@@ -55,10 +55,8 @@ project (project_name)
     root_dir_rel .. "/src/**.hpp",
 
     -- Thirdparty source files.
-    root_dir_rel .. "/thirdparty/tomlcpp/**.c",
-    root_dir_rel .. "/thirdparty/tomlcpp/**.cpp",
-    root_dir_rel .. "/thirdparty/tomlcpp/**.h",
-    root_dir_rel .. "/thirdparty/tomlcpp/**.hpp",
+    root_dir_rel .. "/thirdparty/termbox/*.c",
+    root_dir_rel .. "/thirdparty/termbox/*.h",
     root_dir_rel .. "/thirdparty/tree-sitter-0.22.6/include/**.h",
     root_dir_rel .. "/thirdparty/tree-sitter-0.22.6/src/lib.c",
   }
@@ -68,9 +66,9 @@ project (project_name)
 
     -- Thirdparty includes.
     root_dir_rel .. "/thirdparty/",
+    root_dir_rel .. "/thirdparty/termbox/",
     root_dir_rel .. "/thirdparty/tree-sitter-0.22.6/include/",
     root_dir_rel .. "/thirdparty/tree-sitter-0.22.6/src/",
-    root_dir_rel .. "/thirdparty/tomlcpp/",
   }
 
   -- Enable if needed.

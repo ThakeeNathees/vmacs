@@ -7,7 +7,6 @@
 // Licenced under: MIT
 
 #include "core/core.hpp"
-#include <tomlcpp.hpp>
 
 
 static bool ResolveColorFromString(

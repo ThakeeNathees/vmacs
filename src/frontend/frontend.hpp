@@ -9,10 +9,10 @@
 #pragma once
 
 #include "core/core.hpp"
-#include <termbox2/termbox2.h>
+#include <termbox.h>
 
 
-class Termbox2 : public IFrontEnd {
+class Termbox : public IFrontEnd {
 public:
   bool Initialize() override;
   std::vector<Event> GetEvents() override;

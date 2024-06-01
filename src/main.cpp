@@ -26,6 +26,7 @@
 //   simple workflow (open edit save etc).
 //   proper binding and modes.
 //   ctrl+q properly handle.
+//   emacs theme is disabled (windows string len limitation).
 //
 //
 // Gap Buffer:
@@ -164,7 +165,7 @@
 #include "ui/ui.hpp"
 
 #include "core/core.hpp"
-#include "platform/posix.hpp"
+#include "platform/platform.hpp"
 #include "frontend/frontend.hpp"
 
 #include "editor/editor.hpp"
@@ -388,7 +389,9 @@ int main(int argc, char** argv) {
   // 
   // Test it with send the language server "exit" notification twise.
   //
+#ifndef _WIN32
   signal(SIGPIPE, SIG_IGN);
+#endif
 
   // fzf_things_test();
   // return 0;
@@ -584,7 +587,7 @@ int main(int argc, char** argv) {
     editor->RegisterLspClient(config);
   }
 
-  std::unique_ptr<IFrontEnd> frontend = std::make_unique<Termbox2>();
+  std::unique_ptr<IFrontEnd> frontend = std::make_unique<Termbox>();
   editor->SetFrontEnd(std::move(frontend));
 
 

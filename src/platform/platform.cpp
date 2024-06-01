@@ -32,7 +32,7 @@ std::string Path::Uri() const {
 
 
 std::string Path::FileName() const {
-  return path.filename();
+  return path.filename().string();
 }
 
 
@@ -67,7 +67,7 @@ bool Path::operator ==(const Path& other) const {
 
 
 Path Path::operator /(const std::string& inner) const {
-  return Path(path/inner);
+  return Path((path / inner).string());
 }
 
 
