@@ -153,22 +153,22 @@ using Json = nlohmann::json;
   ((json).contains(key)) && (json)[key].is_type()
 
 
-#define JSON_GET_STRING_OR(json, key, or)            \
+#define JSON_GET_STRING_OR(json, key, or_)           \
   (((json).contains(key) && (json)[key].is_string()) \
     ? (json)[key].template get<std::string>()        \
-    : or)
+    : or_)
 
 
-#define JSON_GET_BOOL_OR(json, key, or)               \
+#define JSON_GET_BOOL_OR(json, key, or_)              \
   (((json).contains(key) && (json)[key].is_boolean()) \
     ? (json)[key].template get<bool>()                \
-    : or)
+    : or_)
 
 
-#define JSON_GET_INT_OR(json, key, or)                       \
+#define JSON_GET_INT_OR(json, key, or_)                      \
   (((json).contains(key) && (json)[key].is_number_integer()) \
     ? (json)[key].template get<int>()                        \
-    : or)
+    : or_)
 
 
 #define BUFF_CELL(buff, x, y)\

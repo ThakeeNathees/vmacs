@@ -89,12 +89,20 @@ std::string& Finder::GetSearchText() {
 void FilesFinder::Initialize() {
   IPC::IpcOptions opt; // FIXME(grep): we need to do this properly.
   opt.user_data      = this;
+
+#ifdef _WIN32
+  opt.file = "dir";
+  opt.argv = { "/S", "/B", "/A-D" };
+#else
   opt.file           = "rg";
   opt.argv           = { "--files" };
+#endif
   // opt.file           = "fd";
   // opt.argv           = StringSplit("--type f", ' ');
+
   // opt.file           = "find";
   // opt.argv           = StringSplit(". -type f", ' ');
+
   opt.timeout_sec    = 4;
   opt.sending_inputs = false;
   opt.stdout_cb      = [&](void* data, const char* buff, size_t length) {
@@ -136,9 +144,9 @@ void FilesFinder::TriggerFuzzyFilter() {
 
   IPC::IpcOptions opt; // FIXME: This needs to implemented properly.
   opt.user_data      = this;
-  opt.file           = "fzf";
-  opt.argv           = { "--filter", search_text };
 
+  // opt.file           = "fzf";
+  // opt.argv           = { "--filter", search_text };
   // std::string s; // "s.*e.*a.*r.*c.*h";
   // for (int i = 0; i < search_text.size(); i++) {
   //   s += search_text[i];
@@ -146,6 +154,14 @@ void FilesFinder::TriggerFuzzyFilter() {
   // }
   // opt.file           = "grep"; // Use grep if fzf not available.
   // opt.argv           = { s };
+
+  std::string s; // "s.*e.*a.*r.*c.*h";
+  for (int i = 0; i < search_text.size(); i++) {
+    s += search_text[i];
+    if (i != search_text.size()-1) s+=".*";
+  }
+  opt.file           = "grep"; // Use grep if fzf not available.
+  opt.argv           = { s };
 
   opt.timeout_sec    = 2;
   opt.sending_inputs = true;

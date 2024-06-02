@@ -83,6 +83,8 @@ struct tb_global_t {
   int last_y;
   int output_mode;
 
+  uint32_t last_ch;
+
   uintattr_t fg;
   uintattr_t bg;
   uintattr_t last_fg;
@@ -140,7 +142,6 @@ static tb_err send_sgr(uint32_t fg, uint32_t bg, int fg_is_default,
                        int bg_is_default);
 static tb_err send_cursor_if(int x, int y);
 static tb_err send_char(int x, int y, uint32_t ch);
-static tb_err send_cluster(int x, int y, uint32_t* ch, size_t nch);
 static tb_err convert_num(uint32_t num, char* buf);
 static tb_err cell_cmp(struct tb_cell* a, struct tb_cell* b);
 static tb_err cell_copy(struct tb_cell* dst, struct tb_cell* src);
@@ -2950,31 +2951,26 @@ static tb_err send_cursor_if(int x, int y) {
 }
 
 static tb_err send_char(int x, int y, uint32_t ch) {
-  return send_cluster(x, y, &ch, 1);
-}
-
-static tb_err send_cluster(int x, int y, uint32_t* ch, size_t nch) {
   int rv;
   char chu8[8];
 
-  if (global.last_x != x - 1 || global.last_y != y) {
+  if ((global.last_ch >= 0xffff) || global.last_x != x - 1 || global.last_y != y) {
     if_err_return(rv, send_cursor_if(x, y));
   }
+
   global.last_x = x;
   global.last_y = y;
+  global.last_ch = ch;
 
   int i;
-  for (i = 0; i < (int)nch; i++) {
-    uint32_t ch32 = *(ch + i);
-    int chu8_len;
-    if (ch32 == 0) { // replace null with space (from termbox 19dbee5)
-      chu8_len = 1;
-      chu8[0] = ' ';
-    } else {
-      chu8_len = tb_utf8_unicode_to_char(chu8, ch32);
-    }
-    if_err_return(rv, bytebuf_nputs(&global.out, chu8, (size_t)chu8_len));
+  int chu8_len;
+  if (ch == 0) { // replace null with space (from termbox 19dbee5)
+    chu8_len = 1;
+    chu8[0] = ' ';
+  } else {
+    chu8_len = tb_utf8_unicode_to_char(chu8, ch);
   }
+  if_err_return(rv, bytebuf_nputs(&global.out, chu8, (size_t)chu8_len));
 
   return TB_OK;
 }

@@ -8,12 +8,13 @@
 
 #if defined(__unix__) || defined(__APPLE__)
 
-#include <thread>
-#include <signal.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <stdbool.h>
 #include <errno.h>
+#include <signal.h>
+#include <stdbool.h>
+#include <stdlib.h>
+#include <sys/wait.h>
+#include <thread>
+#include <unistd.h>
 
 // Read and write end of a pipe.
 #define PE_READ  0

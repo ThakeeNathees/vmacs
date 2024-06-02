@@ -10,10 +10,11 @@
 
 // TODO:
 //
-//  TEST IN WINDOWS AND LINUX
+//  IPC Wndows
 //
 // Now:
 //   Reading file
+//   rename server_io_thread in ipc.
 //
 //
 // Release:
