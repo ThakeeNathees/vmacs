@@ -2044,9 +2044,9 @@ static bool to_tb_event(INPUT_RECORD* ir, struct tb_event* ev) {
       // the wheel was rotated backward, toward the user.
       if (mer->dwEventFlags & MOUSE_WHEELED) {
         if (HIWORD(mer->dwButtonState) & 0x8000) {
-          ev->key = TB_KEY_MOUSE_WHEEL_UP;
-        } else {
           ev->key = TB_KEY_MOUSE_WHEEL_DOWN;
+        } else {
+          ev->key = TB_KEY_MOUSE_WHEEL_UP;
         }
         return true;
       }

@@ -27,12 +27,17 @@ void Finder::StdoutCallbackLoadResults(
       if (*end == '\n') {
         size_t len = (end-buff); // This will skip the '\n' character, +1 if needed.
         if (len != 0) {
+
+          // If line ends with '\r\n' skip the cariage return as well (windows thing).
+          if (*(end - 1) == '\r') len--;
+
           if (!pending.empty()) {
             lines.push_back(pending + std::string(buff, len));
             pending.clear();
           } else {
             lines.push_back(std::string(buff, len));
           }
+
         }
         buff = end+1;
       }
@@ -91,8 +96,8 @@ void FilesFinder::Initialize() {
   opt.user_data      = this;
 
 #ifdef _WIN32
-  opt.file = "dir";
-  opt.argv = { "/S", "/B", "/A-D" };
+  opt.file = "cmd.exe";
+  opt.argv = { "/C", "dir", "/S", "/B", "/A-D" };
 #else
   opt.file           = "rg";
   opt.argv           = { "--files" };

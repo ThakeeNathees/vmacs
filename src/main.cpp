@@ -41,6 +41,7 @@
 //  - ts_edit_tree implement (same as syncing with lsp server).
 //  - FrameBuffer as class (constructor, set cell etc).
 //  - CRLF files crash the editor handle properly.
+//  - IPC errors should be passed to editor.
 //  - Editor::Error(), etc.
 //  - Window pos/area.
 //  - Loading config from file.
@@ -578,7 +579,12 @@ int main(int argc, char** argv) {
   {
     LspConfig config;
     config.id = "clangd";
+#ifdef _WIN32
+    config.server_file = "C:\\Program Files\\LLVM\\bin\\clangd.exe";
+#else
     config.server_file = "clangd";
+#endif
+
     editor->RegisterLspClient(config);
   }
   {

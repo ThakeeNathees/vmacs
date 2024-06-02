@@ -47,6 +47,7 @@ project (project_name)
 
   -- Termbox option to support true color.
   defines { "TB_OPT_ATTR_W=32" }
+  characterset ("ASCII")
 
   files {
     root_dir_rel .. "/src/**.c",

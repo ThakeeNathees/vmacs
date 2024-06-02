@@ -16,6 +16,8 @@
 #include <thread>
 #include <unistd.h>
 
+#include "platform.hpp"
+
 // Read and write end of a pipe.
 #define PE_READ  0
 #define PE_WRITE 1
@@ -71,17 +73,6 @@ typedef enum {
   EXIT_TYPE_TIMEOUT = 2,
 } exec_exit_type;
 
-// By convention argv[0] should be the same as file.
-bool SpawnProcess(
-  const char* file,   // The executable file we'll be executing.
-  char* const argv[], // Arguments (last elements *MUST* be NULL).
-  pid_t* pid,         // Return value process id.
-  int* fdwrite_in,    // Return file descriptor for stdin.
-  int* fdread_out,    // Return file descriptor for stdout.
-  int* fdread_err);   // Return file descriptor for stderr.
-
-bool ShellExec(exec_options_t opt, pid_t* pid, std::atomic<bool>& loop_stop);
-
 
 uint64_t Platform::GetPid() {
   return (uint64_t) getpid();
@@ -95,7 +86,7 @@ char Platform::GetPathSeparator() {
 
 // Returns true on success. If the fdread is not NULL, it'll open pipe from child to parent to listen stdout of the child and
 // if the fdwrite is not NULL it'll open pipe from parent to child to send message from parent's stdout.
-bool SpawnProcess(const char* file, char* const argv[], pid_t* pid, int* fdwrite_in, int* fdread_out, int* fdread_err) {
+static bool SpawnProcess(const char* file, char* const argv[], pid_t* pid, int* fdwrite_in, int* fdread_out, int* fdread_err) {
 
   int pipe_parent_to_child_in[2];  // Pipe to write to child's  stdin.
   int pipe_child_to_parent_out[2]; // Pipe to read from child's stdout.
@@ -155,7 +146,7 @@ bool SpawnProcess(const char* file, char* const argv[], pid_t* pid, int* fdwrite
 
 
 // Return false if it failed to spawn a child process.
-bool ShellExec(exec_options_t opt, pid_t* pid, std::atomic<bool>& loop_stop) {
+static bool ShellExec(exec_options_t opt, pid_t* pid, std::atomic<bool>& loop_stop) {
 
   // Set of file descriptors waiting for listening.
   fd_set fds_waiting_for_read;

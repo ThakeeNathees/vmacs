@@ -27,7 +27,11 @@ std::string Path::String() const {
 
 
 std::string Path::Uri() const {
+#ifdef _WIN32
+  return std::string("file:///") + path.string();
+#else
   return std::string("file://") + path.string();
+#endif
 }
 
 
