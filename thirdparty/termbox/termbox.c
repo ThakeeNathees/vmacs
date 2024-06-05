@@ -1908,7 +1908,7 @@ static bool to_tb_key(WORD vk, tb_key* kc, const uint8_t mod) {
   }
 
   // ctrl + a-z, A-Z
-  if (mod & TB_MOD_CTRL){
+  if (mod & TB_MOD_CTRL) {
     switch (vk) {
       case 'a': case 'A': *kc = TB_KEY_CTRL_A; return true;
       case 'b': case 'B': *kc = TB_KEY_CTRL_B; return true;
