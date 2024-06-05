@@ -20,6 +20,27 @@
 // -----------------------------------------------------------------------------
 
 
+Utf8Iterator::Utf8Iterator(const uint8_t* start, size_t len) : start(start), length(len) {
+  curr = start;
+}
+
+
+bool Utf8Iterator::HasNext() const {
+  return (curr - start) < length;
+}
+
+
+uint32_t Utf8Iterator::Next() {
+  if (!HasNext()) return 0; // TODO: This should maybe throw an error.
+  uint32_t ret;
+  int len = Utf8CharToUnicode(&ret, (const char*)curr);
+
+  // FIXME: check if the length is greater than the actual length of the string.
+  curr += len;
+  return ret;
+}
+
+
 String::String(const std::string& data) : data(data) {
   length = Utf8Strlen(this->data.c_str());
 }

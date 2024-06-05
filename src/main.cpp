@@ -20,7 +20,6 @@
 // Release:
 //   Diagnostics.
 //   Well documented source code.
-//   Windows support
 //   read file properly (crlf, encoding, etc.) + handle binary files.
 //   finder, autocompletion highlight fzf match.
 //   cleanup source files.

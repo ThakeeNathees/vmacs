@@ -512,6 +512,22 @@ struct Event {
 // -----------------------------------------------------------------------------
 
 
+class Utf8Iterator {
+public:
+
+  Utf8Iterator(const uint8_t* start, size_t length);
+  bool HasNext() const;
+  uint32_t Next();
+
+private:
+  const uint8_t* const start = nullptr; // Start of the string.
+  const uint8_t* curr = nullptr;        // Current position.
+
+  // Not the string length, but the number of bytes in the string.
+  size_t length = 0;
+};
+
+
 // A string class wrapper for string to deal with utf8 stuff.
 class String {
 public:
