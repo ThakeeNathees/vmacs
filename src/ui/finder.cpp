@@ -10,7 +10,7 @@
 #include "ui.hpp"
 
 
-void Finder::SetSearchText(std::string* search_text) {
+void Finder::SetSearchText(const std::string* search_text) {
   this->search_text = search_text;
 }
 

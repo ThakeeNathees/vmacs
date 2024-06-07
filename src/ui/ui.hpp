@@ -312,6 +312,8 @@ public: // Actions.
   static bool Action_Vsplit(ActionExecutor* self);
   static bool Action_Hsplit(ActionExecutor* self);
   static bool Action_CloseWindow(ActionExecutor* self);
+
+  static bool Action_OpenTestPopup(ActionExecutor* self);
 };
 
 
@@ -417,7 +419,40 @@ public: // Actions.
 
 
 // -----------------------------------------------------------------------------
-// Find Window.
+// Popups.
+// -----------------------------------------------------------------------------
+
+
+// FIXME: Move this class to somewhere common.
+//
+// A reusable input text box used in finder window search text, save file path
+// prompt window, command selection popup etc.
+class InputBox {
+public:
+  bool HandleEvent(const Event& event);
+  void Draw(FrameBuffer& buff, Position pos, Area area);
+
+  // Returns the entered text.
+  const std::string& GetText() const;
+
+  // Actions.
+  bool CursorRight();
+  bool CursorLeft();
+  bool CursorHome();
+  bool CursorEnd();
+  bool Backspace();
+
+private:
+  // The text which entered in the search box.
+  std::string text;
+
+  // The cursor inside the search bar.
+  int cursor_index = 0;
+};
+
+
+// -----------------------------------------------------------------------------
+// Find Window Popup.
 // -----------------------------------------------------------------------------
 
 
@@ -430,12 +465,7 @@ public:
 
 private:
   std::unique_ptr<Finder> finder;
-
-  // The text which entered in the search box.
-  std::string search_text;
-
-  // The cursor inside the search bar.
-  int cursor_index = 0;
+  InputBox inputbox;
 
   // The index of the selected item in the filtered list. By default it'll be
   // 0 if there is anything in the filter list.
@@ -445,6 +475,7 @@ private:
                             // selection is on the view.
 
 private:
+
   void _Update() override;
   bool _HandleEvent(const Event& event) override;
   void _Draw(FrameBuffer& buff, Position pos, Area area) override;
@@ -473,3 +504,32 @@ public: // Actions.
   static bool Action_Close(FindWindow* self);
 };
 
+
+// -----------------------------------------------------------------------------
+// Input Text Popup.
+// -----------------------------------------------------------------------------
+
+class InputWindow : public Window {
+  DEFINE_GET_CLASS_NAME(InputWindow);
+
+public:
+  void SetLabel(const String& label);
+
+private:
+  String label;
+  InputBox inputbox;
+
+private:
+  void _Update() override;
+  bool _HandleEvent(const Event& event) override;
+  void _Draw(FrameBuffer& buff, Position pos, Area area) override;
+
+public: // Actions.
+  static bool Action_CursorRight(InputWindow* self);
+  static bool Action_CursorLeft(InputWindow* self);
+  static bool Action_CursorHome(InputWindow* self);
+  static bool Action_CursorEnd(InputWindow* self);
+  static bool Action_Backspace(InputWindow* self);
+  static bool Action_Enter(InputWindow* self);
+  static bool Action_Close(InputWindow* self);
+};

@@ -721,6 +721,11 @@ private:
 // icon for a completion kind, and we should't depend on the lsp "module" here.
 #define COMPLETION_ITEM_KIND_COUNT 25
 
+// Takes a color (0xrrggbb) and set the "opacity" to the given percent.
+#define DIM_COLOR(color, percent) \
+  ((((((color) >> 16) & 0xff) * (percent)) / 100) << 16) | \
+  ((((((color) >> 8)  & 0xff) * (percent)) / 100) <<  8) | \
+  ((((((color) >> 0)  & 0xff) * (percent)) / 100) <<  0)
 
 class Icons {
 public:

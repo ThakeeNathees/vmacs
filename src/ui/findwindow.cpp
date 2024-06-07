@@ -8,11 +8,61 @@
 
 #include "ui.hpp"
 
+// -----------------------------------------------------------------------------
+
+bool InputBox::HandleEvent(const Event& event) {
+  if (event.type == Event::Type::KEY && event.key.unicode != 0) {
+    char c = (char) event.key.unicode;
+    text.insert(cursor_index, std::string(1, event.key.unicode));
+    cursor_index++;
+    return true;
+  }
+  return false;
+}
+
+
+void InputBox::Draw(FrameBuffer& buff, Position pos, Area area) {
+  const Theme& theme = Editor::GetTheme();
+  const Icons& icons = Editor::GetIcons();
+
+  for (int i = 0; i < text.size(); i++) {
+    Style style = theme.style;
+    if (i == cursor_index) style.ApplyInplace(theme.cursor);
+    SET_CELL(buff, pos.x+i, pos.y, text[i], style);
+  }
+  if (cursor_index == text.size()) {
+    auto style = theme.style.Apply(theme.cursor);
+    SET_CELL(buff, pos.x+ cursor_index, pos.y, ' ', style);
+  }
+}
+
+
+const std::string& InputBox::GetText() const {
+  return text;
+}
+
+
+bool InputBox::CursorRight() { if (cursor_index < text.size()) cursor_index++; return true; }
+bool InputBox::CursorLeft()  { if (cursor_index > 0) cursor_index--; return true; }
+bool InputBox::CursorHome()  { cursor_index = 0; return true; }
+bool InputBox::CursorEnd()   { cursor_index = text.size(); return true; }
+
+bool InputBox::Backspace() {
+  if (cursor_index > 0) {
+    text.erase(cursor_index-1, 1);
+    cursor_index--;
+  }
+  return true;
+}
+
+// -----------------------------------------------------------------------------
+
+
 // FIXME(grep) The finder might not have the requirnment installed, handle it.
 
 FindWindow::FindWindow(std::unique_ptr<Finder> finder_) : finder(std::move(finder_)) {
 
-  finder->SetSearchText(&search_text);
+  finder->SetSearchText(&inputbox.GetText());
   finder->RegisterItemsChangeListener([&](){ this->OnItemsChanged(); });
   finder->Initialize();
 }
@@ -24,14 +74,11 @@ Window::Type FindWindow::GetType() const {
 
 
 bool FindWindow::_HandleEvent(const Event& event) {
-  if (event.type == Event::Type::KEY && event.key.unicode != 0) {
-    char c = (char) event.key.unicode;
-    search_text.insert(cursor_index, std::string(1, event.key.unicode));
+  if (inputbox.HandleEvent(event)) {
     finder->InputChanged();
-    cursor_index++;
     selected_index = 0;
     return true;
-  }
+  } 
   return false;
 }
 
@@ -81,32 +128,26 @@ void FindWindow::_Draw(FrameBuffer& buff, Position pos, Area area) {
   const Theme& theme = Editor::GetTheme();
   const Icons& icons = Editor::GetIcons();
 
-  const int x = pos.x;
-  const int y = pos.y;
-  const int w = area.width;
-  const int h = area.height;
+  const int percent = 70; // Will consume 70% of the window.
+  const int W = area.width;
+  const int H = area.height;
+  const int w = (W * percent) / 100;
+  const int h = (H * percent) / 100;
+  const int x = pos.x + (W - w) / 2;
+  const int y = pos.y + (H - h) / 2;
 
   // We need a witdh of at least 4 cells (two borders and two for spacing).
-  if (area.width-4 <= 0) return;
+  if (w-4 <= 0) return;
 
   // TODO: Check if the input area is enough and h-scroll if reached the end.
   // And drawing the filter_ratio shouldn't block the input if the input is reached
   // the end.
 
   // Draw the border.
-  DrawRectangleLine(buff, pos, area, theme.lines, icons, true);
+  DrawRectangleLine(buff, Position(x, y), Area(w, h), theme.lines, icons, true);
 
-  // Draw the input area.
-  const std::string& input_text = search_text;
-  for (int i = 0; i < input_text.size(); i++) {
-    Style style = theme.style;
-    if (i == cursor_index) style.ApplyInplace(theme.cursor);
-    SET_CELL(buff, x+2+i, y+1, input_text[i], style);
-  }
-  if (cursor_index == input_text.size()) {
-    auto style = theme.style.Apply(theme.cursor);
-    SET_CELL(buff, x+2 + cursor_index, y+1, ' ', style);
-  }
+  // Draw the input box. width = w-2 for padding on both edges.
+  inputbox.Draw(buff, Position(x+2, y+1), Area(w-2, 1));
 
   int total_count = finder->GetItemsCountTotal();
   int items_count = finder->GetItemsCount();
@@ -172,10 +213,10 @@ void FindWindow::DrawItems(FrameBuffer& buff, int x, int y, int w, int h, const 
 // Actions.
 // -----------------------------------------------------------------------------
 
-bool FindWindow::Action_CursorRight(FindWindow* self) { ASSERT(self->finder != nullptr, OOPS); if (self->cursor_index < self->search_text.size()) self->cursor_index++; return true; }
-bool FindWindow::Action_CursorLeft(FindWindow* self)  { if (self->cursor_index > 0) self->cursor_index--; return true; }
-bool FindWindow::Action_CursorHome(FindWindow* self)  { self->cursor_index = 0; return true; }
-bool FindWindow::Action_CursorEnd(FindWindow* self)   { ASSERT(self->finder != nullptr, OOPS); self->cursor_index = self->search_text.size(); return true; }
+bool FindWindow::Action_CursorRight(FindWindow* self) { return self->inputbox.CursorRight(); }
+bool FindWindow::Action_CursorLeft(FindWindow* self)  { return self->inputbox.CursorLeft(); }
+bool FindWindow::Action_CursorHome(FindWindow* self)  { return self->inputbox.CursorHome(); }
+bool FindWindow::Action_CursorEnd(FindWindow* self)   { return self->inputbox.CursorEnd(); }
 
 bool FindWindow::Action_CycleSelection(FindWindow* self) {
   int items_count = self->finder->GetItemsCount();
@@ -201,14 +242,11 @@ bool FindWindow::Action_CycleSelectionReversed(FindWindow* self) {
 
 
 bool FindWindow::Action_Backspace(FindWindow* self) {
-  if (self->cursor_index > 0) {
-    self->search_text.erase(self->cursor_index-1, 1);
+  if (!self->inputbox.Backspace()) return false;
     self->finder->InputChanged();
-    self->cursor_index--;
     self->view_start_index = 0;
     self->selected_index   = 0;
-  }
-  return true;
+    return true;
 }
 
 

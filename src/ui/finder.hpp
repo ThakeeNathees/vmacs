@@ -20,7 +20,7 @@ class Finder {
 public:
   virtual ~Finder() = default;
 
-  void SetSearchText(std::string* search_text);
+  void SetSearchText(const std::string* search_text);
 
   // Returns the locked mutex of the list and set the pointer, the caller of this
   // method is responsible to release the lock.
@@ -51,7 +51,7 @@ protected:
   // claim ownership here). Since this value is only read and write by the main
   // thread and for child process we'll pass the string as value before creating
   // the process/thread so we don't need a mutex for this string.
-  std::string* search_text = nullptr;
+  const std::string* search_text = nullptr;
 
   std::unique_ptr<IPC> ipc_total;
   std::mutex mutex_total;
@@ -82,7 +82,6 @@ public:
 
 private:
   void TriggerFuzzyFilter();
-
 };
 
 

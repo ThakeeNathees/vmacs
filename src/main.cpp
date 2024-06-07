@@ -532,6 +532,25 @@ int main(int argc, char** argv) {
   Ui::keytree.RegisterBinding("DocumentWindow", "insert", "<C-e>a",     "cursor_up");
   Ui::keytree.RegisterBinding("Ui", "<C-e>b",     "next_window");
 
+  // FIXME: The close action of popup should be re-usable.
+  Ui::keytree.RegisterAction("Ui", "open_text_popup", (FuncAction) Ui::Action_OpenTestPopup);
+  Ui::keytree.RegisterBinding("Ui", "<C-r>", "open_text_popup");
+
+  name = InputWindow::ClassName();
+
+  Ui::keytree.RegisterAction(name, "cursor_right", (FuncAction) InputWindow::Action_CursorRight);
+  Ui::keytree.RegisterAction(name, "cursor_left", (FuncAction) InputWindow::Action_CursorLeft);
+  Ui::keytree.RegisterAction(name, "cursor_home", (FuncAction) InputWindow::Action_CursorHome);
+  Ui::keytree.RegisterAction(name, "cursor_end", (FuncAction) InputWindow::Action_CursorEnd);
+  Ui::keytree.RegisterAction(name, "backspace", (FuncAction) InputWindow::Action_Backspace);
+  Ui::keytree.RegisterAction(name, "close", (FuncAction) InputWindow::Action_Close);
+
+  Ui::keytree.RegisterBinding(name, "<right>", "cursor_right");
+  Ui::keytree.RegisterBinding(name, "<left>",  "cursor_left");
+  Ui::keytree.RegisterBinding(name, "<home>",  "cursor_home");
+  Ui::keytree.RegisterBinding(name, "<end>",  "cursor_end");
+  Ui::keytree.RegisterBinding(name, "<backspace>", "backspace");
+  Ui::keytree.RegisterBinding(name, "<esc>", "close");
 
   std::shared_ptr<Editor> editor = Editor::Singleton();
 

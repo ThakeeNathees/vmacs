@@ -667,16 +667,14 @@ void Ui::Draw(FrameBuffer& buff) {
   DrawInfoBar(buff);
   DrawOverlays(buff);
 
-  // FIXME: The size is "hardcoded".
+  // FIXME: popup opacity percent is hardcoded.
   if (popup) {
-    const int percent = 70;
-    const int W = buff.width;
-    const int H = buff.height;
-    const int w = (W * percent) / 100;
-    const int h = (H * percent) / 100;
-    const int x = (W - w) / 2;
-    const int y = (H - h) / 2;
-    popup->Draw(buff, Position(x, y), Area(w, h));
+    int percent = 70;
+    for (int i = 0; i < buff.width * buff.height; i++) {
+      uint32_t fg = buff.cells[i].fg;
+      buff.cells[i].fg = DIM_COLOR(fg, 70);
+    }
+    popup->Draw(buff, Position(0, 0), Area(buff.width, buff.height));
   }
 }
 
@@ -1153,5 +1151,15 @@ bool Ui::Action_CloseWindow(ActionExecutor* ae) {
   Ui* self = static_cast<Ui*>(ae);
   Window* window = self->GetActiveWindow();
   return self->CloseWindow(window);
+}
+
+
+bool Ui::Action_OpenTestPopup(ActionExecutor* ae) {
+  Ui* self = static_cast<Ui*>(ae);
+  if (self->popup != nullptr) return false;
+  std::unique_ptr<InputWindow> iw = std::make_unique<InputWindow>();
+  iw->SetLabel("File Name:");
+  self->popup = std::move(iw);
+  return true;
 }
 

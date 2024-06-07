@@ -438,8 +438,9 @@ public:
   void UnRegisterListener(DocumentListener* listener);
 
   LanguageId GetLanguageId() const;
-  bool IsReadOnly() const;
   const Path& GetPath() const;
+  bool IsReadOnly() const;
+  bool IsUnsaved() const;
 
   void SetThemeGetter(GetThemeFn fn);
 
@@ -548,6 +549,11 @@ private:
   // `file://path/to/cwd/test.c` even thought the file isn't exists in the disk
   // we'll create a new one.
   Path path;
+
+  // Weather the path is unsaved. Initially it'll be saved either an empty file
+  // or a file is loaded from the path. Note that both saving the file or undoing
+  // to a saved point in time will make it saved.
+  bool unsaved = false;
 
   std::shared_ptr<LspClient> lsp_client;
 

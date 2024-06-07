@@ -75,6 +75,11 @@ bool Document::IsReadOnly() const {
 }
 
 
+bool Document::IsUnsaved() const {
+  return unsaved;
+}
+
+
 const Path& Document::GetPath() const {
   return path;
 }
@@ -238,6 +243,11 @@ void Document::PushSignatureHelp(SignatureItems&& items) {
 
 
 void Document::OnHistoryChanged(const std::vector<DocumentChange>& changes) {
+
+  // TODO: Along with the document version maintain another version to keep track
+  // of do we have unsaved progress (undo should go back to a saved point).
+  unsaved = true;
+
   // TODO: Consider moving the diagnostics coordinates a little till the next
   // diagnostics comes from the server or maybe consider removing the current
   // diagnostics after a certain time in the update() method.
