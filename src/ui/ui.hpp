@@ -431,6 +431,9 @@ public:
 private:
   std::unique_ptr<Finder> finder;
 
+  // The text which entered in the search box.
+  std::string search_text;
+
   // The cursor inside the search bar.
   int cursor_index = 0;
 

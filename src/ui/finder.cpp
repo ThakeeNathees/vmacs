@@ -10,6 +10,11 @@
 #include "ui.hpp"
 
 
+void Finder::SetSearchText(std::string* search_text) {
+  this->search_text = search_text;
+}
+
+
 void Finder::RegisterItemsChangeListener(CallbackFinderItemsChanged cb_filter) {
   cb_items_changed = cb_filter;
 }
@@ -56,7 +61,7 @@ void Finder::StdoutCallbackLoadResults(
 
 std::unique_lock<std::mutex> Finder::GetItems(const std::vector<std::string>** ret) {
   // If search text is empty we send the un-filtered items.
-  if (search_text.empty()) {
+  if (search_text->empty()) {
     std::unique_lock<std::mutex> lock(mutex_total);
     *ret = &total;
     return std::move(lock);
@@ -69,7 +74,7 @@ std::unique_lock<std::mutex> Finder::GetItems(const std::vector<std::string>** r
 
 
 int Finder::GetItemsCount() {
-  if (search_text.empty()) return GetItemsCountTotal();
+  if (search_text->empty()) return GetItemsCountTotal();
 
   std::lock_guard<std::mutex> lock(mutex_filters);
   return filters.size();
@@ -79,11 +84,6 @@ int Finder::GetItemsCount() {
 int Finder::GetItemsCountTotal() {
   std::lock_guard<std::mutex> lock(mutex_total);
   return total.size();
-}
-
-
-std::string& Finder::GetSearchText() {
-  return search_text;
 }
 
 
@@ -124,7 +124,7 @@ void FilesFinder::Initialize() {
 
 
 void FilesFinder::InputChanged() {
-  if (search_text.empty()) {
+  if (search_text->empty()) {
     {
       std::lock_guard<std::mutex> lock_r(mutex_total);
       std::lock_guard<std::mutex> lock_f(mutex_filters);
@@ -152,19 +152,19 @@ void FilesFinder::TriggerFuzzyFilter() {
   opt.user_data      = this;
 
   // opt.file           = "fzf";
-  // opt.argv           = { "--filter", search_text };
+  // opt.argv           = { "--filter", *search_text };
   // std::string s; // "s.*e.*a.*r.*c.*h";
-  // for (int i = 0; i < search_text.size(); i++) {
-  //   s += search_text[i];
-  //   if (i != search_text.size()-1) s+=".*";
+  // for (int i = 0; i < search_text->size(); i++) {
+  //   s += (*search_text)[i];
+  //   if (i != search_text->size()-1) s+=".*";
   // }
   // opt.file           = "grep"; // Use grep if fzf not available.
   // opt.argv           = { s };
 
   std::string s; // "s.*e.*a.*r.*c.*h";
-  for (int i = 0; i < search_text.size(); i++) {
-    s += search_text[i];
-    if (i != search_text.size()-1) s+=".*";
+  for (int i = 0; i < search_text->size(); i++) {
+    s += (*search_text)[i];
+    if (i != search_text->size()-1) s+=".*";
   }
   opt.file           = "grep"; // Use grep if fzf not available.
   opt.argv           = { s };
@@ -214,7 +214,7 @@ void LiveGrep::Initialize() {
 
 
 void LiveGrep::InputChanged() {
-  if (search_text.empty()) {
+  if (search_text->empty()) {
     {
       std::lock_guard<std::mutex> lock(mutex_filters);
       filters.clear();
@@ -244,7 +244,7 @@ void LiveGrep::TriggerGrep() {
     "--line-number",
     "--column",
     "--smart-case",
-    search_text,
+    *search_text,
   };
   opt.timeout_sec    = 2;
   opt.sending_inputs = false;

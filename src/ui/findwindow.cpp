@@ -12,6 +12,7 @@
 
 FindWindow::FindWindow(std::unique_ptr<Finder> finder_) : finder(std::move(finder_)) {
 
+  finder->SetSearchText(&search_text);
   finder->RegisterItemsChangeListener([&](){ this->OnItemsChanged(); });
   finder->Initialize();
 }
@@ -25,7 +26,7 @@ Window::Type FindWindow::GetType() const {
 bool FindWindow::_HandleEvent(const Event& event) {
   if (event.type == Event::Type::KEY && event.key.unicode != 0) {
     char c = (char) event.key.unicode;
-    finder->GetSearchText().insert(cursor_index, std::string(1, event.key.unicode));
+    search_text.insert(cursor_index, std::string(1, event.key.unicode));
     finder->InputChanged();
     cursor_index++;
     selected_index = 0;
@@ -96,7 +97,7 @@ void FindWindow::_Draw(FrameBuffer& buff, Position pos, Area area) {
   DrawRectangleLine(buff, pos, area, theme.lines, icons, true);
 
   // Draw the input area.
-  const std::string& input_text = finder->GetSearchText();
+  const std::string& input_text = search_text;
   for (int i = 0; i < input_text.size(); i++) {
     Style style = theme.style;
     if (i == cursor_index) style.ApplyInplace(theme.cursor);
@@ -171,10 +172,10 @@ void FindWindow::DrawItems(FrameBuffer& buff, int x, int y, int w, int h, const 
 // Actions.
 // -----------------------------------------------------------------------------
 
-bool FindWindow::Action_CursorRight(FindWindow* self) { ASSERT(self->finder != nullptr, OOPS); if (self->cursor_index < self->finder->GetSearchText().size()) self->cursor_index++; return true; }
+bool FindWindow::Action_CursorRight(FindWindow* self) { ASSERT(self->finder != nullptr, OOPS); if (self->cursor_index < self->search_text.size()) self->cursor_index++; return true; }
 bool FindWindow::Action_CursorLeft(FindWindow* self)  { if (self->cursor_index > 0) self->cursor_index--; return true; }
 bool FindWindow::Action_CursorHome(FindWindow* self)  { self->cursor_index = 0; return true; }
-bool FindWindow::Action_CursorEnd(FindWindow* self)   { ASSERT(self->finder != nullptr, OOPS); self->cursor_index = self->finder->GetSearchText().size(); return true; }
+bool FindWindow::Action_CursorEnd(FindWindow* self)   { ASSERT(self->finder != nullptr, OOPS); self->cursor_index = self->search_text.size(); return true; }
 
 bool FindWindow::Action_CycleSelection(FindWindow* self) {
   int items_count = self->finder->GetItemsCount();
@@ -201,7 +202,7 @@ bool FindWindow::Action_CycleSelectionReversed(FindWindow* self) {
 
 bool FindWindow::Action_Backspace(FindWindow* self) {
   if (self->cursor_index > 0) {
-    self->finder->GetSearchText().erase(self->cursor_index-1, 1);
+    self->search_text.erase(self->cursor_index-1, 1);
     self->finder->InputChanged();
     self->cursor_index--;
     self->view_start_index = 0;
