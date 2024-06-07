@@ -10,14 +10,11 @@
 
 // TODO:
 //
-//  IPC Wndows
-//
 // Now:
-//   Reading file
-//   rename server_io_thread in ipc.
 //
 //
 // Release:
+//   Homescreen code cleanup.
 //   Diagnostics.
 //   Well documented source code.
 //   read file properly (crlf, encoding, etc.) + handle binary files.
@@ -26,7 +23,8 @@
 //   simple workflow (open edit save etc).
 //   proper binding and modes.
 //   ctrl+q properly handle.
-//   emacs theme is disabled (windows string len limitation).
+//
+//   emacs theme is disabled (windows string len limitation): Load resources dynamically and have the binary size small
 //
 //
 // Gap Buffer:
@@ -37,22 +35,19 @@
 //
 //
 // Pending:
-//  - ts_edit_tree implement (same as syncing with lsp server).
-//  - FrameBuffer as class (constructor, set cell etc).
-//  - CRLF files crash the editor handle properly.
+//  - CRLF files crash the editor handle properly (because of lsp).
 //  - IPC errors should be passed to editor.
 //  - Editor::Error(), etc.
 //  - Window pos/area.
+//  - Calculate area manually instead of draw so they can setup the view at start.
 //  - Loading config from file.
-//  - Remove tomlcpp library. We don't need it (maybe?)
-//  - calculate area manually instead of draw so they can setup the view at start.
 //  - Check if the LSP client exists and show an error message otherwise.
 //  - fzf, rg check if exists.
 //  - Opening new file should open in the split if the current tab has multi splits.
-//    it's a single window tab, we start in a new tab.
+//    It's a single window tab, we start in a new tab.
 //  - Clicking on tabname should change the tab.
 //  - Jump to document should make the view center.
-//  - open document in editor where language and lsp are solved from the path.
+//  - Open document in editor where language and lsp are solved from the path.
 //    glue split positions (viw shouldn't move and the selection wont' change after modify in another split)
 //    check what happens with empty Path with lsp server and handle.
 //    open empty, search for a file with file picker.
@@ -67,6 +62,8 @@
 //  - Scroll if more tabs.
 //  - Theme dynamic changeing (listener);
 //  - diagnostics in gutter.
+//  - FrameBuffer as class (constructor, set cell etc).
+//  - ts_edit_tree implement (same as syncing with lsp server).
 //
 //
 // Big things:
@@ -149,6 +146,10 @@
 //   ipc timeout value hardcoded fix.
 //   Maybe rename.
 //
+
+#if defined(__unix__) || defined(__APPLE__)
+#include <signal.h>
+#endif
 
 
 // FIXME: remove this.

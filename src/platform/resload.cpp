@@ -9,8 +9,8 @@
 #include "core/core.hpp"
 #include "platform.hpp"
 
-#include "resources/themes.xmacro.inl"
-#include "resources/lang.xmacro.inl"
+#include "runtime/themes.xmacro.inl"
+#include "runtime/lang.xmacro.inl"
 
 #define X(id, q_highlight, loader) \
   extern "C" const TSLanguage* loader(void);

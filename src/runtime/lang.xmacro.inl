@@ -6,16 +6,16 @@
 
 
 static const char* c_query_highlight =
-  #include "resources/languages/c/highlight.scm.inl"
+  #include "runtime/languages/c/highlight.scm.inl"
 ;
 
 
 static const char* cpp_query_highlight =
-  #include "resources/languages/cpp/highlight.scm.inl"
+  #include "runtime/languages/cpp/highlight.scm.inl"
 ;
 
 
 static const char* python_query_highlight =
-  #include "resources/languages/python/highlight.scm.inl"
+  #include "runtime/languages/python/highlight.scm.inl"
 ;
 

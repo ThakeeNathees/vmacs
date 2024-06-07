@@ -326,15 +326,15 @@ public:
     if (argv != nullptr) free(argv);
     loop_stop = true;
     pending_inputs = false;
-    if (server_io_thread.joinable()) {
-      server_io_thread.join();
+    if (child_io_thread.joinable()) {
+      child_io_thread.join();
     }
   }
 
 
   // Note that this method isn't supposed to be called multiple times.
   void Run() override {
-    server_io_thread = std::thread([this] () {
+    child_io_thread = std::thread([this] () {
       ShellExec(execopt, &pid, loop_stop);
     });
   }
@@ -365,7 +365,7 @@ private:
 
   std::atomic<bool> pending_inputs = false;
   std::atomic<bool> loop_stop = false;
-  std::thread server_io_thread;
+  std::thread child_io_thread;
 
 private:
   static int StdinCallback(void* user_data, int fd, bool* pending) {

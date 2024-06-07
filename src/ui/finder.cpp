@@ -99,14 +99,15 @@ void FilesFinder::Initialize() {
   opt.file = "cmd.exe";
   opt.argv = { "/C", "dir", "/S", "/B", "/A-D" };
 #else
-  opt.file           = "rg";
-  opt.argv           = { "--files" };
-#endif
+  // opt.file           = "rg";
+  // opt.argv           = { "--files" };
+
   // opt.file           = "fd";
   // opt.argv           = StringSplit("--type f", ' ');
 
-  // opt.file           = "find";
-  // opt.argv           = StringSplit(". -type f", ' ');
+  opt.file           = "find";
+  opt.argv           = StringSplit(". -type f", ' ');
+#endif
 
   opt.timeout_sec    = 4;
   opt.sending_inputs = false;
