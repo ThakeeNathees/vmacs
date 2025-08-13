@@ -3,6 +3,7 @@
 build/
 **/*.gen.h
 **/.DS_Store
+.cache/
 
 # Prerequisites
 *.d

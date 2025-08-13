@@ -1,33 +1,553 @@
+//
 // .--.--.--------.-----.----.-----. vmacs text editor and more.
 // |  |  |        |  _  |  __|__ --| version 0.1.0
 //  \___/|__|__|__|__.__|____|_____| https://github.com/thakeenathees/vmacs
 //
-// Copyright (c) 2023 Thakee Nathees
+// Copyright (c) 2024 Thakee Nathees
 // Licenced under: MIT
 
 #include "client.hpp"
 
+#include <future>
 
-LspClient::LspClient(std::string_view server_cmd, std::string_view cwd) {
+// The json (documentation) is either string or MarkupContent, either way we
+// just return the plan text and we're not rendering the markdown content.
+#define GET_DOC_STR_OR_MARKUP(json)                                \
+  ((json).is_string() ? (json).template get<std::string>() : (     \
+    (json).is_object() ? ( JSON_GET_STRING_OR(json, "value", "")) : ""))
 
-  cp = Process::New();
 
-  cp->Config(server_cmd, cwd,
-    [=](const std::string& data) {
-      LspClient::_OnStdoutReady(this, data);
-    },
-    [](const std::string& data) {
-      printf("[stderr] %s\n", data.c_str());
-    });
-
-  bool ok = cp->Run();
-  assert(ok && "child process creation failed!");
+// Recursively search if a json value exists. Consider the folloging example:
+//
+//   json["capabilities"]["completionProvider"]["triggerCharacters"]
+//
+// The call should be made like this:
+//
+//   const char* path[] = {"capabilities", "completionProvider", "triggerCharacters", NULL };
+//   const Json* trig;
+//   bool contains = GetJson(&trig, json, path);
+//
+static bool GetJson(const Json** ret, const Json& json, const char** args) {
+  if (*args == NULL) { *ret = &json; return true; }
+  if (!json.contains(*args)) { return false;}
+  return GetJson(ret, json[*args], args+1);
 }
 
 
-void LspClient::_OnStdoutReady(LspClient* client, std::string_view data) {
+LspClient::LspClient(LspConfig config) : config(config) {
+
+  // FIXME: Move this logic to somewhere to support restarting the server
+  // if something went wrong and the user needs to restart this client/server.
+  IPC::IpcOptions opt;
+  opt.user_data      = this;
+  opt.file           = config.server_file;
+  opt.argv           = config.argv;
+  opt.timeout_sec    = -1;
+  opt.sending_inputs = true;
+  opt.stdout_cb      = LspClient::StdoutCallback;
+  opt.stderr_cb      = LspClient::StderrCallback;
+  opt.exit_cb        = LspClient::ExitCallback;
+  ipc                = IPC::New(opt);
+}
+
+
+LspClient::~LspClient() {
+
+  // TODO: Make a shoutdown lsp method call and call this before unregister and
+  // remove lsp clients from the lsp_client registry.
+  // SendNotification("exit", Json::object());
+
+  // It's possible the server is not initialized and all the requests are
+  // waiting still.
+  stop_all_threads = true;
+  cond_server_initialized.notify_all();
+
+  // This is necessary, consider without destroing ipc here and the LspClient is
+  // "dying" bellow and waiting to join threads but suddenly we got response
+  // from the language server for our initialize request and now we have to send
+  // "initialized" notification. So the notification will wait on the mutex
+  // `mutex_threads_pool` and it'll only unlocks when we're done with this
+  // destructor. So by the time "initilized" method aquire the mutex it's already
+  // destroied.
+  //
+  // So we make sure the IPC is destroied properly and we have nothing to do
+  // with it or its callback before we cleanup.
+  ipc = nullptr;
+
+  {
+    std::lock_guard<std::mutex> lock_pool(mutex_threads_pool);
+    for (std::thread& thread : threads) {
+      if (thread.joinable()) thread.join();
+    }
+  }
+}
+
+
+void LspClient::StartServer() {
+
+  // Check if server already started.
+  if (server_started) return;
+  server_started = true;
+
+  // Run server in a child process IO loop in a different thread.
+  ipc->Run();
+
+  // FIXME: configure params. (check with jedi-language-server)
+  // Json params = Json::parse(R"!!({"capabilities":{"textDocument":{"hover":{"dynamicRegistration":true,"contentFormat":["plaintext","markdown"]},"synchronization":{"dynamicRegistration":true,"willSave":false,"didSave":false,"willSaveWaitUntil":false},"completion":{"dynamicRegistration":true,"completionItem":{"snippetSupport":false,"commitCharactersSupport":true,"documentationFormat":["plaintext","markdown"],"deprecatedSupport":false,"preselectSupport":false},"contextSupport":false},"signatureHelp":{"dynamicRegistration":true,"signatureInformation":{"documentationFormat":["plaintext","markdown"]}},"declaration":{"dynamicRegistration":true,"linkSupport":true},"definition":{"dynamicRegistration":true,"linkSupport":true},"typeDefinition":{"dynamicRegistration":true,"linkSupport":true},"implementation":{"dynamicRegistration":true,"linkSupport":true}},"workspace":{"didChangeConfiguration":{"dynamicRegistration":true}}},"initializationOptions":null,"processId":null,"rootUri":"file:///home/ubuntu/artifacts/","workspaceFolders":null})!!");
+
+  Json params = Json::object();
+  SendRequest("initialize", params);
+}
+
+
+bool LspClient::IsTriggeringCharacterCompletion(char c) const {
+  if (BETWEEN('a', c, 'z') || BETWEEN('A', c, 'Z') || c == '_') return true;
+  for (char tc : triggering_characters_completion) {
+    if (tc == c) return true;
+  }
+  return false;
+}
+
+
+bool LspClient::IsTriggeringCharacterSignature(char c) const {
+  for (char tc : triggering_characters_signature) {
+    if (tc == c) return true;
+  }
+  return false;
+}
+
+
+RequestId LspClient::SendRequest(const std::string& method, const Json& params) {
+  RequestId id = next_request_id++;
+  SendServerContent({
+    { "jsonrpc", "2.0" },
+    { "id",      id },
+    { "method",  method },
+    { "params",  params },
+  });
+  return id;
+}
+
+
+void LspClient::SendNotification(const std::string& method, const Json& params) {
+  SendServerContent({
+    { "jsonrpc",  "2.0" },
+    { "method",   method },
+    { "params",   params },
+  });
+}
+
+
+void LspClient::DidOpen(const Path& path, const std::string&& text, const std::string& language, uint32_t version) {
+  SendNotification(
+    "textDocument/didOpen", {
+      {
+        "textDocument", {
+          { "uri", path.Uri() },
+          { "text", std::string(text) },
+          { "languageId", language },
+          { "version", version },
+        }
+      }
+    });
+}
+
+
+void LspClient::DidChange(const Path& path, uint32_t version, const std::vector<DocumentChange>& changes) {
+  std::vector<Json> content_changes;
+  for (const DocumentChange& change : changes) {
+    content_changes.push_back({
+      {
+        "range", {
+          { "start", {{ "line", change.start.line }, { "character", change.start.character }}  },
+          { "end", {{ "line", change.end.line }, { "character", change.end.character }} },
+        },
+      },
+      { "text", change.text }
+    });
+  }
+  SendNotification("textDocument/didChange", {
+      { "textDocument", {{ "uri", path.Uri() }, { "version", version }} },
+      { "contentChanges", content_changes },
+  });
+}
+
+
+void LspClient::Completion(const Path& path, Coord position) {
+  RequestId id = SendRequest("textDocument/completion", {
+      { "textDocument", {{ "uri", path.Uri() }} },
+      { "position", {{ "line", position.line }, { "character", position.character }} },
+  });
+  ResponseContext ctx;
+  ctx.type = ResponseType::RESP_COMPLETION;
+  ctx.path = path;
+  {
+    std::lock_guard<std::mutex> lock(mutex_pending_requests);
+    pending_requests[id] = ctx;
+  }
+}
+
+
+void LspClient::SignatureHelp(const Path& path, Coord position) {
+  RequestId id = SendRequest("textDocument/signatureHelp", {
+      { "textDocument", {{ "uri", path.Uri() }} },
+      { "position", {{ "line", position.line }, { "character", position.character }} },
+  });
+  ResponseContext ctx;
+  ctx.type = ResponseType::RESP_SIGNATURE_HELP;
+  ctx.path = path;
+  {
+    std::lock_guard<std::mutex> lock(mutex_pending_requests);
+    pending_requests[id] = ctx;
+  }
+}
+
+
+void LspClient::HandleServerInitilized(const Json& result) {
+
+  { // Store the completion triggering characters.
+    const Json* trig;
+    static const char* trig_chars_path[] = {"capabilities", "completionProvider", "triggerCharacters", NULL};
+    if(GetJson( &trig, result, trig_chars_path)) {
+      if (trig->is_array()) {
+        for (auto& c : *trig) {
+          if (!c.is_string()) continue;
+          std::string ch = c.template get<std::string>();
+          if (ch.empty()) continue;
+          triggering_characters_completion.push_back(ch[0]);
+        }
+      }
+    }
+  }
+
+  { // Store the signature triggering characters.
+    const Json* trig;
+    static const char* trig_chars_path[] = {"capabilities", "signatureHelpProvider", "triggerCharacters", NULL};
+    if(GetJson( &trig, result, trig_chars_path)) {
+      if (trig->is_array()) {
+        for (auto& c : *trig) {
+          if (!c.is_string()) continue;
+          std::string ch = c.template get<std::string>();
+          if (ch.empty()) continue;
+          triggering_characters_signature.push_back(ch[0]);
+        }
+      }
+    }
+  }
+}
+
+
+void LspClient::SendServerContent(const Json& content) {
+
+  // It's possible for the ipc to be nullptr if we're waiting for the threads
+  // to join in the destructor and this method is called by some other threads.
+  if (ipc == nullptr) return;
+
+  // FIXME: This bellow .dump() will crash if the any param of string contains
+  // literal cariage return '\r' in it (they handle newline but not \r). Still
+  // we shouldn't have \r\n sequence in the source since json-rpc will fail to
+  // parse the data. This shoul be solved with crlf files also.
+  // ex:
+  // { "text" : "line1\r\nline2\r\n"  }  <-- chrash.
+  // { "text" : "line1\\r\nline2\\r\n" } <-- fine (they escape \n).
+  //
+  std::string dump = content.dump();
+  std::string data = "";
+  std::string content_len = std::to_string(dump.length());
+
+  data = "Content-Length: " + content_len + "\r\n";
+  data += "\r\n";
+  data += dump;
+
+  bool is_initialize_request = (
+      JSON_CHECK(content, "id", is_number_integer) &&
+      (content["id"].template get<int>() == INITIALIZE_REQUSET_ID));
+
+  if (is_initialize_request) {
+    if (ipc) ipc->WriteToStdin(data);
+
+  } else {
+
+    // This is not necessary all handled properly (read in the destructor)
+    // but just in case.
+    if (stop_all_threads) return;
+
+    {
+    std::lock_guard<std::mutex> look_pool(mutex_threads_pool);
+
+    // Wait in a thread till the server is initialized.
+    threads.emplace_back([this, data](){
+      std::unique_lock<std::mutex> lock(mutex_server_initialized);
+      while (!is_server_initialized && !stop_all_threads) {
+        cond_server_initialized.wait(lock);
+      }
+      if (stop_all_threads) return;
+      if (ipc) ipc->WriteToStdin(data);
+    });
+    }
+
+  }
+}
+
+
+void LspClient::HandleServerContent(const Json& content) {
+
+  // TODO: check contains method and params, before getting.
+  if (!content.contains("id") && content.contains("method") && content.contains("params")) {
+    HandleNotify(content["method"], content["params"]);
+    return;
+  }
+
+  if (!content.contains("id")) return;
+  if (!content["id"].is_number_integer()) return;
+
+  RequestId id = content["id"].template get<int>();
+
+  if (content.contains("method") && content.contains("params")) {
+    HandleRequest(id, content["method"], content["params"]);
+    return;
+  }
+
+  if (content.contains("result")) {
+    HandleResponse(id, content["result"]);
+    return;
+  }
+
+  if (content.contains("error")) {
+    HandleError(id, content["error"]);
+    return;
+  }
+}
+
+
+void LspClient::HandleNotify(const std::string& method, const Json& params) {
+
+  if (method == "textDocument/publishDiagnostics") {
+
+    if (cb_diagnostics == nullptr) return;
+    std::vector<Diagnostic> diagnostics;
+
+    for (const Json& diag : params["diagnostics"]) {
+      Diagnostic diagnostic;
+
+      // Not optional.
+      diagnostic.message   = JSON_GET_STRING_OR(diag, "message", "");
+
+      // TODO: Assuming "range" will always exists, fix this. Figure out a better
+      // way to convert back and forth json to c++ types.
+      diagnostic.start.line      = diag["range"]["start"]["line"].template get<int>();
+      diagnostic.start.character = diag["range"]["start"]["character"].template get<int>();
+      diagnostic.end.line        = diag["range"]["end"]["line"].template get<int>();
+      diagnostic.end.character   = diag["range"]["end"]["character"].template get<int>();
+
+      diagnostic.severity  = JSON_GET_INT_OR(diag, "severity", 3);
+      diagnostic.code      = JSON_GET_STRING_OR(diag, "code", "");
+      diagnostic.source    = JSON_GET_STRING_OR(diag, "source", "");
+
+
+      diagnostics.push_back(std::move(diagnostic));
+    }
+
+    std::string uri = JSON_GET_STRING_OR(params, "uri", "");
+    uint32_t version = JSON_GET_INT_OR(params, "version", 0);
+    cb_diagnostics(Path::FromUri(uri), version, std::move(diagnostics));
+    return;
+  }
+
+}
+
+
+void LspClient::HandleResponse(RequestId id, const Json& result) {
+
+  // If the server is initialized, update the atomic bool and tell the server
+  // we're initialized as well.
+  if (id == INITIALIZE_REQUSET_ID) {
+    is_server_initialized = true;
+    cond_server_initialized.notify_all();
+    HandleServerInitilized(result);
+    SendNotification("initialized", Json::object());
+  }
+
+  ResponseContext ctx;
+  {
+    std::lock_guard<std::mutex> lock(mutex_pending_requests);
+    auto it = pending_requests.find(id);
+    if (it == pending_requests.end()) return; // TODO: Log ignored response.
+
+    // Copy the values and and remove the pending request from the table.
+    ctx = std::move(it->second);
+    pending_requests.erase(it);
+  }
+
+  switch (ctx.type) {
+    case RESP_UNKNOWN: return;
+    case RESP_COMPLETION:
+     {
+       if (cb_completion == nullptr) return;
+       if (result.is_null()) return;
+
+       bool is_incomplete = false;
+       std::vector<CompletionItem> completion_list;
+
+       // Result could be either CompletionItem[] or CompletionList.
+       if (result.is_array()) {
+         for (const Json& item : result) {
+           CompletionItem ci;
+           if (!JsonToCompletionItem(&ci, item)) continue;
+           completion_list.push_back(std::move(ci));
+         }
+       } else if (result.is_object()) {
+         is_incomplete = JSON_GET_BOOL_OR(result, "isIncomplete", false);
+
+         if (!result.contains("items")) return; // Error ??
+         if (!result["items"].is_array()) return;
+         for (const Json& item : result["items"]) {
+           CompletionItem ci;
+           if (!JsonToCompletionItem(&ci, item)) continue;
+           completion_list.push_back(std::move(ci));
+         }
+
+       } else return; // Unknown response ??
+
+       cb_completion(ctx.path, is_incomplete, std::move(completion_list));
+       return; // we're done here.
+
+     } break; // case RESP_COMPLETION
+
+    case RESP_SIGNATURE_HELP:
+     {
+       if (cb_signature_help == nullptr) return;
+       if (result.is_null()) return;
+       if (!result.contains("signatures")) return;
+       if (!result["signatures"].is_array()) return;
+       SignatureItems items;
+       items.active_parameter = JSON_GET_INT_OR(result, "activeParameter", -1);
+       items.active_signature = JSON_GET_INT_OR(result, "activeSignature", -1);
+       for (auto& sig : result["signatures"]) {
+         if (!sig.is_object()) continue;
+         SignatureInformation signature;
+         signature.label = JSON_GET_STRING_OR(sig, "label", "");
+
+         if (sig.contains("documentation")) {
+           signature.documentation = GET_DOC_STR_OR_MARKUP(sig["documentation"]);
+         }
+
+         // According to the docs.
+         int active_parameter = JSON_GET_INT_OR(sig, "activeParameter", -1);
+         if (active_parameter >= 0) items.active_parameter = active_parameter;
+
+         if (JSON_CHECK(sig, "parameters", is_array)) {
+           for (auto& param : sig["parameters"]) {
+             ParameterInformation pi;
+
+             // TODO: this could be either string or a (index, length (exclusive)).
+             // we're parsing only the string, but have to consider the (int, int)
+             // as well.
+             // param["label"] : string | [int, int]
+             //
+             if (JSON_CHECK(param, "label", is_string)) {
+               std::string label = param["label"].template get<std::string>();
+               size_t pos = signature.label.find(label);
+               if (pos != std::string::npos) {
+                 pi.label.start = pos;
+                 pi.label.end = pos + label.size() - 1;
+               }
+             }
+
+             pi.documentation = JSON_GET_STRING_OR(param, "documentation", "");
+             signature.parameters.push_back(pi);
+           }
+         }
+         items.signatures.push_back(signature);
+       }
+
+       cb_signature_help(ctx.path, std::move(items));
+     } break;
+  }
+
+}
+
+
+void LspClient::HandleRequest(RequestId id, const std::string& method, const Json& params) {
+
+}
+
+
+void LspClient::HandleError(RequestId id, const Json& error) {
+
+}
+
+
+void LspClient::ParseAndHandleResponse(LspClient* self, std::string_view json_string) {
+  try {
+    Json content = Json::parse(json_string);
+    self->HandleServerContent(content);
+
+  } catch (std::exception) {}
+}
+
+
+bool LspClient::JsonToCompletionItem(CompletionItem* item, const Json& json) {
+  ASSERT(item != nullptr, OOPS);
+
+  if (!json.contains("label")) return false;
+  item->label = json["label"].template get<std::string>();
+  item->insert_text = JSON_GET_STRING_OR(json, "insertText", "");
+
+  item->kind = (CompletionItemKind) JSON_GET_INT_OR(json, "kind", 1);
+  item->documentation = JSON_GET_STRING_OR(json, "documentation", "");
+  item->depricated = JSON_GET_BOOL_OR(json, "depricated", false);
+  item->documentation = JSON_GET_STRING_OR(json, "sortText", "");
+
+  auto _ParseTextEdit = [](const Json& json) -> TextEdit {
+    TextEdit text_edit;
+
+    Coord start, end;
+    if (!json.contains("range")) return text_edit;
+    const Json& range = json["range"];
+
+    // TODO: Handle all the possible errors it might throw (create a common function as it's reusable).
+    start.line      = range["start"]["line"].template get<int>();
+    start.character = range["start"]["character"].template get<int>();
+    end.line        = range["end"]["line"].template get<int>();
+    end.character   = range["end"]["character"].template get<int>();
+
+    text_edit.start = start;
+    text_edit.end   = end;
+    text_edit.text  = JSON_GET_STRING_OR(json, "newText", "");
+
+    return text_edit;
+  };
+
+  if (json.contains("textEdit")) {
+    item->text_edit =  _ParseTextEdit(json["textEdit"]);
+  }
+
+  return true;
+}
+
+
+void LspClient::StdoutCallback(void* user_data, const char* buff, size_t length) {
+
+  LspClient* self = static_cast<LspClient*>(user_data);
+  std::string_view data(buff, length);
 
   do {
+    if (self->pending_bytes > 0) {
+      if (data.length() < self->pending_bytes) { // Still not enough.
+        self->stdout_buffer += data;
+        self->pending_bytes -= data.length();
+        return; // Nothing else to do.
+      }
+
+      self->stdout_buffer += data.substr(0, self->pending_bytes);
+      ParseAndHandleResponse(self, self->stdout_buffer);
+
+      self->pending_bytes = 0;
+      self->stdout_buffer.clear();
+      data = data.substr(self->pending_bytes);
+    }
+
     size_t len_start = data.find("Content-Length:");
     if (len_start == std::string::npos) return;
     len_start += strlen("Content-Length:");
@@ -35,193 +555,38 @@ void LspClient::_OnStdoutReady(LspClient* client, std::string_view data) {
     size_t len_end = data.find("\r\n", len_start);
     if (len_end == std::string::npos) return;
 
-    std::string str_len = std::string(data.data() + len_start, len_end - len_start);
-    int content_len = std::stoi(str_len);
+    int content_len = 0;
+    std::string len_str = std::string(data.data() + len_start, len_end - len_start);
+    try {
+      content_len = std::stoi(len_str);
+    } catch (std::exception) { return; }
 
     size_t content_start = data.find("\r\n\r\n");
-    if (content_start == std::string::npos) return;
+    if (content_start == std::string::npos) return; // Invalid response ??
     content_start += strlen("\r\n\r\n");
 
-    // Something went wrong from server.
-    if (data.length() - content_start < content_len) return;
+    // The output is not enough to parse, push it to our stdout_buffer.
+    size_t available_content = data.length() - content_start;
+    if (available_content < content_len) {
+      self->stdout_buffer = data.substr(content_start);
+      self->pending_bytes = content_len - available_content;
+      return;
+    }
 
     std::string_view content_str = data.substr(content_start, content_len);
 
-    json content = json::parse(content_str);
+    ParseAndHandleResponse(self, content_str);
+
+    // Update data for the next iteration.
     data = data.substr(content_start + content_len);
-
-    printf("\n%s\n", content.dump(2).c_str());
-    client->_HandleServerContent(content);
-
   } while (data.length() > 0);
-}
-
-
-void LspClient::_HandleServerContent(const json& content) {
-  if (!content.contains("id") && content.contains("params")) {
-    OnNotify(content["method"], content["params"]);
-    return;
-  }
-
-  RequestId id = content["id"];
-
-  if (content.contains("method")) {
-    std::string_view method = content["method"].template get<std::string_view>();
-    OnRequest(id, method, content["params"]);
-    return;
-  }
-
-  if (content.contains("result")) {
-    OnResponse(id, content["result"]);
-    return;
-  }
-
-  if (content.contains("error")) {
-    OnError(id, content["error"]);
-    return;
-  }
-}
-
-
-void LspClient::_WriteToServer(std::string_view content) {
-  assert(cp->IsRunning() && "Child process is not running!");
-
-  std::string data;
-  data += "Content-Length: " + std::to_string(content.length()) + "\r\n";
-  data += "\r\n";
-  data += content;
-
-  cp->WriteStdin(data);
-}
-
-
-RequestId LspClient::SendRequest(std::string_view method, const json& params) {
-  // Except for "initialize" method all other request should be send after the
-  // server is initialized.
-  RequestMessage message;
-  message.jsonrpc = "2.0";
-  message.id      = next_id++;
-  message.method  = method;
-  message.params  = params;
-  _WriteToServer(json(message).dump());
-  return message.id;
-}
-
-
-void LspClient::SendNotification(std::string_view method, const json& params) {
-  NotificationMessage message;
-  message.jsonrpc = "2.0";
-  message.method = method;
-  message.params = params;
-  _WriteToServer(json(message).dump());
-}
-
-
-RequestId LspClient::Initialize(std::optional<DocumentUri> root_uri) {
-  InitializeParams params;
-  params.rootUri = root_uri;
-  return SendRequest("initialize", params);
-}
-
-
-RequestId LspClient::Shutdown() {
-  return SendRequest("shutdown", json());
-}
-
-
-RequestId LspClient::Completion(DocumentUri uri, Position position, std::optional<CompletionContext> context) {
-  CompletionParams params;
-  params.textDocument.uri = uri;
-  params.position = position;
-  params.context = context;
-  return SendRequest("textDocument/completion", params);
-}
-
-
-RequestId LspClient::SignatureHelp(DocumentUri uri, Position position) {
-  TextDocumentPositionParams params;
-  params.textDocument.uri = uri;
-  params.position = position;
-  return SendRequest("textDocument/signatureHelp", params);
-}
-
-
-RequestId LspClient::GotoDefinition(DocumentUri uri, Position position) {
-  TextDocumentPositionParams params;
-  params.textDocument.uri = uri;
-  params.position = position;
-  return SendRequest("textDocument/definition", params);
-}
-
-
-RequestId LspClient::GotoDeclaration(DocumentUri uri, Position position) {
-  TextDocumentPositionParams params;
-  params.textDocument.uri = uri;
-  params.position = position;
-  return SendRequest("textDocument/declaration", params);
-}
-
-
-RequestId LspClient::Hover(DocumentUri uri, Position position) {
-  TextDocumentPositionParams params;
-  params.textDocument.uri = uri;
-  params.position = position;
-  return SendRequest("textDocument/hover", params);
-}
-
-
-void LspClient::Initialized() {
-  SendNotification("initialized", json::object());
-}
-
-
-void LspClient::Exit() {
-  SendNotification("exit", json());
-}
-
-
-void LspClient::DidOpen(DocumentUri uri, std::string_view text, std::string_view lang_id) {
-  DidOpenTextDocumentParams params;
-  params.textDocument.uri = uri;
-  params.textDocument.text = text;
-  params.textDocument.languageId = lang_id;
-  SendNotification("textDocument/didOpen", params);
-}
-
-
-void LspClient::DidClose(DocumentUri uri) {
-  DidCloseTextDocumentParams params;
-  params.textDocument.uri = uri;
-  SendNotification("textDocument/didClose", params);
-}
-
-
-void LspClient::DidChange(DocumentUri uri, std::vector<TextDocumentContentChangeEvent>&& changes) {
-  DidChangeTextDocumentParams params;
-  params.textDocument.uri = uri;
-  params.contentChanges = std::move(changes);
-  SendNotification("textDocument/didChange", params);
-}
-
-
-void LspClient::OnNotify(const std::string& method, const json& params) {
 
 }
 
 
-void LspClient::OnResponse(RequestId id, const json& result) {
-  if (id == 0) {
-    is_server_initialized = true;
-    Initialized();
-  }
+void LspClient::StderrCallback(void* user_data, const char* buff, size_t length) {
 }
 
 
-void LspClient::OnRequest(RequestId id, std::string_view method, const json& params) {
-
-}
-
-
-void LspClient::OnError(RequestId id, const json& error) {
-
+void LspClient::ExitCallback(void* user_data, int exit_code) {
 }
